@@ -1,11 +1,9 @@
-using System.Windows;
+using Avalonia.Controls;
+using Avalonia.Markup.Xaml;
 
 namespace ChatApp.UI.Views;
 
 public partial class CreateGroupChatWindow : Window
 {
-    public CreateGroupChatWindow()
-    {
-        InitializeComponent();
-    }
+    public CreateGroupChatWindow() => AvaloniaXamlLoader.Load(this);
 }

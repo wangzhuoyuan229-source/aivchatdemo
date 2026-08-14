@@ -1,7 +1,9 @@
 using System.Collections.Specialized;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using ChatApp.UI.ViewModels;
 
 namespace ChatApp.UI.Views;
@@ -12,58 +14,41 @@ public partial class ChatView : UserControl
 
     public ChatView()
     {
-        InitializeComponent();
+        AvaloniaXamlLoader.Load(this);
         DataContextChanged += OnDataContextChanged;
         Loaded += ChatView_Loaded;
     }
 
-    private async void ChatView_Loaded(object sender, RoutedEventArgs e)
+    private async void ChatView_Loaded(object? sender, RoutedEventArgs e)
     {
-        // 当 ChatView 被重新加载（从 null 切回 Chat）时，强制重新加载消息以触发 UI 更新
         if (DataContext is ChatViewModel vm && vm.Conversation is not null)
-        {
-            // 切回时主动重新加载消息，确保 UI 正确显示历史对话
             await vm.RefreshCurrentAsync();
-            // 滚动到底部显示最新消息
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                if (MessagesScroll.ScrollableHeight > 0)
-                    MessagesScroll.ScrollToBottom();
-            }), System.Windows.Threading.DispatcherPriority.Background);
-        }
+        ScrollToBottom();
     }
 
-    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    private void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_currentSource is not null)
             _currentSource.CollectionChanged -= OnMessagesChanged;
-
-        if (e.NewValue is ChatViewModel vm)
+        if (DataContext is ChatViewModel vm)
         {
             _currentSource = vm.Messages;
-            vm.Messages.CollectionChanged += OnMessagesChanged;
+            _currentSource.CollectionChanged += OnMessagesChanged;
         }
     }
 
-    private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        // Scroll to bottom whenever messages change (added during streaming too).
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (MessagesScroll.ScrollableHeight > 0)
-                MessagesScroll.ScrollToBottom();
-        }), System.Windows.Threading.DispatcherPriority.Background);
-    }
+    private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e) => ScrollToBottom();
 
-    private void InputBox_KeyDown(object sender, KeyEventArgs e)
+    private void ScrollToBottom() => Dispatcher.UIThread.Post(() =>
+        this.FindControl<ScrollViewer>("MessagesScroll")?.ScrollToEnd(), DispatcherPriority.Background);
+
+    private void InputBox_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None)
+        if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None &&
+            DataContext is ChatViewModel vm && vm.SendCommand.CanExecute(null))
         {
-            if (DataContext is ChatViewModel vm && vm.SendCommand.CanExecute(null))
-            {
-                vm.SendCommand.Execute(null);
-                e.Handled = true;
-            }
+            vm.SendCommand.Execute(null);
+            e.Handled = true;
         }
     }
 }

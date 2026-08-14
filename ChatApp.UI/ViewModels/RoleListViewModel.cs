@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using ChatApp.Core.Models;
 using ChatApp.Core.Services;
+using ChatApp.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -13,6 +14,7 @@ public partial class RoleListViewModel : ViewModelBase
     private readonly IChatHistoryService _history;
     private readonly INavigation _navigation;
     private readonly ILogger<RoleListViewModel> _logger;
+    private readonly IDialogService _dialogs;
 
     public ObservableCollection<Role> Roles { get; } = new();
 
@@ -25,12 +27,14 @@ public partial class RoleListViewModel : ViewModelBase
     [ObservableProperty] private Role? _selectedRole;
     [ObservableProperty] private string _searchText = string.Empty;
 
-    public RoleListViewModel(IRoleService roleService, IChatHistoryService history, INavigation navigation, ILogger<RoleListViewModel> logger)
+    public RoleListViewModel(IRoleService roleService, IChatHistoryService history, INavigation navigation,
+        ILogger<RoleListViewModel> logger, IDialogService dialogs)
     {
         _roleService = roleService;
         _history = history;
         _navigation = navigation;
         _logger = logger;
+        _dialogs = dialogs;
     }
 
     public async Task LoadAsync()
@@ -106,13 +110,11 @@ public partial class RoleListViewModel : ViewModelBase
             ? $"「{role.Name}」是内置角色。\n\n确定要删除吗？该操作不可撤销，将一并删除该角色下的所有会话、消息与长期记忆。"
             : $"确定要删除角色「{role.Name}」吗？\n\n该操作不可撤销，将一并删除该角色下的所有会话、消息与长期记忆。";
 
-        var confirm = System.Windows.MessageBox.Show(
+        var confirm = await _dialogs.ConfirmAsync(
             message,
-            "删除角色",
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Warning);
+            "删除角色");
 
-        if (confirm != System.Windows.MessageBoxResult.Yes) return;
+        if (!confirm) return;
 
         try
         {
@@ -124,11 +126,7 @@ public partial class RoleListViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Delete role failed.");
-            System.Windows.MessageBox.Show(
-                $"删除失败：{ex.Message}",
-                "错误",
-                System.Windows.MessageBoxButton.OK,
-                System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"删除失败：{ex.Message}");
         }
     }
 }

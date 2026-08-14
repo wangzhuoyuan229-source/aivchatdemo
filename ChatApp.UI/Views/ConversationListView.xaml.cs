@@ -1,20 +1,24 @@
-using System.Windows.Controls;
-using System.Windows.Input;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Markup.Xaml;
+using ChatApp.UI.ViewModels;
 
 namespace ChatApp.UI.Views;
 
 public partial class ConversationListView : UserControl
 {
-    public ConversationListView()
+    public ConversationListView() => AvaloniaXamlLoader.Load(this);
+
+    private void SearchBox_KeyDown(object? sender, KeyEventArgs e)
     {
-        InitializeComponent();
+        if (e.Key == Key.Enter && DataContext is ConversationListViewModel vm)
+            vm.SearchCommand.Execute(null);
     }
 
-    private void SearchBox_KeyDown(object sender, KeyEventArgs e)
+    private void Conversations_DoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (e.Key == Key.Enter && DataContext is ViewModels.ConversationListViewModel vm)
-        {
-            vm.SearchCommand.Execute(null);
-        }
+        if (sender is ListBox { SelectedItem: ConversationItemViewModel item } &&
+            DataContext is ConversationListViewModel vm && vm.OpenCommand.CanExecute(item))
+            vm.OpenCommand.Execute(item);
     }
 }

@@ -1,11 +1,9 @@
-using System.Windows;
+using Avalonia.Controls;
+using Avalonia.Markup.Xaml;
 
 namespace ChatApp.UI.Views;
 
 public partial class CreateRoleWindow : Window
 {
-    public CreateRoleWindow()
-    {
-        InitializeComponent();
-    }
+    public CreateRoleWindow() => AvaloniaXamlLoader.Load(this);
 }

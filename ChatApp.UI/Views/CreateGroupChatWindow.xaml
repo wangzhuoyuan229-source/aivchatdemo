@@ -1,5 +1,5 @@
 <Window x:Class="ChatApp.UI.Views.CreateGroupChatWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="创建群聊" Height="600" Width="480"
         WindowStartupLocation="CenterOwner" Background="{StaticResource BgBrush}">
@@ -27,8 +27,8 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="群名" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
-                <TextBox Grid.Column="1" Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="留空将自动生成"/>
+                <TextBox Grid.Column="1" Text="{Binding Title}"
+                         ToolTip.Tip="留空将自动生成"/>
             </Grid>
 
             <TextBlock Grid.Row="1" Text="选择群成员（至少 2 个）" FontSize="12" Foreground="{StaticResource TextSubBrush}" Margin="0,0,0,6"/>
@@ -64,8 +64,8 @@
             <Grid>
                 <TextBlock Text="{Binding ErrorText}" Foreground="#E53935" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Left"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Style="{StaticResource GhostButton}" Content="取消" Command="{Binding CancelCommand}" Padding="20,8" Margin="0,0,8,0"/>
-                    <Button Style="{StaticResource PrimaryButton}" Content="创建并进入" Command="{Binding CreateCommand}" Padding="24,8"/>
+                    <Button Classes="ghost" Content="取消" Command="{Binding CancelCommand}" Padding="20,8" Margin="0,0,8,0"/>
+                    <Button Classes="primary" Content="创建并进入" Command="{Binding CreateCommand}" Padding="24,8"/>
                 </StackPanel>
             </Grid>
         </Border>

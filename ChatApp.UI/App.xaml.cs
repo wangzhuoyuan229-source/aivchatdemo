@@ -1,8 +1,10 @@
-using System.Windows;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
 using ChatApp.AI;
 using ChatApp.Infrastructure;
+using ChatApp.UI.Services;
 using ChatApp.UI.ViewModels;
-using ChatApp.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -11,12 +13,13 @@ namespace ChatApp.UI;
 
 public partial class App : Application
 {
-    private readonly IHost _host;
+    private IHost? _host;
 
-    /// <summary>Global service provider for view code-behind that needs DI (e.g. dialogs).</summary>
     public static IServiceProvider Services { get; private set; } = default!;
 
-    public App()
+    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+
+    public override async void OnFrameworkInitializationCompleted()
     {
         _host = Host.CreateDefaultBuilder()
             .ConfigureLogging(logging =>
@@ -28,8 +31,7 @@ public partial class App : Application
             {
                 services.AddInfrastructure();
                 services.AddChatAppAi();
-
-                // View models
+                services.AddSingleton<IDialogService, DialogService>();
                 services.AddSingleton<MainViewModel>();
                 services.AddSingleton<INavigation>(sp => sp.GetRequiredService<MainViewModel>());
                 services.AddSingleton<ChatViewModel>();
@@ -39,31 +41,30 @@ public partial class App : Application
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<CreateRoleViewModel>();
                 services.AddSingleton<CreateGroupChatViewModel>();
-
-                // Views
                 services.AddSingleton<MainWindow>();
             })
             .Build();
         Services = _host.Services;
-    }
 
-    protected override async void OnStartup(StartupEventArgs e)
-    {
-        base.OnStartup(e);
-
-        try
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            await InfrastructureModule.InitializeAsync(_host.Services);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"初始化数据库失败：\n{ex.Message}", "启动错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            var window = _host.Services.GetRequiredService<MainWindow>();
+            desktop.MainWindow = window;
+            window.DataContext = _host.Services.GetRequiredService<MainViewModel>();
+            window.Show();
+
+            try
+            {
+                await InfrastructureModule.InitializeAsync(_host.Services);
+                await ((MainViewModel)window.DataContext).InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                await _host.Services.GetRequiredService<IDialogService>()
+                    .ShowErrorAsync($"初始化数据库失败：\n{ex.Message}", "启动错误");
+            }
         }
 
-        var window = _host.Services.GetRequiredService<MainWindow>();
-        var vm = _host.Services.GetRequiredService<MainViewModel>();
-        window.DataContext = vm;
-        await vm.InitializeAsync();
-        window.Show();
+        base.OnFrameworkInitializationCompleted();
     }
 }

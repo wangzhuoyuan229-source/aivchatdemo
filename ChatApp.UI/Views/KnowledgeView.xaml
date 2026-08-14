@@ -1,13 +1,14 @@
 <UserControl x:Class="ChatApp.UI.Views.KnowledgeView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:ChatApp.UI.ViewModels"
-             xmlns:cm="clr-namespace:ChatApp.Core.Models;assembly=ChatApp.Core"
-             xmlns:conv="clr-namespace:ChatApp.UI.Converters"
+             xmlns:vm="using:ChatApp.UI.ViewModels"
+             xmlns:cm="using:ChatApp.Core.Models"
+             xmlns:conv="using:ChatApp.UI.Converters"
              Background="{StaticResource BgBrush}">
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="Bool2Vis"/>
         <conv:BooleanToVisibilityInverseConverter x:Key="Bool2VisInverse"/>
+        <conv:NullToVisibilityConverter x:Key="Null2Vis"/>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -29,24 +30,24 @@
                     <TextBlock Text="📚 知识库" FontSize="16" FontWeight="SemiBold"/>
                     <TextBlock Text="导入小说/设定集等文档，AI 将基于其世界观回答。左侧可创建分组管理文档。" FontSize="12" Foreground="{StaticResource TextSubBrush}" Margin="0,2,0,0"/>
                 </StackPanel>
-                <Button Grid.Column="1" Style="{StaticResource GhostButton}" Content="↻ 刷新" Command="{Binding RefreshCommand}" Margin="0,0,8,0"/>
+                <Button Grid.Column="1" Classes="ghost" Content="↻ 刷新" Command="{Binding RefreshCommand}" Margin="0,0,8,0"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button Style="{StaticResource GhostButton}" Content="✎ 批量管理" Command="{Binding ToggleBatchModeCommand}" Margin="0,0,8,0"/>
-                    <Button Style="{StaticResource GhostButton}" Content="＋ 新建分组" Command="{Binding CreateGroupCommand}" Margin="0,0,8,0"/>
-                    <Button Style="{StaticResource GhostButton}" Content="📁 导入文件夹" Command="{Binding ImportFolderCommand}" Margin="0,0,8,0"/>
-                    <Button Style="{StaticResource PrimaryButton}" Content="+ 导入文档" Command="{Binding ImportCommand}"/>
+                    <Button Classes="ghost" Content="✎ 批量管理" Command="{Binding ToggleBatchModeCommand}" Margin="0,0,8,0"/>
+                    <Button Classes="ghost" Content="＋ 新建分组" Command="{Binding CreateGroupCommand}" Margin="0,0,8,0"/>
+                    <Button Classes="ghost" Content="📁 导入文件夹" Command="{Binding ImportFolderCommand}" Margin="0,0,8,0"/>
+                    <Button Classes="primary" Content="+ 导入文档" Command="{Binding ImportCommand}"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- 导入进度条 -->
-        <Border Grid.Row="1" Background="#FFFBEA" Padding="20,8" Visibility="{Binding IsImporting, Converter={StaticResource Bool2Vis}}">
+        <Border Grid.Row="1" Background="#FFFBEA" Padding="20,8" IsVisible="{Binding IsImporting, Converter={StaticResource Bool2Vis}}">
             <TextBlock Text="{Binding ProgressText}" Foreground="#B8860B" FontSize="12"/>
         </Border>
 
         <!-- 批量操作工具栏（仅批量模式显示） -->
         <Border Grid.Row="2" Background="#F0F7FF" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,10"
-                Visibility="{Binding IsBatchMode, Converter={StaticResource Bool2Vis}}">
+                IsVisible="{Binding IsBatchMode, Converter={StaticResource Bool2Vis}}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -63,8 +64,8 @@
                     <TextBlock Text="全选" FontSize="13" Margin="6,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <Button Grid.Column="1" Style="{StaticResource GhostButton}" Content="全选" Command="{Binding SelectAllCommand}" Margin="16,0,8,0"/>
-                <Button Grid.Column="2" Style="{StaticResource GhostButton}" Content="取消选择" Command="{Binding DeselectAllCommand}" Margin="0,0,8,0"/>
+                <Button Grid.Column="1" Classes="ghost" Content="全选" Command="{Binding SelectAllCommand}" Margin="16,0,8,0"/>
+                <Button Grid.Column="2" Classes="ghost" Content="取消选择" Command="{Binding DeselectAllCommand}" Margin="0,0,8,0"/>
 
                 <!-- 选中计数 -->
                 <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="13" Foreground="{StaticResource TextSubBrush}" Margin="8,0,0,0">
@@ -73,8 +74,8 @@
 
                 <!-- 批量操作按钮 -->
                 <StackPanel Grid.Column="5" Orientation="Horizontal">
-                    <Button Style="{StaticResource GhostButton}" Content="📦 移动到分组" Command="{Binding BatchMoveCommand}" Margin="0,0,8,0"/>
-                    <Button Style="{StaticResource GhostButton}" Content="🗑 批量删除" Command="{Binding BatchDeleteCommand}" Foreground="#E53935"/>
+                    <Button Classes="ghost" Content="📦 移动到分组" Command="{Binding BatchMoveCommand}" Margin="0,0,8,0"/>
+                    <Button Classes="ghost" Content="🗑 批量删除" Command="{Binding BatchDeleteCommand}" Foreground="#E53935"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -92,41 +93,27 @@
                     <TextBlock DockPanel.Dock="Top" Text="分组" FontWeight="SemiBold" FontSize="13" Margin="16,12,0,8"/>
                     <ListBox x:Name="GroupsList" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"
                              Background="Transparent" BorderThickness="0" Padding="0">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="Padding" Value="16,8"/>
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="BorderThickness" Value="3,0,0,0"/>
-                                <Setter Property="BorderBrush" Value="Transparent"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                                        <Setter Property="Background" Value="#F5F5F5"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:GroupNode}">
-                                <Grid>
-                                    <Grid.ContextMenu>
-                                        <ContextMenu Visibility="{Binding SourceGroup, Converter={x:Static conv:NullToVisibilityConverter.Instance}}">
-                                            <MenuItem Header="重命名…"
-                                                      Command="{Binding DataContext.RenameGroupCommand, Source={x:Reference GroupsList}}"
-                                                      CommandParameter="{Binding}"/>
-                                            <MenuItem Header="删除分组…"
-                                                      Command="{Binding DataContext.DeleteGroupCommand, Source={x:Reference GroupsList}}"
-                                                      CommandParameter="{Binding}"/>
-                                        </ContextMenu>
-                                    </Grid.ContextMenu>
+                            <DataTemplate>
+                                <Grid Margin="8,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="🗂" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <TextBlock Grid.Column="1" Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Grid.Column="2" Text="{Binding DocumentCount}" Foreground="{StaticResource TextSubBrush}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                    <Button Grid.Column="3" Classes="ghost" Content="✎" Padding="4"
+                                            IsVisible="{Binding SourceGroup, Converter={StaticResource Null2Vis}}"
+                                            Command="{Binding DataContext.RenameGroupCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            CommandParameter="{Binding}" ToolTip.Tip="重命名"/>
+                                    <Button Grid.Column="4" Classes="ghost" Content="×" Padding="4" Foreground="#E53935"
+                                            IsVisible="{Binding SourceGroup, Converter={StaticResource Null2Vis}}"
+                                            Command="{Binding DataContext.DeleteGroupCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            CommandParameter="{Binding}" ToolTip.Tip="删除分组"/>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -138,23 +125,22 @@
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="20,8">
                 <ItemsControl x:Name="DocsList" ItemsSource="{Binding Documents}">
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:SelectableDocument}">
-                            <Border Background="White" CornerRadius="6" Padding="16,12" Margin="0,0,0,10">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.15" Color="Gray"/>
-                                </Border.Effect>
+                        <DataTemplate>
+                            <Border Background="White" CornerRadius="6" Padding="16,12" Margin="0,0,0,10"
+                                    BoxShadow="0 1 6 0 #26000000">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
                                     <!-- 复选框（仅批量模式显示） -->
                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
                                               VerticalAlignment="Center" Margin="0,0,12,0"
-                                              Visibility="{Binding DataContext.IsBatchMode, Source={x:Reference DocsList}, Converter={StaticResource Bool2Vis}}"/>
+                                              IsVisible="{Binding DataContext.IsBatchMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource Bool2Vis}}"/>
 
                                     <TextBlock Grid.Column="1" Text="📄" FontSize="28" VerticalAlignment="Center" Margin="0,0,14,0"/>
                                     <StackPanel Grid.Column="2" VerticalAlignment="Center">
@@ -168,23 +154,15 @@
                                         </StackPanel>
                                     </StackPanel>
 
-                                    <!-- 单个删除按钮（非批量模式显示） -->
-                                    <Button Grid.Column="3" Style="{StaticResource GhostButton}" Content="删除"
-                                            Visibility="{Binding DataContext.IsBatchMode, Source={x:Reference DocsList}, Converter={StaticResource Bool2VisInverse}}"
-                                            Command="{Binding DataContext.DeleteDocumentCommand, Source={x:Reference DocsList}}"
+                                    <Button Grid.Column="3" Classes="ghost" Content="移动"
+                                            IsVisible="{Binding DataContext.IsBatchMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource Bool2VisInverse}}"
+                                            Command="{Binding DataContext.MoveDocumentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}"/>
+                                    <Button Grid.Column="4" Classes="ghost" Content="删除" Foreground="#E53935"
+                                            IsVisible="{Binding DataContext.IsBatchMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource Bool2VisInverse}}"
+                                            Command="{Binding DataContext.DeleteDocumentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"/>
                                 </Grid>
-                                <!-- 文档项右键菜单：移动到分组 -->
-                                <Border.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="移动到分组…"
-                                                  Command="{Binding DataContext.MoveDocumentCommand, Source={x:Reference DocsList}}"
-                                                  CommandParameter="{Binding}"/>
-                                        <MenuItem Header="删除…"
-                                                  Command="{Binding DataContext.DeleteDocumentCommand, Source={x:Reference DocsList}}"
-                                                  CommandParameter="{Binding}"/>
-                                    </ContextMenu>
-                                </Border.ContextMenu>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

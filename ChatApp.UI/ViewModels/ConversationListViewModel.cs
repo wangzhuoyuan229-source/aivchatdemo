@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using ChatApp.Core.Models;
 using ChatApp.Core.Services;
+using ChatApp.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -24,17 +25,20 @@ public partial class ConversationListViewModel : ViewModelBase
     private readonly IRoleService _roles;
     private readonly INavigation _navigation;
     private readonly ILogger<ConversationListViewModel> _logger;
+    private readonly IDialogService _dialogs;
 
     public ObservableCollection<ConversationItemViewModel> Items { get; } = new();
 
     [ObservableProperty] private string _searchText = string.Empty;
 
-    public ConversationListViewModel(IChatHistoryService history, IRoleService roles, INavigation navigation, ILogger<ConversationListViewModel> logger)
+    public ConversationListViewModel(IChatHistoryService history, IRoleService roles, INavigation navigation,
+        ILogger<ConversationListViewModel> logger, IDialogService dialogs)
     {
         _history = history;
         _roles = roles;
         _navigation = navigation;
         _logger = logger;
+        _dialogs = dialogs;
     }
 
     public async Task LoadAsync()
@@ -94,10 +98,10 @@ public partial class ConversationListViewModel : ViewModelBase
     private async Task DeleteAsync(ConversationItemViewModel item)
     {
         // 弹出确认对话框，避免误删
-        var confirm = System.Windows.MessageBox.Show(
+        var confirm = await _dialogs.ConfirmAsync(
             $"确定要删除会话「{item.Title}」吗？\n\n该操作不可撤销，将删除该会话的所有消息。",
-            "删除会话", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
-        if (confirm != System.Windows.MessageBoxResult.Yes) return;
+            "删除会话");
+        if (!confirm) return;
 
         try
         {
@@ -113,8 +117,7 @@ public partial class ConversationListViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Delete conversation failed.");
-            System.Windows.MessageBox.Show($"删除会话失败：{ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"删除会话失败：{ex.Message}");
         }
     }
 

@@ -1,11 +1,10 @@
 using System.Collections.ObjectModel;
 using ChatApp.Core.Models;
 using ChatApp.Core.Services;
-using ChatApp.UI.Views;
+using ChatApp.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
 
 namespace ChatApp.UI.ViewModels;
 
@@ -13,6 +12,7 @@ public partial class KnowledgeViewModel : ViewModelBase
 {
     private readonly IKnowledgeService _knowledge;
     private readonly ILogger<KnowledgeViewModel> _logger;
+    private readonly IDialogService _dialogs;
 
     public ObservableCollection<GroupNode> Groups { get; } = new();
     public ObservableCollection<SelectableDocument> Documents { get; } = new();
@@ -40,10 +40,11 @@ public partial class KnowledgeViewModel : ViewModelBase
         { GroupId: var id } => id,
     };
 
-    public KnowledgeViewModel(IKnowledgeService knowledge, ILogger<KnowledgeViewModel> logger)
+    public KnowledgeViewModel(IKnowledgeService knowledge, ILogger<KnowledgeViewModel> logger, IDialogService dialogs)
     {
         _knowledge = knowledge;
         _logger = logger;
+        _dialogs = dialogs;
     }
 
     public async Task LoadAsync()
@@ -177,13 +178,8 @@ public partial class KnowledgeViewModel : ViewModelBase
     [RelayCommand]
     private async Task ImportAsync()
     {
-        var dlg = new OpenFileDialog
-        {
-            Title = "选择知识库文档",
-            Filter = "支持的文档|*.txt;*.md;*.pdf|文本文件|*.txt|Markdown|*.md|PDF|*.pdf|所有文件|*.*",
-            Multiselect = false
-        };
-        if (dlg.ShowDialog() != true) return;
+        var filePath = await _dialogs.PickFileAsync();
+        if (string.IsNullOrWhiteSpace(filePath)) return;
 
         IsImporting = true;
         ProgressText = "导入中…";
@@ -191,7 +187,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         {
             var targetGroup = CurrentImportGroupId;
             var progress = new Progress<(int done, int total)>(p => ProgressText = p.total > 0 ? $"分块并嵌入 {p.done}/{p.total}" : "处理中…");
-            await _knowledge.ImportAsync(dlg.FileName, progress, groupId: targetGroup);
+            await _knowledge.ImportAsync(filePath, progress, groupId: targetGroup);
             await LoadAsync();
             ProgressText = $"导入完成 ✓（已加入：{SelectedGroup?.DisplayName ?? "未分组"}）";
         }
@@ -209,8 +205,8 @@ public partial class KnowledgeViewModel : ViewModelBase
     [RelayCommand]
     private async Task ImportFolderAsync()
     {
-        var dlg = new OpenFolderDialog { Title = "选择知识库文件夹（含子文件夹）" };
-        if (dlg.ShowDialog() != true) return;
+        var folderPath = await _dialogs.PickFolderAsync();
+        if (string.IsNullOrWhiteSpace(folderPath)) return;
 
         IsImporting = true;
         ProgressText = "扫描文件夹…";
@@ -223,7 +219,7 @@ public partial class KnowledgeViewModel : ViewModelBase
                 else if (string.IsNullOrEmpty(p.currentFile)) ProgressText = $"完成 {p.doneFiles}/{p.totalFiles}";
                 else ProgressText = $"导入 {p.doneFiles + 1}/{p.totalFiles}：{p.currentFile}";
             });
-            var docs = await _knowledge.ImportDirectoryAsync(dlg.FolderName, recursive: true, progress, groupId: targetGroup);
+            var docs = await _knowledge.ImportDirectoryAsync(folderPath, recursive: true, progress, groupId: targetGroup);
             await LoadAsync();
             ProgressText = docs.Count > 0 ? $"文件夹导入完成 ✓（{docs.Count} 个文档）" : "未发现可导入的文档";
         }
@@ -241,10 +237,10 @@ public partial class KnowledgeViewModel : ViewModelBase
     [RelayCommand]
     private async Task DeleteDocumentAsync(SelectableDocument doc)
     {
-        var confirm = System.Windows.MessageBox.Show(
+        var confirm = await _dialogs.ConfirmAsync(
             $"确定要删除文档「{doc.Title}」吗？\n\n该操作将一并删除其所有分块与向量。",
-            "删除文档", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
-        if (confirm != System.Windows.MessageBoxResult.Yes) return;
+            "删除文档");
+        if (!confirm) return;
 
         try
         {
@@ -254,8 +250,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Delete document failed.");
-            System.Windows.MessageBox.Show($"删除失败：{ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"删除失败：{ex.Message}");
         }
     }
 
@@ -268,23 +263,17 @@ public partial class KnowledgeViewModel : ViewModelBase
         foreach (var g in groups)
             options.Add((g.Name, (int?)g.Id));
 
-        int? targetGroupId = null;
-        bool ok = false;
+        int? targetGroupId;
+        bool ok;
         try
         {
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                var (confirmed, value) = SelectionDialog.Show(
-                    $"选择「{doc.Title}」的目标分组：", options, title: "移动文档");
-                ok = confirmed;
-                targetGroupId = value;
-            });
+            (ok, targetGroupId) = await _dialogs.SelectAsync(
+                $"选择「{doc.Title}」的目标分组：", options, "移动文档");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Show SelectionDialog failed.");
-            System.Windows.MessageBox.Show($"打开对话框失败：{ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"打开对话框失败：{ex.Message}");
             return;
         }
         if (!ok) return;
@@ -296,8 +285,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"移动文档失败：{ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"移动文档失败：{ex.Message}");
             _logger.LogWarning(ex, "Move document failed.");
         }
     }
@@ -310,10 +298,10 @@ public partial class KnowledgeViewModel : ViewModelBase
         var selected = Documents.Where(d => d.IsSelected).Select(d => d.Id).ToList();
         if (selected.Count == 0) return;
 
-        var confirm = System.Windows.MessageBox.Show(
+        var confirm = await _dialogs.ConfirmAsync(
             $"确定要删除选中的 {selected.Count} 个文档吗？\n\n该操作将一并删除这些文档的所有分块与向量，不可撤销。",
-            "批量删除", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
-        if (confirm != System.Windows.MessageBoxResult.Yes) return;
+            "批量删除");
+        if (!confirm) return;
 
         try
         {
@@ -324,8 +312,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Batch delete failed.");
-            System.Windows.MessageBox.Show($"批量删除失败：{ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"批量删除失败：{ex.Message}");
         }
     }
 
@@ -340,24 +327,17 @@ public partial class KnowledgeViewModel : ViewModelBase
         foreach (var g in groups)
             options.Add((g.Name, (int?)g.Id));
 
-        int? targetGroupId = null;
-        bool ok = false;
+        int? targetGroupId;
+        bool ok;
         try
         {
-            // 确保在 UI 线程上弹出对话框
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                var (confirmed, value) = SelectionDialog.Show(
-                    $"选择 {selectedIds.Count} 个文档的目标分组：", options, title: "批量移动文档");
-                ok = confirmed;
-                targetGroupId = value;
-            });
+            (ok, targetGroupId) = await _dialogs.SelectAsync(
+                $"选择 {selectedIds.Count} 个文档的目标分组：", options, "批量移动文档");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Show SelectionDialog failed.");
-            System.Windows.MessageBox.Show($"打开对话框失败：{ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"打开对话框失败：{ex.Message}");
             return;
         }
         if (!ok) return;
@@ -370,8 +350,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"批量移动失败：{ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"批量移动失败：{ex.Message}");
             _logger.LogWarning(ex, "Batch move failed.");
         }
     }
@@ -381,7 +360,7 @@ public partial class KnowledgeViewModel : ViewModelBase
     [RelayCommand]
     private async Task CreateGroupAsync()
     {
-        var (ok, name) = InputDialog.Show("请输入分组名称：", defaultValue: "", title: "新建分组");
+        var (ok, name) = await _dialogs.PromptAsync("请输入分组名称：", "", "新建分组");
         if (!ok || string.IsNullOrWhiteSpace(name)) return;
 
         try
@@ -393,8 +372,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"创建分组失败：{ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"创建分组失败：{ex.Message}");
             _logger.LogWarning(ex, "Create group failed.");
         }
     }
@@ -403,7 +381,7 @@ public partial class KnowledgeViewModel : ViewModelBase
     private async Task RenameGroupAsync(GroupNode node)
     {
         if (node?.SourceGroup is null) return;
-        var (ok, name) = InputDialog.Show("请输入新的分组名称：", defaultValue: node.DisplayName, title: "重命名分组");
+        var (ok, name) = await _dialogs.PromptAsync("请输入新的分组名称：", node.DisplayName, "重命名分组");
         if (!ok || string.IsNullOrWhiteSpace(name)) return;
 
         try
@@ -413,8 +391,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"重命名失败：{ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"重命名失败：{ex.Message}");
             _logger.LogWarning(ex, "Rename group failed.");
         }
     }
@@ -428,16 +405,9 @@ public partial class KnowledgeViewModel : ViewModelBase
                   "「是」：一并删除这些文档（含向量）\n" +
                   "「否」：把这些文档移到「未分组」（保留文档）\n" +
                   "「取消」：放弃操作";
-        var result = System.Windows.MessageBox.Show(msg, "删除分组",
-            System.Windows.MessageBoxButton.YesNoCancel, System.Windows.MessageBoxImage.Question);
-
-        bool deleteDocuments;
-        switch (result)
-        {
-            case System.Windows.MessageBoxResult.Yes: deleteDocuments = true; break;
-            case System.Windows.MessageBoxResult.No: deleteDocuments = false; break;
-            default: return;
-        }
+        var result = await _dialogs.ConfirmDeleteGroupAsync(msg, "删除分组");
+        if (result is null) return;
+        var deleteDocuments = result == DeleteGroupChoice.DeleteDocuments;
 
         try
         {
@@ -447,8 +417,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"删除分组失败：{ex.Message}", "错误",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            await _dialogs.ShowErrorAsync($"删除分组失败：{ex.Message}");
             _logger.LogWarning(ex, "Delete group failed.");
         }
     }

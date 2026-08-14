@@ -1,10 +1,20 @@
 # AI 角色扮演聊天应用 (ChatApp)
 
-> .NET 8 + WPF 桌面应用 | Semantic Kernel AI 引擎 | EF Core + SQLite 持久化
+> .NET 8 + Avalonia 跨平台桌面应用 | Semantic Kernel AI 引擎 | EF Core + SQLite 持久化
 
 ## 项目概述
 
-ChatApp 是一款 Windows 桌面 AI 角色扮演聊天应用，支持 1:1 私聊与多 AI 群聊。用户可以创建/管理 AI 角色（人设、性格、说话风格），导入知识库文档，并通过 OpenAI 兼容 API 驱动角色进行对话。应用采用 BYOK（自带密钥）模式，支持任何兼容 OpenAI 接口的服务。
+ChatApp 是一款支持 macOS 与 Windows 的桌面 AI 角色扮演聊天应用，支持 1:1 私聊与多 AI 群聊。用户可以创建/管理 AI 角色（人设、性格、说话风格），导入知识库文档，并通过 OpenAI 兼容 API 驱动角色进行对话。应用采用 BYOK（自带密钥）模式，支持任何兼容 OpenAI 接口的服务。
+
+## macOS 发布
+
+安装 .NET 8 SDK 后运行：
+
+```bash
+./publish-macos.sh
+```
+
+脚本会自动识别 Apple Silicon 或 Intel Mac，生成 `publish/osx-arm64/ChatApp.app` 或 `publish/osx-x64/ChatApp.app`。首次分发给其他用户时，未签名应用可能需要在 Finder 中右键选择“打开”；正式公开发布建议使用 Apple Developer ID 签名和公证。
 
 ## Windows 发布
 
@@ -21,7 +31,7 @@ ChatApp 是一款 Windows 桌面 AI 角色扮演聊天应用，支持 1:1 私聊
 | 层级 | 技术 | 版本 |
 |------|------|------|
 | 运行时 | .NET 8 | 8.0 |
-| UI 框架 | WPF (Windows Presentation Foundation) | net8.0-windows |
+| UI 框架 | Avalonia | 11.3.20 |
 | MVVM 框架 | CommunityToolkit.Mvvm | 8.2.2 |
 | AI 引擎 | Microsoft Semantic Kernel | 1.21.1 |
 | 数据库 | EF Core + SQLite (Microsoft.Data.Sqlite) | 8.0.11 |
@@ -38,7 +48,7 @@ ChatApp.sln
 ├── ChatApp.Core            # 领域层：模型、服务接口、设置
 ├── ChatApp.Infrastructure  # 基础设施层：数据访问、仓储、向量存储
 ├── ChatApp.AI              # AI 层：语义内核、编排器、记忆/知识服务
-└── ChatApp.UI              # 表现层：WPF 界面、MVVM 视图模型
+└── ChatApp.UI              # 表现层：Avalonia 跨平台界面、MVVM 视图模型
 ```
 
 ### 依赖关系
@@ -227,9 +237,10 @@ ChatApp.UI/
 ├── App.xaml.cs                   # 启动引导（IHost + DI + 初始化）
 ├── MainWindow.xaml               # 主窗口（导航栏 + 中栏 + 右栏布局）
 ├── MainWindow.xaml.cs            # 代码后置（空）
-├── app.manifest                  # Windows 应用清单
+├── Program.cs                    # Avalonia 跨平台程序入口
+├── Platforms/macOS/Info.plist    # macOS 应用包元数据
 ├── Converters/
-│   └── Converters.cs             # 10 个 WPF 值转换器
+│   └── Converters.cs             # Avalonia 值转换器
 ├── ViewModels/
 │   ├── ViewModelBase.cs          # ObservableObject 基类
 │   ├── INavigation.cs            # 导航抽象接口
@@ -352,7 +363,7 @@ KnowledgeDocuments (M) ──< KnowledgeChunks (M)
 
 - 默认路径：`%LOCALAPPDATA%\ChatApp\`
 - 数据库文件：`chatapp.db`
-- 知识文件存储：`knowledge\` 子目录
+- 知识文件存储：`knowledge` 子目录
 - 可通过环境变量 `CHATAPP_DATA_DIR` 重定向
 
 ---
@@ -362,8 +373,8 @@ KnowledgeDocuments (M) ──< KnowledgeChunks (M)
 ### 环境要求
 
 - .NET 8 SDK
-- Visual Studio 2022 或 VS Code + C# 扩展
-- Windows 10/11（WPF 依赖）
+- Windows 可使用 Visual Studio 2022；macOS 推荐 JetBrains Rider，也可使用 VS Code + C# 扩展
+- macOS 12+ 或 Windows 10/11
 
 ### 构建与运行
 

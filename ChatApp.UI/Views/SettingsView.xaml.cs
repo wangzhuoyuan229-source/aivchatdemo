@@ -1,11 +1,9 @@
-using System.Windows.Controls;
+using Avalonia.Controls;
+using Avalonia.Markup.Xaml;
 
 namespace ChatApp.UI.Views;
 
 public partial class SettingsView : UserControl
 {
-    public SettingsView()
-    {
-        InitializeComponent();
-    }
+    public SettingsView() => AvaloniaXamlLoader.Load(this);
 }

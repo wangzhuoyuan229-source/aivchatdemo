@@ -1,120 +1,83 @@
 using System.Globalization;
-using System.Windows;
-using System.Windows.Data;
-using System.Windows.Media;
+using Avalonia;
+using Avalonia.Data.Converters;
+using Avalonia.Layout;
+using Avalonia.Media;
 
 namespace ChatApp.UI.Converters;
 
-public class NullToVisibilityConverter : IValueConverter
+public abstract class ConverterBase : IValueConverter
+{
+    public abstract object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture);
+    public virtual object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => AvaloniaProperty.UnsetValue;
+}
+
+public sealed class NullToVisibilityConverter : ConverterBase
 {
     public static readonly NullToVisibilityConverter Instance = new();
-
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is null ? Visibility.Collapsed : Visibility.Visible;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is not null;
 }
 
-public class StringToVisibilityConverter : IValueConverter
+public sealed class StringToVisibilityConverter : ConverterBase
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => !string.IsNullOrWhiteSpace(value as string) ? Visibility.Visible : Visibility.Collapsed;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is string text && !string.IsNullOrWhiteSpace(text);
 }
 
-public class BoolToVisibilityConverter : IValueConverter
+public sealed class BoolToVisibilityConverter : ConverterBase
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b ? Visibility.Visible : Visibility.Collapsed;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is Visibility v && v == Visibility.Visible;
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is true;
+    public override object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => value is true;
 }
 
-public class InverseNullToVisibilityConverter : IValueConverter
+public sealed class InverseNullToVisibilityConverter : ConverterBase
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is null ? Visibility.Visible : Visibility.Collapsed;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is null;
 }
 
-public class InverseBooleanConverter : IValueConverter
+public sealed class InverseBooleanConverter : ConverterBase
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b ? !b : Binding.DoNothing;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b ? !b : Binding.DoNothing;
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is not true;
+    public override object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => value is not true;
 }
 
-public class BooleanToVisibilityInverseConverter : IValueConverter
+public sealed class BooleanToVisibilityInverseConverter : ConverterBase
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b ? Visibility.Collapsed : Visibility.Visible;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is not true;
 }
 
-public class AccentIfEqualConverter : IValueConverter
+public sealed class AccentIfEqualConverter : ConverterBase
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        var equal = value?.ToString() == parameter?.ToString();
-        if (equal && Application.Current.TryFindResource("AccentBrush") is Brush b) return b;
-        return Brushes.Transparent;
-    }
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    private static readonly IBrush Accent = new SolidColorBrush(Color.Parse("#07C160"));
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => string.Equals(value?.ToString(), parameter?.ToString(), StringComparison.OrdinalIgnoreCase)
+            ? Accent
+            : Brushes.Transparent;
 }
 
-public class BoolToAlignmentConverter : IValueConverter
+public sealed class BoolToAlignmentConverter : ConverterBase
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b ? HorizontalAlignment.Right : HorizontalAlignment.Left;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? HorizontalAlignment.Right : HorizontalAlignment.Left;
 }
 
-public class BoolToTextAlignmentConverter : IValueConverter
+public sealed class BoolToTextAlignmentConverter : ConverterBase
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b ? TextAlignment.Right : TextAlignment.Left;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? TextAlignment.Right : TextAlignment.Left;
 }
 
-public class BoolToFlowDirectionConverter : IValueConverter
+public sealed class BoolToFlowDirectionConverter : ConverterBase
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
 }
 
-public class BubbleBrushConverter : IValueConverter
+public sealed class BubbleBrushConverter : ConverterBase
 {
     public static readonly BubbleBrushConverter Instance = new();
-
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        if (value is bool isUser)
-        {
-            var key = isUser ? "UserBubbleBrush" : "AssistantBubbleBrush";
-            if (Application.Current.TryFindResource(key) is Brush b) return b;
-        }
-        return Brushes.White;
-    }
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    private static readonly IBrush User = new SolidColorBrush(Color.Parse("#95EC69"));
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? User : Brushes.White;
 }
