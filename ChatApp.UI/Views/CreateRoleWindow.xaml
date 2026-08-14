@@ -1,0 +1,86 @@
+<Window x:Class="ChatApp.UI.Views.CreateRoleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="创建 AI 角色" Height="640" Width="520"
+        WindowStartupLocation="CenterOwner" Background="{StaticResource BgBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,14">
+            <TextBlock Text="✨ 创建 AI 角色" FontSize="16" FontWeight="SemiBold"/>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,16">
+            <StackPanel>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="头像(emoji)" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Avatar}" MaxLength="4" Width="80" HorizontalAlignment="Left"/>
+                </Grid>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="名称 *" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+                </Grid>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="简介" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48"/>
+                </Grid>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="背景设定" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Background}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"/>
+                </Grid>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="性格" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Personality}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56"/>
+                </Grid>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="说话风格" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <TextBox Grid.Column="1" Text="{Binding SpeakingStyle}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56"/>
+                </Grid>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="开场问候" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Greeting}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48"/>
+                </Grid>
+                <TextBlock Text="{Binding ErrorText}" Foreground="#E53935" FontSize="12" TextWrapping="Wrap"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="20,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource GhostButton}" Content="取消" Command="{Binding CancelCommand}" Padding="20,8" Margin="0,0,8,0"/>
+                <Button Style="{StaticResource PrimaryButton}" Content="创建并对话" Command="{Binding CreateCommand}" Padding="24,8"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

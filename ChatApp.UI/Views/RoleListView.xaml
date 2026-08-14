@@ -1,0 +1,122 @@
+<UserControl x:Class="ChatApp.UI.Views.RoleListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:ChatApp.UI.ViewModels"
+             xmlns:cm="clr-namespace:ChatApp.Core.Models;assembly=ChatApp.Core"
+             xmlns:conv="clr-namespace:ChatApp.UI.Converters"
+             Background="White">
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="Bool2Vis"/>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="16,14,12,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="角色库" Style="{StaticResource TitleText}"/>
+            <Button Grid.Column="1" Style="{StaticResource GhostButton}" Content="群聊"
+                    Click="CreateGroupChat_Click" Margin="0,0,4,0"/>
+            <Button Grid.Column="2" Style="{StaticResource GhostButton}" Content="新建"
+                    Click="CreateRole_Click" Margin="0,0,4,0" x:Name="CreateRoleButton"/>
+            <Button Grid.Column="3" Style="{StaticResource GhostButton}" Content="↻"
+                    Command="{Binding RefreshCommand}"/>
+        </Grid>
+
+        <!-- Recent group chats (collapses when empty) -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,6"
+                    Visibility="{Binding HasGroupChats, Converter={StaticResource Bool2Vis}}">
+            <TextBlock Text="最近群聊" FontSize="12" Foreground="{StaticResource TextSubBrush}"
+                       Margin="16,4,12,4"/>
+            <ItemsControl ItemsSource="{Binding GroupChats}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Command="{Binding DataContext.OpenGroupChatCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                Style="{StaticResource GhostButton}" HorizontalContentAlignment="Stretch"
+                                Margin="8,1" Padding="8,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Width="34" Height="34" CornerRadius="6" Background="#F2F2F2" VerticalAlignment="Center" Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Avatar}" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding RoleName}" FontSize="11" Foreground="{StaticResource TextSubBrush}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding UpdatedText}" FontSize="10" Foreground="{StaticResource TextSubBrush}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+        <ListBox Grid.Row="2" x:Name="RoleList"
+                 ItemsSource="{Binding Roles}" Background="Transparent" BorderThickness="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="bd" Background="Transparent">
+                                    <ContentPresenter/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="#F0F0F0"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="{x:Type cm:Role}">
+                    <Grid Margin="14,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="6" Background="#F2F2F2" VerticalAlignment="Top">
+                            <TextBlock Text="{Binding Avatar}" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextMainBrush}"/>
+                            <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{StaticResource TextSubBrush}"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="160"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Style="{StaticResource GhostButton}" Content="删除"
+                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                    CommandParameter="{Binding}" Margin="0,0,4,0"
+                                    Foreground="#E53935"/>
+                            <Button Style="{StaticResource GhostButton}" Content="对话 →"
+                                    Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                    CommandParameter="{Binding}"/>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>

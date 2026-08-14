@@ -1,0 +1,85 @@
+<Window x:Class="ChatApp.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:ChatApp.UI.Converters"
+        Title="{Binding WindowTitle}" Height="760" Width="1180"
+        MinHeight="600" MinWidth="960"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgBrush}">
+    <Window.Resources>
+        <conv:InverseNullToVisibilityConverter x:Key="InverseNull2Vis"/>
+        <conv:NullToVisibilityConverter x:Key="Null2Vis"/>
+        <conv:AccentIfEqualConverter x:Key="AccentIfEqual"/>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="64"/>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Column 1: Navigation rail -->
+        <Border Grid.Column="0" Background="#2E2E2E">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="AI" FontSize="22" FontWeight="Bold" Foreground="White"
+                           HorizontalAlignment="Center" Margin="0,18,0,12"/>
+
+                <StackPanel Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Center">
+                    <Button Style="{StaticResource NavButton}" ToolTip="会话"
+                            Tag="conversations" Command="{Binding ShowConversationsCommand}"
+                            Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=conversations}">
+                        <TextBlock Text="&#xE8BD;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="White"/>
+                    </Button>
+                    <Button Style="{StaticResource NavButton}" ToolTip="角色库"
+                            Tag="roles" Command="{Binding ShowRolesCommand}"
+                            Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=roles}">
+                        <TextBlock Text="&#xE716;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="White"/>
+                    </Button>
+                    <Button Style="{StaticResource NavButton}" ToolTip="知识库"
+                            Tag="knowledge" Command="{Binding ShowKnowledgeCommand}"
+                            Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=knowledge}">
+                        <TextBlock Text="&#xE82D;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="White"/>
+                    </Button>
+                    <Button Style="{StaticResource NavButton}" ToolTip="设置"
+                            Tag="settings" Command="{Binding ShowSettingsCommand}"
+                            Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=settings}">
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="White"/>
+                    </Button>
+                </StackPanel>
+
+                <TextBlock Grid.Row="2" Text="v1.0" Foreground="#888" FontSize="10"
+                           HorizontalAlignment="Center" Margin="0,0,0,12"/>
+            </Grid>
+        </Border>
+
+        <!-- Column 2: Middle list -->
+        <Border Grid.Column="1" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <ContentControl Grid.Row="1" Content="{Binding MiddleView}"/>
+            </Grid>
+        </Border>
+
+        <!-- Column 3: Right detail -->
+        <Grid Grid.Column="2">
+            <ContentControl Content="{Binding RightView}"/>
+            <Border Visibility="{Binding RightView, Converter={StaticResource InverseNull2Vis}}">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="🤖" FontSize="64" Opacity="0.4" HorizontalAlignment="Center"/>
+                    <TextBlock Text="选择左侧的角色，开始聊天" FontSize="14" Foreground="{StaticResource TextSubBrush}"
+                               Margin="0,16,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

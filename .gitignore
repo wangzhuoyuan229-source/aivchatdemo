@@ -1,0 +1,23 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# IDE and local tooling
+.vs/
+.vscode/
+.idea/
+.trae/
+
+# Local application data
+data/*
+!data/.gitkeep
+
+# Local configuration and secrets
+appsettings.Local.json
+appsettings.*.Local.json
+*.user
+*.suo
+
+# OS files
+.DS_Store
+Thumbs.db
