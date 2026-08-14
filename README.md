@@ -6,15 +6,60 @@
 
 ChatApp 是一款支持 macOS 与 Windows 的桌面 AI 角色扮演聊天应用，支持 1:1 私聊与多 AI 群聊。用户可以创建/管理 AI 角色（人设、性格、说话风格），导入知识库文档，并通过 OpenAI 兼容 API 驱动角色进行对话。应用采用 BYOK（自带密钥）模式，支持任何兼容 OpenAI 接口的服务。
 
-## macOS 发布
+## macOS Release 使用说明
 
-安装 .NET 8 SDK 后运行：
+当前正式版为 [v1.0.0](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.0.0)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
+
+### 下载与安装
+
+1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.0.0/ChatApp-macOS-arm64.zip)。
+2. 双击 ZIP 文件解压，得到 `ChatApp.app`。
+3. 将 `ChatApp.app` 拖入“应用程序（Applications）”文件夹。
+4. 首次启动时，在 Finder 中右键 `ChatApp.app`，选择“打开”，然后在系统提示中再次选择“打开”。后续可正常双击启动。
+5. 如果 macOS 仍然阻止启动，请进入“系统设置 → 隐私与安全性”，找到 ChatApp 的拦截提示并选择“仍要打开”。
+
+可选：下载后在终端校验文件完整性：
+
+```bash
+shasum -a 256 ~/Downloads/ChatApp-macOS-arm64.zip
+```
+
+v1.0.0 的 SHA-256 应为：
+
+```text
+93b0c01d1c94badd716a6d1302aaa42ad9c1262bc09ebe4a66aa8b55393c8a0f
+```
+
+### 首次配置
+
+1. 启动 ChatApp，打开左侧“设置”。
+2. 填写兼容 OpenAI 协议的 API Base URL 和自己的 API Key。
+3. 选择或填写聊天模型与 Embedding 模型。
+4. 点击“保存设置”，再进入角色库开始对话。
+
+应用采用 BYOK（自带密钥）模式，Release 中没有预置任何 API Key。用户填写的设置、聊天记录和知识库保存在本机：
+
+```text
+~/Library/Application Support/ChatApp/
+```
+
+其中 `chatapp.db` 包含本地设置和聊天数据，请勿上传、公开或发送给其他人。删除 `ChatApp.app` 不会自动删除这些用户数据。
+
+### 升级与卸载
+
+- 升级：退出旧版本，用新版 `ChatApp.app` 替换“应用程序”中的旧版本；本地数据会保留。
+- 卸载程序：删除“应用程序”中的 `ChatApp.app`。
+- 同时清除全部本地数据：确认不再需要聊天记录和知识库后，再删除 `~/Library/Application Support/ChatApp/`。
+
+### 开发者构建 macOS 版本
+
+安装 .NET 8 SDK 后，在项目根目录运行：
 
 ```bash
 ./publish-macos.sh
 ```
 
-脚本会自动识别 Apple Silicon 或 Intel Mac，生成 `publish/osx-arm64/ChatApp.app` 或 `publish/osx-x64/ChatApp.app`。首次分发给其他用户时，未签名应用可能需要在 Finder 中右键选择“打开”；正式公开发布建议使用 Apple Developer ID 签名和公证。
+脚本会自动识别 Apple Silicon 或 Intel Mac，生成 `publish/osx-arm64/ChatApp.app` 或 `publish/osx-x64/ChatApp.app`。正式公开分发建议使用 Apple Developer ID 签名和公证。
 
 ## Windows 发布
 
