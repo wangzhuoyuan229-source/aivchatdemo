@@ -8,15 +8,24 @@ ChatApp 是一款支持 macOS 与 Windows 的桌面 AI 角色扮演聊天应用�
 
 ## macOS Release 使用说明
 
-当前正式版为 [v1.0.0](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.0.0)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
+当前正式版为 [v1.0.1](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.0.1)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
 
 ### 下载与安装
 
-1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.0.0/ChatApp-macOS-arm64.zip)。
+1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.0.1/ChatApp-macOS-arm64.zip)。
 2. 双击 ZIP 文件解压，得到 `ChatApp.app`。
 3. 将 `ChatApp.app` 拖入“应用程序（Applications）”文件夹。
 4. 首次启动时，在 Finder 中右键 `ChatApp.app`，选择“打开”，然后在系统提示中再次选择“打开”。后续可正常双击启动。
 5. 如果 macOS 仍然阻止启动，请进入“系统设置 → 隐私与安全性”，找到 ChatApp 的拦截提示并选择“仍要打开”。
+
+如果系统显示“ChatApp 已损坏”，请先核对下方 SHA-256；确认文件一致且确实从本仓库下载后，在终端执行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/ChatApp.app
+open /Applications/ChatApp.app
+```
+
+该命令只应对已核验来源和哈希的 ChatApp 使用，不要用它绕过未知应用的安全检查。
 
 可选：下载后在终端校验文件完整性：
 
@@ -24,10 +33,10 @@ ChatApp 是一款支持 macOS 与 Windows 的桌面 AI 角色扮演聊天应用�
 shasum -a 256 ~/Downloads/ChatApp-macOS-arm64.zip
 ```
 
-v1.0.0 的 SHA-256 应为：
+v1.0.1 的 SHA-256 应为：
 
 ```text
-93b0c01d1c94badd716a6d1302aaa42ad9c1262bc09ebe4a66aa8b55393c8a0f
+66eebe3b064ac95200d9ea7843322eb7916f4bc3752c7256fef9b8aa45cd9608
 ```
 
 ### 首次配置

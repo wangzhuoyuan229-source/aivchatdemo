@@ -28,6 +28,13 @@ cp -R "$raw_dir/." "$app_dir/Contents/MacOS/"
 cp "$project_dir/ChatApp.UI/Platforms/macOS/Info.plist" "$app_dir/Contents/Info.plist"
 chmod +x "$app_dir/Contents/MacOS/ChatApp.UI"
 find "$app_dir/Contents/MacOS" -type f -name '*.pdb' -delete
+# Sign each Mach-O file first and the completed bundle last. This keeps the
+# resource seal consistent after Info.plist and native libraries are copied.
+while IFS= read -r -d '' binary; do
+  codesign --force --sign - "$binary"
+done < <(find "$app_dir/Contents/MacOS" -type f \( -name '*.dylib' -o -name 'ChatApp.UI' \) -print0)
+codesign --force --sign - "$app_dir"
+codesign --verify --deep --strict "$app_dir"
 xattr -cr "$app_dir" 2>/dev/null || true
 
 echo "Created $app_dir"
