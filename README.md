@@ -6,6 +6,16 @@
 
 ChatApp 是一款 Windows 桌面 AI 角色扮演聊天应用，支持 1:1 私聊与多 AI 群聊。用户可以创建/管理 AI 角色（人设、性格、说话风格），导入知识库文档，并通过 OpenAI 兼容 API 驱动角色进行对话。应用采用 BYOK（自带密钥）模式，支持任何兼容 OpenAI 接口的服务。
 
+## Windows 发布
+
+在 Windows 且安装 .NET 8 SDK 后运行：
+
+```powershell
+.\publish-win-x64.ps1
+```
+
+生成的单文件程序位于 `publish/win-x64/ChatApp.UI.exe`。API Key 不写入程序或发布目录，而是由用户在应用设置中输入并保存到本机 `%LOCALAPPDATA%\\ChatApp`；发布前不要把本地数据库或配置文件复制进发布包。
+
 ## 技术栈
 
 | 层级 | 技术 | 版本 |
