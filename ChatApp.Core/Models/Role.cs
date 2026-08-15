@@ -27,6 +27,12 @@ public class Role
     /// <summary>Full assembled system prompt. When empty, it is built from the fields above.</summary>
     public string SystemPrompt { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Authored multi-turn dialogue examples used only to demonstrate the role's
+    /// conversational style. They are never treated as a source of world facts.
+    /// </summary>
+    public string DialogueExamples { get; set; } = string.Empty;
+
     /// <summary>Greeting message sent when a conversation starts.</summary>
     public string Greeting { get; set; } = string.Empty;
 
@@ -35,6 +41,13 @@ public class Role
 
     /// <summary>True for factory-seeded roles, false for user-created roles.</summary>
     public bool IsPreset { get; set; } = true;
+
+    /// <summary>UI-only count populated by the role list; not persisted by EF Core.</summary>
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public int KnowledgeGroupCount { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool HasNoKnowledgeGroups => KnowledgeGroupCount == 0;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

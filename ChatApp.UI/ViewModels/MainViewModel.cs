@@ -21,7 +21,6 @@ public partial class MainViewModel : ViewModelBase, INavigation
 
     public ChatViewModel Chat => _services.GetRequiredService<ChatViewModel>();
     public RoleListViewModel Roles => _services.GetRequiredService<RoleListViewModel>();
-    public ConversationListViewModel Conversations => _services.GetRequiredService<ConversationListViewModel>();
     public KnowledgeViewModel Knowledge => _services.GetRequiredService<KnowledgeViewModel>();
     public SettingsViewModel Settings => _services.GetRequiredService<SettingsViewModel>();
     public CreateRoleViewModel CreateRole => _services.GetRequiredService<CreateRoleViewModel>();
@@ -54,9 +53,6 @@ public partial class MainViewModel : ViewModelBase, INavigation
     private void ShowKnowledge() => Navigate("knowledge");
 
     [RelayCommand]
-    private void ShowConversations() => Navigate("conversations");
-
-    [RelayCommand]
     private void ShowSettings() => Navigate("settings");
 
     public void Navigate(string pageKey)
@@ -66,11 +62,6 @@ public partial class MainViewModel : ViewModelBase, INavigation
             pageKey, Chat.Conversation?.Id, Chat.Messages.Count);
         switch (pageKey)
         {
-            case "conversations":
-                _ = Conversations.LoadAsync();
-                MiddleView = Conversations;
-                RightView = null;
-                break;
             case "roles":
                 MiddleView = Roles;
                 // 如果之前有打开的会话，恢复显示右侧对话界面（保留上次的对话内容）

@@ -13,7 +13,7 @@ namespace ChatApp.AI.SemanticKernel;
 /// <summary>
 /// Director for group chats. Persists the user message, picks speakers (round-robin
 /// or hybrid director-LLM selection), assembles each speaker's context (its own
-/// persona + private long-term memory + global knowledge + a group transcript),
+/// persona + private long-term memory + role-scoped knowledge + a group transcript),
 /// streams its reply, persists it, and appends it to the transcript so later
 /// speakers can react to it.
 /// </summary>
@@ -90,42 +90,70 @@ public class GroupChatOrchestrator : IGroupChatService
         // 2. Build the group transcript (recent window, including the user message just added).
         var window = await _history.GetMessagesAsync(conversationId, settings.ContextWindowSize, ct);
         var transcript = FormatTranscript(window, rolesById);
+        var retrievalQuery = ChatOrchestrator.BuildRetrievalQuery(window);
 
         // 3. Pick speakers.
         var speakerIds = settings.GroupChat.Mode == GroupChatMode.Hybrid
             ? await PickSpeakersHybridAsync(settings, rolesById, members, userText, transcript, ct)
             : members.Select(m => m.RoleId).ToList();
 
-        // Cap to MaxSpeakersPerTurn (Hybrid enforces it; RoundRobin ignores it by design).
-        if (settings.GroupChat.Mode == GroupChatMode.Hybrid && speakerIds.Count > settings.GroupChat.MaxSpeakersPerTurn)
-            speakerIds = speakerIds.Take(settings.GroupChat.MaxSpeakersPerTurn).ToList();
+        // Hybrid uses MaxSpeakersPerTurn as the requested number of speakers. The
+        // director may return fewer names, so fill the remainder in display order.
+        // This guarantees that a two-member group produces two replies by default.
+        if (settings.GroupChat.Mode == GroupChatMode.Hybrid)
+        {
+            speakerIds = CompleteHybridSelection(
+                speakerIds, members, rolesById, settings.GroupChat.MaxSpeakersPerTurn);
+        }
+
+        _logger.LogInformation(
+            "Group-chat turn selected {Count} speaker(s): {Speakers}.",
+            speakerIds.Count,
+            string.Join("、", speakerIds.Select(id => rolesById[id].Name)));
 
         // 4. Each speaker takes a turn, seeing the latest transcript (which grows as they speak).
         var results = new List<Message>();
         var kernel = KernelFactory.Build(settings);
         var chat = kernel.GetRequiredService<IChatCompletionService>();
-        var execSettings = new OpenAIPromptExecutionSettings { Temperature = 0.8, TopP = 1.0 };
+        var execSettings = new OpenAIPromptExecutionSettings
+        {
+            Temperature = Math.Clamp(settings.ChatTemperature, 0, 2),
+            TopP = 1.0
+        };
 
         foreach (var roleId in speakerIds)
         {
             if (!rolesById.TryGetValue(roleId, out var role)) continue;
             ct.ThrowIfCancellationRequested();
 
-            // Best-effort per-role memory + global knowledge.
+            // Best-effort private memory plus strict knowledge scoped to this role.
             IReadOnlyList<VectorSearchHit> memoryHits = Array.Empty<VectorSearchHit>();
             if (settings.EnableLongTermMemory)
             {
-                try { memoryHits = await _memory.RecallAsync(role.Id, userText, ct); }
+                try { memoryHits = await _memory.RecallAsync(role.Id, retrievalQuery, ct); }
                 catch (Exception ex) { _logger.LogWarning(ex, "Memory recall failed for role {Id}.", role.Id); }
             }
-            IReadOnlyList<VectorSearchHit> kbHits = Array.Empty<VectorSearchHit>();
+            var knowledgeResult = KnowledgeRetrievalResult.Disabled("知识库功能已关闭");
             if (settings.EnableKnowledgeBase)
             {
-                try { kbHits = await _knowledge.RetrieveAsync(userText, settings.KnowledgeTopK, ct); }
-                catch (Exception ex) { _logger.LogWarning(ex, "Knowledge retrieval failed."); }
+                try
+                {
+                    var groupIds = await _roles.GetKnowledgeGroupIdsAsync(role.Id, ct);
+                    knowledgeResult = await _knowledge.RetrieveAsync(
+                        ChatOrchestrator.BuildKnowledgeRequest(settings, retrievalQuery, groupIds), ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Knowledge retrieval failed for group-chat role {RoleId}.", role.Id);
+                    knowledgeResult = KnowledgeRetrievalResult.Unavailable("知识检索暂时不可用");
+                }
             }
 
-            var systemPrompt = ChatOrchestrator.BuildSystemPrompt(role, memoryHits, kbHits)
+            _logger.LogInformation(
+                "Group-chat role {RoleId} knowledge status {Status}; context chunks {Count}.",
+                role.Id, knowledgeResult.Status, knowledgeResult.Hits.Count);
+
+            var systemPrompt = ChatOrchestrator.BuildSystemPrompt(role, memoryHits, knowledgeResult)
                 + BuildGroupRules(role, rolesById, settings.GroupChat);
             var skHistory = new ChatHistory(systemPrompt);
             skHistory.AddUserMessage(transcript + $"\n\n请以 {role.Name} 的身份发言。");
@@ -166,8 +194,8 @@ public class GroupChatOrchestrator : IGroupChatService
     }
 
     /// <summary>
-    /// Hybrid speaker selection: one non-streaming director LLM call picks 1..N speakers
-    /// by name. Falls back to the first N members in display order on any failure.
+    /// Hybrid speaker selection: one non-streaming director LLM call picks the requested
+    /// number of speakers by name. Missing selections are filled in display order later.
     /// </summary>
     private async Task<List<int>> PickSpeakersHybridAsync(
         AiSettings settings,
@@ -191,7 +219,8 @@ public class GroupChatOrchestrator : IGroupChatService
             directorHistory.AddUserMessage(
                 $"用户说：「{userText}」\n\n" +
                 $"最近群聊记录：\n{transcript}\n\n" +
-                $"请选出最适合回复的 1-{max} 个角色，按发言顺序输出角色名，用逗号分隔。只输出名字，不要解释。");
+                $"请选出最适合回复的 {Math.Min(max, roleList.Count)} 个角色，按发言顺序输出角色名，用逗号分隔。" +
+                "必须给足人数，只输出名字，不要解释。");
 
             var kernel = KernelFactory.Build(settings);
             var chat = kernel.GetRequiredService<IChatCompletionService>();
@@ -211,6 +240,36 @@ public class GroupChatOrchestrator : IGroupChatService
         }
 
         return roleList.Take(max).Select(r => r.Id).ToList();
+    }
+
+    /// <summary>
+    /// Produces exactly the requested number of valid, distinct Hybrid speakers when
+    /// enough group members exist. Director choices keep their order; missing choices
+    /// are filled from the conversation's display order.
+    /// </summary>
+    internal static List<int> CompleteHybridSelection(
+        IEnumerable<int> selected,
+        IReadOnlyList<ConversationMember> members,
+        IReadOnlyDictionary<int, Role> rolesById,
+        int requestedCount)
+    {
+        if (rolesById.Count == 0) return new List<int>();
+
+        var targetCount = Math.Clamp(requestedCount, 1, rolesById.Count);
+        var result = selected
+            .Where(rolesById.ContainsKey)
+            .Distinct()
+            .Take(targetCount)
+            .ToList();
+
+        foreach (var member in members.OrderBy(m => m.DisplayOrder))
+        {
+            if (result.Count >= targetCount) break;
+            if (rolesById.ContainsKey(member.RoleId) && !result.Contains(member.RoleId))
+                result.Add(member.RoleId);
+        }
+
+        return result;
     }
 
     private static string BuildDirectorSystem(IReadOnlyList<Role> roles)

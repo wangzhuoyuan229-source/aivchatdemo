@@ -43,7 +43,11 @@ public partial class RoleListViewModel : ViewModelBase
         try
         {
             var roles = await _roleService.GetAllAsync();
-            foreach (var r in roles) Roles.Add(r);
+            foreach (var r in roles)
+            {
+                r.KnowledgeGroupCount = (await _roleService.GetKnowledgeGroupIdsAsync(r.Id)).Count;
+                Roles.Add(r);
+            }
         }
         catch (Exception ex)
         {

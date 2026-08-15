@@ -2,7 +2,7 @@ using ChatApp.Core.Models;
 
 namespace ChatApp.Core.Services;
 
-/// <summary>Knowledge-base import, chunking, vectorization and retrieval (F5).</summary>
+/// <summary>Knowledge-base import, chunking and role-scoped lexical retrieval (F5).</summary>
 public interface IKnowledgeService
 {
     Task<IReadOnlyList<KnowledgeDocument>> ListDocumentsAsync(CancellationToken ct = default);
@@ -12,7 +12,7 @@ public interface IKnowledgeService
 
     Task<KnowledgeDocument?> GetDocumentAsync(int id, CancellationToken ct = default);
 
-    /// <summary>Imports a file (.txt/.md/.pdf), chunks it, embeds the chunks and stores them.</summary>
+    /// <summary>Imports a file (.txt/.md/.pdf), chunks it and stores the text for local retrieval.</summary>
     /// <param name="groupId">Optional target group. Null = ungrouped.</param>
     Task<KnowledgeDocument> ImportAsync(string filePath, IProgress<(int done, int total)>? progress = null, CancellationToken ct = default, int? groupId = null);
 
@@ -22,8 +22,8 @@ public interface IKnowledgeService
 
     Task<IReadOnlyList<KnowledgeChunk>> GetChunksAsync(int documentId, CancellationToken ct = default);
 
-    /// <summary>Retrieves the Top-K chunks relevant to the query.</summary>
-    Task<IReadOnlyList<VectorSearchHit>> RetrieveAsync(string query, int topK, CancellationToken ct = default);
+    /// <summary>Retrieves role-scoped, thresholded and source-aware knowledge context.</summary>
+    Task<KnowledgeRetrievalResult> RetrieveAsync(KnowledgeRetrievalRequest request, CancellationToken ct = default);
 
     Task DeleteDocumentAsync(int id, CancellationToken ct = default);
 
@@ -38,7 +38,7 @@ public interface IKnowledgeService
     /// <summary>
     /// 删除分组。
     /// </summary>
-    /// <param name="deleteDocuments">true: 一并删除该组下所有文档（含向量）。false: 把组内文档移到「未分组」。</param>
+    /// <param name="deleteDocuments">true: 一并删除该组下所有文档与分块。false: 把组内文档移到「未分组」。</param>
     Task DeleteGroupAsync(int id, bool deleteDocuments, CancellationToken ct = default);
 
     /// <summary>把文档移动到指定分组。groupId 为 null 表示移到「未分组」。</summary>
@@ -46,7 +46,7 @@ public interface IKnowledgeService
 
     // ----- 批量操作 -----
 
-    /// <summary>批量删除文档（含向量与分块）。</summary>
+    /// <summary>批量删除文档与分块。</summary>
     Task DeleteDocumentsAsync(IReadOnlyList<int> documentIds, CancellationToken ct = default);
 
     /// <summary>批量移动文档到指定分组。</summary>

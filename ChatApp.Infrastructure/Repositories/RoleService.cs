@@ -46,6 +46,52 @@ public class RoleService : IRoleService
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task<IReadOnlyList<int>> GetKnowledgeGroupIdsAsync(int roleId, CancellationToken ct = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        return await db.RoleKnowledgeGroups.AsNoTracking()
+            .Where(x => x.RoleId == roleId)
+            .OrderBy(x => x.KnowledgeGroupId)
+            .Select(x => x.KnowledgeGroupId)
+            .ToListAsync(ct);
+    }
+
+    public async Task SetKnowledgeGroupIdsAsync(int roleId, IReadOnlyCollection<int> groupIds, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(groupIds);
+
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        if (!await db.Roles.AnyAsync(r => r.Id == roleId, ct))
+            throw new KeyNotFoundException($"角色不存在：{roleId}");
+
+        var normalized = groupIds.Where(id => id > 0).Distinct().OrderBy(id => id).ToArray();
+        if (normalized.Length > 0)
+        {
+            var existingGroupIds = await db.KnowledgeGroups
+                .Where(g => normalized.Contains(g.Id))
+                .Select(g => g.Id)
+                .ToListAsync(ct);
+            var missing = normalized.Except(existingGroupIds).ToArray();
+            if (missing.Length > 0)
+                throw new KeyNotFoundException($"知识分组不存在：{string.Join(", ", missing)}");
+        }
+
+        var current = await db.RoleKnowledgeGroups.Where(x => x.RoleId == roleId).ToListAsync(ct);
+        db.RoleKnowledgeGroups.RemoveRange(current.Where(x => !normalized.Contains(x.KnowledgeGroupId)));
+        var currentIds = current.Select(x => x.KnowledgeGroupId).ToHashSet();
+        foreach (var groupId in normalized.Where(id => !currentIds.Contains(id)))
+        {
+            db.RoleKnowledgeGroups.Add(new RoleKnowledgeGroup
+            {
+                RoleId = roleId,
+                KnowledgeGroupId = groupId
+            });
+        }
+
+        await db.SaveChangesAsync(ct);
+        _logger.LogInformation("Role {RoleId} knowledge bindings replaced with {Count} group(s).", roleId, normalized.Length);
+    }
+
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -93,6 +139,7 @@ public class RoleService : IRoleService
         }
 
         db.MemoryEntries.RemoveRange(db.MemoryEntries.Where(m => m.RoleId == id));
+        db.RoleKnowledgeGroups.RemoveRange(db.RoleKnowledgeGroups.Where(x => x.RoleId == id));
         db.Roles.Remove(role);
 
         await db.SaveChangesAsync(ct);

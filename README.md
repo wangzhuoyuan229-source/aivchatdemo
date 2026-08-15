@@ -4,15 +4,22 @@
 
 ## 项目概述
 
-ChatApp 是一款支持 macOS 与 Windows 的桌面 AI 角色扮演聊天应用，支持 1:1 私聊与多 AI 群聊。用户可以创建/管理 AI 角色（人设、性格、说话风格），导入知识库文档，并通过 OpenAI 兼容 API 驱动角色进行对话。应用采用 BYOK（自带密钥）模式，支持任何兼容 OpenAI 接口的服务。
+ChatApp 是一款支持 macOS 与 Windows 的桌面 AI 角色扮演聊天应用，支持 1:1 私聊与多 AI 群聊。用户可以创建/管理 AI 角色（人设、性格、说话风格），导入知识库文档，并通过远程 OpenAI 兼容 API 驱动角色进行对话。应用采用 BYOK（自带密钥）模式，只允许 HTTPS 托管 API，不提供本地模型入口。
+
+## 模型接入策略
+
+默认服务为 DeepSeek，默认聊天模型为 `deepseek-v4-flash`。设置页仍允许接入其他
+OpenAI 兼容的远程 HTTPS API；localhost、回环地址、私有网络地址和普通 HTTP 地址
+会在界面、持久化与运行时三层被拒绝。仓库中的 LoRA 训练材料仅保留用于离线研究和
+评测，不再接入桌面应用；详情见 [training/README.md](training/README.md)。
 
 ## macOS Release 使用说明
 
-当前正式版为 [v1.0.1](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.0.1)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
+当前正式版为 [v1.0.2](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.0.2)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
 
 ### 下载与安装
 
-1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.0.1/ChatApp-macOS-arm64.zip)。
+1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.0.2/ChatApp-macOS-arm64.zip)。
 2. 双击 ZIP 文件解压，得到 `ChatApp.app`。
 3. 将 `ChatApp.app` 拖入“应用程序（Applications）”文件夹。
 4. 首次启动时，在 Finder 中右键 `ChatApp.app`，选择“打开”，然后在系统提示中再次选择“打开”。后续可正常双击启动。
@@ -33,18 +40,23 @@ open /Applications/ChatApp.app
 shasum -a 256 ~/Downloads/ChatApp-macOS-arm64.zip
 ```
 
-v1.0.1 的 SHA-256 应为：
+v1.0.2 的 SHA-256 应为：
 
 ```text
-66eebe3b064ac95200d9ea7843322eb7916f4bc3752c7256fef9b8aa45cd9608
+0347d9e612501adf4fadcb987537486d844e622f7020064a2b2ced56c245e3e9
 ```
 
 ### 首次配置
 
 1. 启动 ChatApp，打开左侧“设置”。
 2. 填写兼容 OpenAI 协议的 API Base URL 和自己的 API Key。
-3. 选择或填写聊天模型与 Embedding 模型。
-4. 点击“保存设置”，再进入角色库开始对话。
+3. 选择或填写聊天模型与 Embedding 模型；停止编辑约 700ms 后设置会自动保存。
+4. 看到“已自动保存”提示后，进入角色库开始对话。
+
+使用 DeepSeek 聊天并启用知识库时，可在“Embedding 服务预设”选择
+“阿里云百炼（推荐 · text-embedding-v4）”。应用会自动填写
+`https://dashscope.aliyuncs.com/compatible-mode/v1` 和 `text-embedding-v4`，
+用户只需填写独立的百炼 API Key。
 
 应用采用 BYOK（自带密钥）模式，Release 中没有预置任何 API Key。用户填写的设置、聊天记录和知识库保存在本机：
 
@@ -127,20 +139,19 @@ ChatApp.UI ──────────────► ChatApp.AI ────
 
 | 功能 | 描述 |
 |------|------|
-| 🤖 **AI 角色管理** | 创建/编辑/删除角色，支持头像、人设、背景、性格、说话风格 |
+| 🤖 **AI 角色管理** | 创建/编辑/删除角色，支持头像、人设、背景、性格、说话风格与示范对话 |
 | 📦 **预设角色库** | 6 个内置角色（林溪、诸葛亮、福尔摩斯、Emma、苏念、李白） |
 | 💬 **1:1 私聊** | 单角色对话，流式输出，支持上下文窗口管理 |
 | 👥 **AI 群聊** | 多角色同台对话，支持混合导演(Hybrid)与轮询(RoundRobin)两种模式 |
-| 📚 **知识库** | 导入 txt/md/pdf 文档，自动分块+向量化，对话时检索注入 |
+| 📚 **严格知识库 RAG** | 导入 txt/md/pdf 文档，按角色绑定的分组检索；无命中时不编造设定 |
 | 🧠 **长期记忆** | 按角色隔离的长期记忆，自动批量抽取+向量召回 |
 | ⚙️ **BYOK 设置** | 自定义 API 端点/密钥/模型，支持 OpenAI 兼容服务 |
-| 🔍 **消息搜索** | 全文关键词搜索历史消息 |
 | 📁 **知识库分组** | 文档分组管理、批量移动/删除 |
 
 ### Phase 2 规划
 
 - FreeForAll 群聊模式（Agent 自评 + 导演评分制）
-- 每角色专属知识库
+- 知识库引用调试面板
 - 语音输入/输出 (STT/TTS)
 - 好感度系统 (Affinity)
 - @ 点名机制
@@ -155,7 +166,7 @@ ChatApp.UI ──────────────► ChatApp.AI ────
 ```
 ChatApp.Core/
 ├── Models/
-│   ├── Role.cs                  # AI 角色（人设、性格、说话风格、问候语）
+│   ├── Role.cs                  # AI 角色（人设、性格、示范对话、问候语）
 │   ├── Message.cs               # 消息 + 会话 + MessageAuthor 枚举
 │   ├── ConversationType.cs      # 会话类型枚举：Private=0, Group=1
 │   ├── ConversationMember.cs    # 群聊成员关联（含 DisplayOrder）
@@ -250,7 +261,7 @@ ChatApp.AI/
   │
   ├─ 1. 持久化用户消息
   ├─ 2. 召回长期记忆（按角色，向量相似度检索）
-  ├─ 3. 检索知识库（向量相似度 TopK）
+  ├─ 3. 按角色绑定分组检索知识库（阈值 + TopK + 相邻分块）
   ├─ 4. 取短期上下文窗口（最近 N 条消息）
   ├─ 5. 组装 System Prompt（角色人设 + 记忆 + 知识）
   ├─ 6. 构建 ChatHistory → Semantic Kernel 流式调用
@@ -265,11 +276,11 @@ ChatApp.AI/
   ├─ 1. 持久化用户消息（RoleId=0）
   ├─ 2. 格式化群聊转录（[角色名] 内容格式）
   ├─ 3. 选择发言者：
-  │     ├─ Hybrid: 导演 LLM 选 1~N 人（低温度 0.2）
+  │     ├─ Hybrid: 导演 LLM 选择设定人数（不足时按成员顺序补足）
   │     └─ RoundRobin: 所有人按 DisplayOrder
   ├─ 4. 每个发言者依次：
   │     ├─ 召回该角色的 1:1 长期记忆
-  │     ├─ 检索全局知识库
+  │     ├─ 检索当前发言角色绑定的知识分组
   │     ├─ 组装 System Prompt（人设 + 群聊规则段）
   │     ├─ 流式生成 → Report(SpeakerStarted/Delta/Finished)
   │     └─ 持久化回复 → 追加到转录（让后续发言者可见）
@@ -281,7 +292,8 @@ ChatApp.AI/
 1. 导演 System Prompt 列出群内所有成员（名+描述）
 2. User Prompt 包含用户消息 + 最近群聊记录
 3. 导演返回逗号分隔的角色名 → 解析为 RoleId
-4. **容错设计**：解析失败回退 `members.Take(MaxSpeakersPerTurn)`，确保不卡死
+4. 导演少选时按 `DisplayOrder` 补足设定人数
+5. **容错设计**：解析失败回退 `members.Take(MaxSpeakersPerTurn)`，确保不卡死
 
 ### ChatApp.UI — 表现层
 
@@ -301,7 +313,7 @@ ChatApp.UI/
 │   ├── MainViewModel.cs          # 主窗口 VM（导航 + 页面切换）
 │   ├── ChatViewModel.cs          # 聊天 VM（私聊/群聊 + 流式气泡）
 │   ├── ChatBubbleViewModel.cs    # 单条消息气泡 VM
-│   ├── ConversationListViewModel.cs  # 会话列表 VM
+│   ├── ConversationItemViewModel.cs  # 最近群聊条目 VM
 │   ├── RoleListViewModel.cs      # 角色列表 VM
 │   ├── KnowledgeViewModel.cs     # 知识库管理 VM
 │   ├── SettingsViewModel.cs      # 设置页 VM
@@ -311,7 +323,6 @@ ChatApp.UI/
 │   └── SelectableDocument.cs     # 可选中文档包装
 └── Views/
     ├── ChatView.xaml/.cs         # 聊天界面
-    ├── ConversationListView.xaml/.cs  # 会话列表
     ├── RoleListView.xaml/.cs     # 角色库
     ├── KnowledgeView.xaml/.cs    # 知识库管理
     ├── SettingsView.xaml/.cs     # 设置页
@@ -325,11 +336,11 @@ ChatApp.UI/
 
 ```
 ┌──────┬────────────────┬──────────────────────────┐
-│ 导航  │  中栏 (300px)   │    右栏 (剩余空间)          │
+│ 导航  │  中栏 (340px)   │    右栏 (剩余空间)          │
 │ 栏   │                │                          │
 │(64px)│ 角色列表/       │  聊天界面 / 知识库 / 设置   │
-│      │ 会话列表/       │                          │
-│ 🤖   │ 最近群聊        │                          │
+│      │ 最近群聊        │                          │
+│ 🤖   │                │                          │
 │ 📚   │                │                          │
 │ ⚙️   │                │                          │
 │      │                │                          │
@@ -395,13 +406,17 @@ KnowledgeDocuments (M) ──< KnowledgeChunks (M)
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
-| `ApiBaseUrl` | `https://api.openai.com/v1` | OpenAI 兼容 API 端点 |
+| `ApiBaseUrl` | `https://api.deepseek.com/v1` | 远程 HTTPS、OpenAI 兼容 API 端点 |
 | `ApiKey` | (空) | API 密钥 |
-| `ChatModel` | `gpt-4o-mini` | 聊天模型名 |
-| `EmbeddingModel` | `text-embedding-3-small` | 嵌入模型名 |
+| `ChatModel` | `deepseek-v4-flash` | 聊天模型名 |
+| `EmbeddingModel` | (空) | 可选的远程嵌入模型名 |
 | `ContextWindowSize` | 20 | 短期上下文窗口消息数 |
 | `MemoryTopK` | 5 | 每轮召回的记忆片段数 |
 | `KnowledgeTopK` | 5 | 每轮召回的知识片段数 |
+| `KnowledgeMinScore` | 0.35 | 知识命中的最低余弦相似度 |
+| `KnowledgeContextCharBudget` | 6000 | 每轮最多注入的知识字符数 |
+| `KnowledgeNeighborRadius` | 1 | 命中分块前后补充的相邻块数量 |
+| `ChatTemperature` | 0.65 | 私聊与群聊角色回复的生成温度 |
 | `MemoryBatchSize` | 50 | 触发记忆抽取的消息阈值 |
 | `CharsPerToken` | 4.0 | Token 估算比例 |
 
@@ -410,7 +425,7 @@ KnowledgeDocuments (M) ──< KnowledgeChunks (M)
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
 | `Mode` | `Hybrid` (1) | 发言模式：RoundRobin=0, Hybrid=1, FreeForAll=2 |
-| `MaxSpeakersPerTurn` | 2 | 每轮最多发言人数（Hybrid 模式） |
+| `MaxSpeakersPerTurn` | 2 | 每轮实际发言人数（Hybrid 模式，成员足够时） |
 | `RespondToOtherAgents` | true | 是否允许 AI 互相回应/反驳 |
 
 ### 数据目录
@@ -479,7 +494,7 @@ dotnet run --project ChatApp.UI
 
 **UI (App.xaml.cs)**:
 - `MainViewModel` (Singleton, also as `INavigation`)
-- `ChatViewModel`, `RoleListViewModel`, `ConversationListViewModel`
+- `ChatViewModel`, `RoleListViewModel`
 - `KnowledgeViewModel`, `SettingsViewModel`
 - `CreateRoleViewModel`, `CreateGroupChatViewModel`
 - `MainWindow`
@@ -521,4 +536,4 @@ dotnet run --project ChatApp.UI
 
 ---
 
-> 文档生成日期：2026-08-11 | 项目版本：v1.0
+> 文档生成日期：2026-08-16 | 项目版本：v1.0.2

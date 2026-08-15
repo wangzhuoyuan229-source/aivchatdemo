@@ -9,7 +9,13 @@ public interface IVectorStore
 
     Task UpsertBatchAsync(IEnumerable<VectorRecord> records, CancellationToken ct = default);
 
-    Task<IReadOnlyList<VectorSearchHit>> SearchAsync(float[] queryVector, string scope, int topK, CancellationToken ct = default);
+    Task<IReadOnlyList<VectorSearchHit>> SearchAsync(
+        float[] queryVector,
+        string scope,
+        int topK,
+        double minScore = 0,
+        IReadOnlySet<string>? allowedIds = null,
+        CancellationToken ct = default);
 
     Task DeleteAsync(string id, CancellationToken ct = default);
 
@@ -21,5 +27,7 @@ public interface IEmbeddingService
 {
     Task<float[]> EmbedAsync(string text, CancellationToken ct = default);
 
-    Task<IReadOnlyList<float[]>> EmbedBatchAsync(IReadOnlyList<string> texts, CancellationToken ct = default);
+    Task<IReadOnlyList<float[]>> EmbedBatchAsync(
+        IReadOnlyList<string> texts,
+        CancellationToken ct = default);
 }

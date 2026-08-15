@@ -20,13 +20,13 @@ public class KnowledgeDocument
     /// <summary>Optional group id. Null means "ungrouped".</summary>
     public int? GroupId { get; set; }
 
-    /// <summary>Scope used in the vector store, e.g. "knowledge:{docId}".</summary>
+    /// <summary>Stable document scope retained for backward-compatible local storage.</summary>
     public string Scope => $"knowledge:{Id}";
 
     public DateTime ImportedAt { get; set; } = DateTime.UtcNow;
 }
 
-/// <summary>A text chunk of a knowledge document (metadata only; embedding lives in vector store).</summary>
+/// <summary>A locally searchable text chunk of a knowledge document.</summary>
 public class KnowledgeChunk
 {
     public int Id { get; set; }

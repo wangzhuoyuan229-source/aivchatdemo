@@ -74,7 +74,6 @@
 
   <Application.DataTemplates>
     <DataTemplate DataType="vm:RoleListViewModel"><views:RoleListView/></DataTemplate>
-    <DataTemplate DataType="vm:ConversationListViewModel"><views:ConversationListView/></DataTemplate>
     <DataTemplate DataType="vm:ChatViewModel"><views:ChatView/></DataTemplate>
     <DataTemplate DataType="vm:KnowledgeViewModel"><views:KnowledgeView/></DataTemplate>
     <DataTemplate DataType="vm:SettingsViewModel"><views:SettingsView/></DataTemplate>

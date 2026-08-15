@@ -13,14 +13,22 @@ public partial class RoleListView : UserControl
     private async void CreateRole_Click(object? sender, RoutedEventArgs e)
     {
         var vm = App.Services.GetRequiredService<CreateRoleViewModel>();
-        vm.Name = string.Empty;
-        vm.Avatar = "🎭";
-        vm.Description = string.Empty;
-        vm.Background = string.Empty;
-        vm.Personality = string.Empty;
-        vm.SpeakingStyle = string.Empty;
-        vm.Greeting = string.Empty;
-        vm.ErrorText = string.Empty;
+        await vm.PrepareForCreateAsync();
+
+        var owner = TopLevel.GetTopLevel(this) as Window;
+        if (owner is null) return;
+        var window = new CreateRoleWindow { DataContext = vm };
+        vm.RequestClose = () => window.Close(true);
+        await window.ShowDialog<bool>(owner);
+        if (DataContext is RoleListViewModel list) await list.LoadAsync();
+    }
+
+    private async void EditRole_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: ChatApp.Core.Models.Role role }) return;
+
+        var vm = App.Services.GetRequiredService<CreateRoleViewModel>();
+        await vm.PrepareForEditAsync(role);
 
         var owner = TopLevel.GetTopLevel(this) as Window;
         if (owner is null) return;

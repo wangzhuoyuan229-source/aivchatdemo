@@ -116,7 +116,13 @@ public class MemoryService : IMemoryService
         if (string.IsNullOrWhiteSpace(query)) return Array.Empty<VectorSearchHit>();
         var settings = await _config.LoadAsync(ct);
         var qv = await _embedding.EmbedAsync(query, ct);
-        return await _vectors.SearchAsync(qv, $"{ScopePrefix}{roleId}", settings.MemoryTopK, ct);
+        return await _vectors.SearchAsync(
+            qv,
+            $"{ScopePrefix}{roleId}",
+            settings.MemoryTopK,
+            minScore: 0,
+            allowedIds: null,
+            ct: ct);
     }
 
     public async Task<IReadOnlyList<MemoryEntry>> ListAsync(int roleId, CancellationToken ct = default)

@@ -12,6 +12,12 @@ public interface IRoleService
 
     Task UpdateAsync(Role role, CancellationToken ct = default);
 
+    /// <summary>Returns the knowledge groups explicitly bound to a role.</summary>
+    Task<IReadOnlyList<int>> GetKnowledgeGroupIdsAsync(int roleId, CancellationToken ct = default);
+
+    /// <summary>Replaces all knowledge-group bindings for a role.</summary>
+    Task SetKnowledgeGroupIdsAsync(int roleId, IReadOnlyCollection<int> groupIds, CancellationToken ct = default);
+
     Task DeleteAsync(int id, CancellationToken ct = default);
 
     /// <summary>Ensures the preset roles exist in the database (idempotent).</summary>

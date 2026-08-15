@@ -1,7 +1,7 @@
 <Window x:Class="ChatApp.UI.Views.CreateRoleWindow"
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="创建 AI 角色" Height="640" Width="520"
+        Title="{Binding WindowTitle}" Height="780" Width="560"
         WindowStartupLocation="CenterOwner" Background="{StaticResource BgBrush}">
     <Grid>
         <Grid.RowDefinitions>
@@ -11,7 +11,7 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,14">
-            <TextBlock Text="✨ 创建 AI 角色" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding WindowTitle}" FontSize="16" FontWeight="SemiBold"/>
         </Border>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,16">
@@ -69,6 +69,41 @@
                         <ColumnDefinition Width="80"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="示范对话" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBox Text="{Binding DialogueExamples}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120"
+                                 Watermark="用户：今天有点累。&#10;角色：那就先歇一会儿，我陪你安静坐着。&#10;&#10;用户：……&#10;角色：不用急着说，我在。"/>
+                        <TextBlock Text="建议填写 6–12 组真实、多样的多轮示范；这些内容只用于模仿语气，不作为设定事实。"
+                                   FontSize="10" Foreground="{StaticResource TextSubBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="知识分组" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <StackPanel Grid.Column="1">
+                        <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="4" Padding="8" MinHeight="70" MaxHeight="140">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding KnowledgeGroups}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}" Margin="0,3"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                        <TextBlock Text="{Binding KnowledgeBindingHint}" FontSize="10" Foreground="#C47A00"
+                                   Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="开场问候" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
                     <TextBox Grid.Column="1" Text="{Binding Greeting}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48"/>
                 </Grid>
@@ -79,7 +114,7 @@
         <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="20,12">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Classes="ghost" Content="取消" Command="{Binding CancelCommand}" Padding="20,8" Margin="0,0,8,0"/>
-                <Button Classes="primary" Content="创建并对话" Command="{Binding CreateCommand}" Padding="24,8"/>
+                <Button Classes="primary" Content="{Binding SubmitText}" Command="{Binding SaveCommand}" Padding="24,8"/>
             </StackPanel>
         </Border>
     </Grid>

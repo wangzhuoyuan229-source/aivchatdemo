@@ -152,11 +152,112 @@ public class KnowledgeService : IKnowledgeService
         return results;
     }
 
-    public async Task<IReadOnlyList<VectorSearchHit>> RetrieveAsync(string query, int topK, CancellationToken ct = default)
+    public async Task<KnowledgeRetrievalResult> RetrieveAsync(KnowledgeRetrievalRequest request, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(query)) return Array.Empty<VectorSearchHit>();
-        var qv = await _embedding.EmbedAsync(query, ct);
-        return await _vectors.SearchAsync(qv, Scope, topK, ct);
+        ArgumentNullException.ThrowIfNull(request);
+        if (string.IsNullOrWhiteSpace(request.Query))
+            return KnowledgeRetrievalResult.NoRelevantMatch("查询为空");
+
+        var groupIds = request.AllowedGroupIds.Where(id => id > 0).Distinct().ToArray();
+        if (groupIds.Length == 0)
+            return KnowledgeRetrievalResult.NoRelevantMatch("角色未绑定知识分组");
+
+        var topK = Math.Clamp(request.TopK, 1, 50);
+        var minScore = Math.Clamp(request.MinScore, 0, 1);
+        var budget = Math.Clamp(request.ContextCharBudget, 200, 50_000);
+        var neighborRadius = Math.Clamp(request.NeighborRadius, 0, 3);
+
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        var documents = await db.KnowledgeDocuments.AsNoTracking()
+            .Where(d => d.GroupId.HasValue && groupIds.Contains(d.GroupId.Value))
+            .ToListAsync(ct);
+        if (documents.Count == 0)
+            return KnowledgeRetrievalResult.NoRelevantMatch("绑定的知识分组中没有文档");
+
+        var documentIds = documents.Select(d => d.Id).ToArray();
+        var chunks = await db.KnowledgeChunks.AsNoTracking()
+            .Where(c => documentIds.Contains(c.DocumentId))
+            .OrderBy(c => c.DocumentId)
+            .ThenBy(c => c.ChunkIndex)
+            .ToListAsync(ct);
+        var allowedIds = chunks.Where(c => !string.IsNullOrWhiteSpace(c.ExternalId))
+            .Select(c => c.ExternalId)
+            .ToHashSet(StringComparer.Ordinal);
+        if (allowedIds.Count == 0)
+            return KnowledgeRetrievalResult.NoRelevantMatch("绑定的知识分组中没有可检索分块");
+
+        var queryVector = await _embedding.EmbedAsync(request.Query, ct);
+        var directHits = await _vectors.SearchAsync(
+            queryVector, Scope, topK, minScore, allowedIds, ct);
+        if (directHits.Count == 0)
+        {
+            _logger.LogInformation(
+                "Knowledge retrieval returned no match. Groups={Groups}, MinScore={MinScore:F3}",
+                string.Join(',', groupIds), minScore);
+            return KnowledgeRetrievalResult.NoRelevantMatch("没有达到相似度阈值的资料");
+        }
+
+        var documentMap = documents.ToDictionary(d => d.Id);
+        var chunkByExternalId = chunks
+            .Where(c => !string.IsNullOrWhiteSpace(c.ExternalId))
+            .ToDictionary(c => c.ExternalId, StringComparer.Ordinal);
+        var chunksByDocument = chunks.GroupBy(c => c.DocumentId)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(c => c.ChunkIndex));
+
+        var result = new List<KnowledgeHit>();
+        var included = new HashSet<string>(StringComparer.Ordinal);
+        var remaining = budget;
+
+        foreach (var direct in directHits)
+        {
+            if (!chunkByExternalId.TryGetValue(direct.Record.Id, out var directChunk)) continue;
+            if (!documentMap.TryGetValue(directChunk.DocumentId, out var document)) continue;
+            if (!chunksByDocument.TryGetValue(directChunk.DocumentId, out var documentChunks)) continue;
+
+            var candidateIndices = new List<int> { directChunk.ChunkIndex };
+            for (var offset = 1; offset <= neighborRadius; offset++)
+            {
+                candidateIndices.Add(directChunk.ChunkIndex - offset);
+                candidateIndices.Add(directChunk.ChunkIndex + offset);
+            }
+
+            foreach (var index in candidateIndices)
+            {
+                if (remaining <= 0) break;
+                if (!documentChunks.TryGetValue(index, out var chunk)) continue;
+                if (!included.Add(chunk.ExternalId)) continue;
+
+                var content = chunk.Content;
+                if (content.Length > remaining)
+                    content = content[..remaining];
+                if (content.Length == 0) break;
+
+                result.Add(new KnowledgeHit
+                {
+                    DocumentId = document.Id,
+                    DocumentTitle = document.Title,
+                    ChunkIndex = chunk.ChunkIndex,
+                    Content = content,
+                    Score = direct.Score,
+                    IsDirectMatch = chunk.ChunkIndex == directChunk.ChunkIndex
+                });
+                remaining -= content.Length;
+            }
+        }
+
+        if (result.Count == 0)
+            return KnowledgeRetrievalResult.NoRelevantMatch("命中分块无法读取");
+
+        _logger.LogInformation(
+            "Knowledge retrieval found {Count} context chunk(s). Groups={Groups}, DirectHits={Hits}",
+            result.Count,
+            string.Join(',', groupIds),
+            string.Join(',', directHits.Select(h => $"{h.Record.Id}:{h.Score:F3}")));
+        return new KnowledgeRetrievalResult
+        {
+            Status = KnowledgeRetrievalStatus.Found,
+            Hits = result
+        };
     }
 
     public async Task DeleteDocumentAsync(int id, CancellationToken ct = default)
@@ -224,6 +325,7 @@ public class KnowledgeService : IKnowledgeService
             ?? throw new KeyNotFoundException($"分组不存在：{id}");
 
         var docs = await db.KnowledgeDocuments.Where(d => d.GroupId == id).ToListAsync(ct);
+        db.RoleKnowledgeGroups.RemoveRange(db.RoleKnowledgeGroups.Where(x => x.KnowledgeGroupId == id));
         if (deleteDocuments)
         {
             // 一并删除组内所有文档及其向量、chunk

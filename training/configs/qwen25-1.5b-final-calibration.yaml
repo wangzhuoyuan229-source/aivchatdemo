@@ -1,0 +1,23 @@
+model: training/cache/Qwen2.5-1.5B-Instruct
+train: true
+data: training/data/strict-diverse
+fine_tune_type: lora
+optimizer: adam
+mask_prompt: true
+num_layers: 16
+batch_size: 1
+iters: 200
+val_batches: 50
+learning_rate: 1.0e-6
+steps_per_report: 20
+steps_per_eval: 100
+grad_accumulation_steps: 4
+adapter_path: training/artifacts/qwen25-1.5b-dialogue-final
+save_every: 100
+max_seq_length: 1024
+grad_checkpoint: false
+seed: 20260815
+lora_parameters:
+  rank: 8
+  dropout: 0.05
+  scale: 20.0

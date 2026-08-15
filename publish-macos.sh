@@ -12,6 +12,10 @@ output_dir="$project_dir/publish/$runtime_id"
 raw_dir="$output_dir/raw"
 app_dir="$output_dir/ChatApp.app"
 
+# Always build a clean bundle so removed assemblies/resources cannot leak from
+# a previous release into the new archive.
+rm -rf "$raw_dir" "$app_dir"
+
 dotnet publish "$project_dir/ChatApp.UI/ChatApp.UI.csproj" \
   -c Release \
   -r "$runtime_id" \

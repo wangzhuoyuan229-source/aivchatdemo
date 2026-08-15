@@ -44,5 +44,10 @@ public class OpenAIEmbeddingService : IEmbeddingService
     {
         if (string.IsNullOrWhiteSpace(settings.EmbeddingModel))
             throw new InvalidOperationException("Embedding 模型未配置，长期记忆与知识库功能需要它。");
+        var effectiveKey = string.IsNullOrWhiteSpace(settings.EmbeddingApiKey)
+            ? settings.ApiKey
+            : settings.EmbeddingApiKey;
+        if (string.IsNullOrWhiteSpace(effectiveKey))
+            throw new InvalidOperationException("Embedding API Key 未配置。");
     }
 }

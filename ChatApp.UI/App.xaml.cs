@@ -36,7 +36,6 @@ public partial class App : Application
                 services.AddSingleton<INavigation>(sp => sp.GetRequiredService<MainViewModel>());
                 services.AddSingleton<ChatViewModel>();
                 services.AddSingleton<RoleListViewModel>();
-                services.AddSingleton<ConversationListViewModel>();
                 services.AddSingleton<KnowledgeViewModel>();
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<CreateRoleViewModel>();

@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<KnowledgeDocument> KnowledgeDocuments => Set<KnowledgeDocument>();
     public DbSet<KnowledgeChunk> KnowledgeChunks => Set<KnowledgeChunk>();
     public DbSet<KnowledgeGroup> KnowledgeGroups => Set<KnowledgeGroup>();
+    public DbSet<RoleKnowledgeGroup> RoleKnowledgeGroups => Set<RoleKnowledgeGroup>();
     public DbSet<Setting> Settings => Set<Setting>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -37,7 +38,15 @@ public class AppDbContext : DbContext
             e.Property(x => x.Personality).HasDefaultValue("");
             e.Property(x => x.SpeakingStyle).HasDefaultValue("");
             e.Property(x => x.SystemPrompt).HasDefaultValue("");
+            e.Property(x => x.DialogueExamples).HasDefaultValue("");
             e.Property(x => x.Greeting).HasDefaultValue("");
+        });
+
+        b.Entity<RoleKnowledgeGroup>(e =>
+        {
+            e.HasKey(x => new { x.RoleId, x.KnowledgeGroupId });
+            e.HasIndex(x => x.RoleId);
+            e.HasIndex(x => x.KnowledgeGroupId);
         });
 
         b.Entity<Message>(e =>

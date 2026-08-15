@@ -20,14 +20,27 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="16,12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="{StaticResource TextSubBrush}" FontSize="12" VerticalAlignment="Center"/>
+        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource DividerBrush}"
+                BorderThickness="0,0,0,1" Padding="18,10">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Grid.Column="0" Width="38" Height="38" CornerRadius="9"
+                        Background="#E5F5EB" Margin="0,0,10,0"
+                        IsVisible="{Binding IsGroupMode, Converter={StaticResource Bool2Vis}}">
+                    <TextBlock Text="👥" FontSize="21" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextMainBrush}"/>
+                    <TextBlock Text="{Binding ConversationSubtitle}" FontSize="11"
+                               Foreground="{StaticResource TextSubBrush}"
+                               TextTrimming="CharacterEllipsis" MaxLines="1"/>
+                </StackPanel>
+                <Border Grid.Column="2" Background="#F1F8F3" CornerRadius="10" Padding="9,4"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding IsSending, Converter={StaticResource Bool2Vis}}">
+                    <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource AccentDarkBrush}"
+                               FontSize="11"/>
+                </Border>
             </Grid>
         </Border>
 

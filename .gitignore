@@ -22,3 +22,18 @@ appsettings.*.Local.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local model training (datasets, environments, checkpoints, and generated reports)
+training/.venv/
+training/cache/
+training/data/raw/
+training/data/processed/
+training/data/strict/
+training/data/strict-diverse/
+training/artifacts/
+training/reports/generated/
+__pycache__/
+*.py[cod]
+
+# Local knowledge corpora imported into the app (not redistributed with releases)
+明日方舟设定/

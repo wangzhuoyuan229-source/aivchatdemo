@@ -10,14 +10,12 @@
     <conv:InverseNullToVisibilityConverter x:Key="InverseNull2Vis"/>
     <conv:AccentIfEqualConverter x:Key="AccentIfEqual"/>
   </Window.Resources>
-  <Grid ColumnDefinitions="64,300,*">
+  <Grid ColumnDefinitions="64,340,*">
     <Border Grid.Column="0" Background="#2E2E2E">
       <Grid RowDefinitions="Auto,*,Auto">
         <TextBlock Grid.Row="0" Text="AI" FontSize="22" FontWeight="Bold" Foreground="White"
                    HorizontalAlignment="Center" Margin="0,18,0,12"/>
         <StackPanel Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Center">
-          <Button Classes="nav" ToolTip.Tip="会话" Command="{Binding ShowConversationsCommand}"
-                  Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=conversations}" Content="💬"/>
           <Button Classes="nav" ToolTip.Tip="角色库" Command="{Binding ShowRolesCommand}"
                   Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=roles}" Content="🎭"/>
           <Button Classes="nav" ToolTip.Tip="知识库" Command="{Binding ShowKnowledgeCommand}"
@@ -25,7 +23,7 @@
           <Button Classes="nav" ToolTip.Tip="设置" Command="{Binding ShowSettingsCommand}"
                   Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=settings}" Content="⚙️"/>
         </StackPanel>
-        <TextBlock Grid.Row="2" Text="v1.0" Foreground="#888" FontSize="10"
+        <TextBlock Grid.Row="2" Text="v1.0.2" Foreground="#888" FontSize="10"
                    HorizontalAlignment="Center" Margin="0,0,0,12"/>
       </Grid>
     </Border>

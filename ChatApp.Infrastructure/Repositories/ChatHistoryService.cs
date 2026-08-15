@@ -93,11 +93,13 @@ public class ChatHistoryService : IChatHistoryService
     public async Task<IReadOnlyList<Message>> GetMessagesAsync(int conversationId, int limit = 1000, CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
-        return await db.Messages.AsNoTracking()
+        var recent = await db.Messages.AsNoTracking()
             .Where(m => m.ConversationId == conversationId)
-            .OrderBy(m => m.Id)
+            .OrderByDescending(m => m.Id)
             .Take(limit)
             .ToListAsync(ct);
+        recent.Reverse();
+        return recent;
     }
 
     public async Task<Message> AddMessageAsync(Message message, CancellationToken ct = default)

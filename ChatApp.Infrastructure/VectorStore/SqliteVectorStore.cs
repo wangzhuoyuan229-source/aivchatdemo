@@ -91,14 +91,33 @@ public class SqliteVectorStore : IVectorStore
             await UpsertAsync(r, ct);
     }
 
-    public async Task<IReadOnlyList<VectorSearchHit>> SearchAsync(float[] queryVector, string scope, int topK, CancellationToken ct = default)
+    public async Task<IReadOnlyList<VectorSearchHit>> SearchAsync(
+        float[] queryVector,
+        string scope,
+        int topK,
+        double minScore = 0,
+        IReadOnlySet<string>? allowedIds = null,
+        CancellationToken ct = default)
     {
+        if (topK <= 0) return Array.Empty<VectorSearchHit>();
         var list = await GetScopeAsync(scope, ct);
-        var hits = new List<VectorSearchHit>(list.Count);
-        foreach (var r in list)
+        return Rank(list, queryVector, topK, minScore, allowedIds);
+    }
+
+    internal static IReadOnlyList<VectorSearchHit> Rank(
+        IEnumerable<VectorRecord> records,
+        float[] queryVector,
+        int topK,
+        double minScore,
+        IReadOnlySet<string>? allowedIds)
+    {
+        if (topK <= 0) return Array.Empty<VectorSearchHit>();
+        var hits = new List<VectorSearchHit>();
+        foreach (var r in records)
         {
+            if (allowedIds is not null && !allowedIds.Contains(r.Id)) continue;
             var score = Cosine(queryVector, r.Embedding);
-            if (score > 0)
+            if (score > 0 && score >= minScore)
                 hits.Add(new VectorSearchHit { Record = r, Score = score });
         }
         return hits.OrderByDescending(h => h.Score).Take(topK).ToList();

@@ -16,25 +16,44 @@ public static class KernelFactory
         if (string.IsNullOrWhiteSpace(settings.ChatModel))
             throw new InvalidOperationException("聊天模型未配置。");
 
-        // One HttpClient shared by chat + embedding; its BaseAddress points to the
-        // OpenAI-compatible endpoint. SK builds its internal client from key + endpoint.
-        var endpoint = NormalizeEndpoint(settings.ApiBaseUrl);
-        var httpClient = new HttpClient { BaseAddress = endpoint, Timeout = TimeSpan.FromMinutes(5) };
+        // Defense in depth: legacy databases or callers outside the settings UI
+        // must never re-enable local inference by supplying a loopback endpoint.
+        var chatClient = CreateHttpClient(settings.ApiBaseUrl);
 
         var builder = Kernel.CreateBuilder();
-        builder.AddOpenAIChatCompletion(settings.ChatModel, settings.ApiKey, httpClient: httpClient);
+        builder.AddOpenAIChatCompletion(settings.ChatModel, settings.ApiKey, httpClient: chatClient);
         if (!string.IsNullOrWhiteSpace(settings.EmbeddingModel))
-            builder.AddOpenAITextEmbeddingGeneration(settings.EmbeddingModel, settings.ApiKey, httpClient: httpClient);
+        {
+            var embeddingApiKey = ResolveEmbeddingApiKey(settings);
+            var embeddingClient = CreateHttpClient(ResolveEmbeddingEndpoint(settings).ToString());
+            builder.AddOpenAITextEmbeddingGeneration(
+                settings.EmbeddingModel,
+                embeddingApiKey,
+                httpClient: embeddingClient);
+        }
         return builder.Build();
     }
 
-    /// <summary>Normalizes a base URL so it ends with "/v1" (the OpenAI SDK appends its own sub-paths).</summary>
-    public static Uri NormalizeEndpoint(string baseUrl)
+    internal static Uri ResolveEmbeddingEndpoint(AiSettings settings) => NormalizeEndpoint(
+        string.IsNullOrWhiteSpace(settings.EmbeddingApiBaseUrl)
+            ? settings.ApiBaseUrl
+            : settings.EmbeddingApiBaseUrl);
+
+    internal static string ResolveEmbeddingApiKey(AiSettings settings) =>
+        string.IsNullOrWhiteSpace(settings.EmbeddingApiKey)
+            ? settings.ApiKey
+            : settings.EmbeddingApiKey;
+
+    private static HttpClient CreateHttpClient(string baseUrl) => new()
     {
-        var url = (baseUrl ?? string.Empty).Trim().TrimEnd('/');
-        if (string.IsNullOrEmpty(url)) url = "https://api.openai.com/v1";
-        if (!url.EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
-            url += "/v1";
-        return new Uri(url);
-    }
+        BaseAddress = NormalizeEndpoint(baseUrl),
+        Timeout = TimeSpan.FromMinutes(5)
+    };
+
+    /// <summary>
+    /// Validates a hosted HTTPS endpoint and ensures it ends with "/v1"
+    /// (the OpenAI SDK appends its own sub-paths).
+    /// </summary>
+    public static Uri NormalizeEndpoint(string baseUrl)
+        => RemoteApiEndpointPolicy.NormalizeOrThrow(baseUrl);
 }

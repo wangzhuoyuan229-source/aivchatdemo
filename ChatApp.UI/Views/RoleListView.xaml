@@ -33,32 +33,40 @@
         </Grid>
 
         <!-- Recent group chats (collapses when empty) -->
-        <StackPanel Grid.Row="1" Margin="0,0,0,6"
+        <StackPanel Grid.Row="1" Margin="0,2,0,8"
                     IsVisible="{Binding HasGroupChats, Converter={StaticResource Bool2Vis}}">
-            <TextBlock Text="最近群聊" FontSize="12" Foreground="{StaticResource TextSubBrush}"
-                       Margin="16,4,12,4"/>
+            <TextBlock Text="最近群聊" FontSize="12" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextSubBrush}" Margin="16,4,12,6"/>
             <ItemsControl ItemsSource="{Binding GroupChats}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Button Command="{Binding DataContext.OpenGroupChatCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
-                                Classes="ghost" HorizontalContentAlignment="Stretch"
-                                Margin="8,1" Padding="8,8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Grid.Column="0" Width="34" Height="34" CornerRadius="6" Background="#F2F2F2" VerticalAlignment="Center" Margin="0,0,10,0">
-                                    <TextBlock Text="{Binding Avatar}" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding RoleName}" FontSize="11" Foreground="{StaticResource TextSubBrush}" TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                                <TextBlock Grid.Column="2" Text="{Binding UpdatedText}" FontSize="10" Foreground="{StaticResource TextSubBrush}" VerticalAlignment="Center"/>
-                            </Grid>
+                                Classes="ghost" HorizontalContentAlignment="Stretch" Margin="8,2" Padding="0">
+                            <Border Background="#F7FAF8" BorderBrush="#E3EEE7" BorderThickness="1"
+                                    CornerRadius="9" Padding="10">
+                                <Grid ColumnDefinitions="48,*,Auto" RowDefinitions="Auto,Auto">
+                                    <Border Grid.Column="0" Grid.RowSpan="2" Width="42" Height="42"
+                                            CornerRadius="9" Background="#E5F5EB" VerticalAlignment="Center"
+                                            Margin="0,0,10,0">
+                                        <TextBlock Text="{Binding Avatar}" FontSize="23"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}"
+                                               FontWeight="SemiBold" FontSize="14"
+                                               Foreground="{StaticResource TextMainBrush}"
+                                               TextTrimming="CharacterEllipsis" Margin="0,0,8,2"/>
+                                    <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding UpdatedText}"
+                                               FontSize="10" Foreground="{StaticResource TextSubBrush}"
+                                               VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal">
+                                        <TextBlock Text="成员 · " FontSize="11" Foreground="#6F8177"/>
+                                        <TextBlock Text="{Binding RoleName}" FontSize="11"
+                                                   Foreground="{StaticResource TextSubBrush}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="155"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                         </Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -67,33 +75,44 @@
 
         <ListBox Grid.Row="2" x:Name="RoleList"
                  ItemsSource="{Binding Roles}" Background="Transparent" BorderThickness="0"
+                 Padding="8,0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Grid Margin="14,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="6" Background="#F2F2F2" VerticalAlignment="Top">
-                            <TextBlock Text="{Binding Avatar}" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextMainBrush}"/>
-                            <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{StaticResource TextSubBrush}"
-                                       TextTrimming="CharacterEllipsis" MaxWidth="160"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Classes="ghost" Content="删除"
-                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                    CommandParameter="{Binding}" Margin="0,0,4,0"
-                                    Foreground="#E53935"/>
-                            <Button Classes="ghost" Content="对话 →"
-                                    Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                    CommandParameter="{Binding}"/>
-                        </StackPanel>
-                    </Grid>
+                    <Border Margin="2,4" Padding="10" CornerRadius="8" Background="#FFFFFF">
+                        <Grid ColumnDefinitions="48,*" RowDefinitions="Auto,Auto">
+                            <Border Grid.Column="0" Grid.RowSpan="2"
+                                    Width="44" Height="44" CornerRadius="8" Background="#F2F2F2"
+                                    VerticalAlignment="Top" Margin="0,1,0,0">
+                                <TextBlock Text="{Binding Avatar}" FontSize="26"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+
+                            <Grid Grid.Column="1" Grid.Row="0" Margin="10,0,0,0" ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"
+                                               Foreground="{StaticResource TextMainBrush}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Description}" FontSize="11"
+                                               Foreground="{StaticResource TextSubBrush}"
+                                               TextTrimming="CharacterEllipsis" MaxLines="1"/>
+                                    <TextBlock Text="未绑定知识库" FontSize="10" Foreground="#C47A00"
+                                               IsVisible="{Binding HasNoKnowledgeGroups, Converter={StaticResource Bool2Vis}}"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="primary" Content="对话 →" Padding="12,6"
+                                        Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                        CommandParameter="{Binding}"/>
+                            </Grid>
+
+                            <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal"
+                                        Margin="6,6,0,0" HorizontalAlignment="Left">
+                                <Button Classes="ghost" Content="编辑" Click="EditRole_Click" Padding="6,3" Margin="0,0,4,0"/>
+                                <Button Classes="ghost" Content="删除" Padding="6,3"
+                                        Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                        CommandParameter="{Binding}" Foreground="#E53935"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>

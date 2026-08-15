@@ -22,7 +22,9 @@ public class ConfigurationService : IConfigurationService
             return new AiSettings();
         try
         {
-            return JsonSerializer.Deserialize<AiSettings>(row.Value, JsonOpts) ?? new AiSettings();
+            var settings = JsonSerializer.Deserialize<AiSettings>(row.Value, JsonOpts) ?? new AiSettings();
+            settings.MigrateToRemoteApiOnly();
+            return settings;
         }
         catch
         {
@@ -32,6 +34,9 @@ public class ConfigurationService : IConfigurationService
 
     public async Task SaveAsync(AiSettings settings, CancellationToken ct = default)
     {
+        settings.ApiBaseUrl = RemoteApiEndpointPolicy
+            .NormalizeOrThrow(settings.ApiBaseUrl)
+            .ToString().TrimEnd('/');
         await using var db = await _factory.CreateDbContextAsync(ct);
         var json = JsonSerializer.Serialize(settings, JsonOpts);
         var row = await db.Settings.FirstOrDefaultAsync(s => s.Key == Key, ct);
@@ -45,6 +50,8 @@ public class ConfigurationService : IConfigurationService
     public async Task<bool> IsConfiguredAsync(CancellationToken ct = default)
     {
         var s = await LoadAsync(ct);
-        return !string.IsNullOrWhiteSpace(s.ApiKey) && !string.IsNullOrWhiteSpace(s.ChatModel);
+        return RemoteApiEndpointPolicy.TryNormalize(s.ApiBaseUrl, out _, out _) &&
+               !string.IsNullOrWhiteSpace(s.ApiKey) &&
+               !string.IsNullOrWhiteSpace(s.ChatModel);
     }
 }

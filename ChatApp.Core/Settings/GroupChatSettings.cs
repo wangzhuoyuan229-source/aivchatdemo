@@ -19,7 +19,7 @@ public class GroupChatSettings
     /// <summary>Default speaking policy. Hybrid = director picks speakers.</summary>
     public GroupChatMode Mode { get; set; } = GroupChatMode.Hybrid;
 
-    /// <summary>Max AI speakers per user turn (Hybrid only).</summary>
+    /// <summary>Requested AI speaker count per user turn (Hybrid only).</summary>
     public int MaxSpeakersPerTurn { get; set; } = 2;
 
     /// <summary>Whether agents are told they may respond to / rebut other agents.</summary>

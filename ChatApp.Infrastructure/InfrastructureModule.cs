@@ -34,10 +34,60 @@ public static class InfrastructureModule
         await MigrateKnowledgeGroupsAsync(db, ct);
         // 群聊功能迁移：添加 ConversationMembers 表、Conversations.Type 列、RoleId 改可空
         await MigrateGroupChatAsync(db, ct);
+        // 严格知识约束：角色示范对话 + 角色到知识分组的显式绑定
+        await MigrateGroundedDialogueAsync(db, ct);
 
         // Preset roles seeding disabled — new databases start with an empty role library.
         // var roleService = services.GetRequiredService<IRoleService>();
         // await roleService.EnsurePresetsSeededAsync(ct);
+    }
+
+    /// <summary>
+    /// Adds authored dialogue examples and explicit role-to-knowledge-group bindings.
+    /// Existing roles intentionally start with no bindings so unrelated knowledge is
+    /// never made visible implicitly. Idempotent for both old and newly-created stores.
+    /// </summary>
+    internal static async Task MigrateGroundedDialogueAsync(AppDbContext db, CancellationToken ct)
+    {
+        var conn = db.Database.GetDbConnection() as SqliteConnection;
+        if (conn is null) return;
+
+        await conn.OpenAsync(ct);
+        try
+        {
+            var roleColumns = await ReadColumnsAsync(conn, "Roles", ct);
+            if (!roleColumns.ContainsKey("DialogueExamples"))
+            {
+                using var addExamples = new SqliteCommand(
+                    "ALTER TABLE \"Roles\" ADD COLUMN \"DialogueExamples\" TEXT NOT NULL DEFAULT '';", conn);
+                await addExamples.ExecuteNonQueryAsync(ct);
+            }
+
+            using (var createBindings = new SqliteCommand(
+                "CREATE TABLE IF NOT EXISTS \"RoleKnowledgeGroups\" (" +
+                "\"RoleId\" INTEGER NOT NULL, " +
+                "\"KnowledgeGroupId\" INTEGER NOT NULL, " +
+                "CONSTRAINT \"PK_RoleKnowledgeGroups\" PRIMARY KEY (\"RoleId\", \"KnowledgeGroupId\"));", conn))
+            {
+                await createBindings.ExecuteNonQueryAsync(ct);
+            }
+
+            using (var roleIndex = new SqliteCommand(
+                "CREATE INDEX IF NOT EXISTS \"IX_RoleKnowledgeGroups_RoleId\" ON \"RoleKnowledgeGroups\" (\"RoleId\");", conn))
+            {
+                await roleIndex.ExecuteNonQueryAsync(ct);
+            }
+
+            using (var groupIndex = new SqliteCommand(
+                "CREATE INDEX IF NOT EXISTS \"IX_RoleKnowledgeGroups_KnowledgeGroupId\" ON \"RoleKnowledgeGroups\" (\"KnowledgeGroupId\");", conn))
+            {
+                await groupIndex.ExecuteNonQueryAsync(ct);
+            }
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
     }
 
     /// <summary>

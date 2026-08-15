@@ -16,8 +16,6 @@ public partial class ChatViewModel : ViewModelBase
     private readonly ILogger<ChatViewModel> _logger;
     private CancellationTokenSource? _cts;
 
-    /// <summary>True when the current conversation is a group chat (multi-AI).</summary>
-    private bool _isGroupMode;
     /// <summary>Member roles keyed by RoleId (group mode only).</summary>
     private readonly Dictionary<int, Role> _groupMembers = new();
     /// <summary>Streaming bubbles keyed by RoleId (group mode only).</summary>
@@ -28,6 +26,8 @@ public partial class ChatViewModel : ViewModelBase
     [ObservableProperty] private string _inputText = string.Empty;
     [ObservableProperty] private bool _isSending;
     [ObservableProperty] private string _statusText = string.Empty;
+    [ObservableProperty] private bool _isGroupMode;
+    [ObservableProperty] private string _conversationSubtitle = string.Empty;
 
     public ObservableCollection<ChatBubbleViewModel> Messages { get; } = new();
 
@@ -51,11 +51,12 @@ public partial class ChatViewModel : ViewModelBase
         var conv = await _history.GetConversationAsync(conversationId);
         if (conv is null) return;
         Conversation = conv;
-        _isGroupMode = false;
+        IsGroupMode = false;
         _groupMembers.Clear();
         _activeBubbles.Clear();
         Role = await _roles.GetAsync(conv.RoleId ?? 0);
         Title = Role is null ? conv.Title : $"{Role.Avatar}  {Role.Name}";
+        ConversationSubtitle = Role?.Description ?? string.Empty;
         Messages.Clear();
         var msgs = await _history.GetMessagesAsync(conversationId);
         foreach (var m in msgs) Messages.Add(ToBubble(m));
@@ -67,7 +68,7 @@ public partial class ChatViewModel : ViewModelBase
         var conv = await _history.GetConversationAsync(conversationId);
         if (conv is null) return;
         Conversation = conv;
-        _isGroupMode = true;
+        IsGroupMode = true;
         Role = null;
         _groupMembers.Clear();
         _activeBubbles.Clear();
@@ -80,8 +81,9 @@ public partial class ChatViewModel : ViewModelBase
         }
 
         Title = string.IsNullOrWhiteSpace(conv.Title)
-            ? $"👥 {string.Join("、", _groupMembers.Values.Select(r => r.Name))}"
-            : $"👥 {conv.Title}";
+            ? string.Join("、", _groupMembers.Values.Select(r => r.Name))
+            : conv.Title;
+        ConversationSubtitle = $"{_groupMembers.Count} 位成员 · {string.Join("、", _groupMembers.Values.Select(r => r.Name))}";
 
         Messages.Clear();
         var msgs = await _history.GetMessagesAsync(conversationId);
@@ -93,11 +95,12 @@ public partial class ChatViewModel : ViewModelBase
     {
         Conversation = null;
         Role = null;
-        _isGroupMode = false;
+        IsGroupMode = false;
         _groupMembers.Clear();
         _activeBubbles.Clear();
         Messages.Clear();
         Title = "对话";
+        ConversationSubtitle = string.Empty;
         StatusText = string.Empty;
         InputText = string.Empty;
     }
@@ -130,7 +133,9 @@ public partial class ChatViewModel : ViewModelBase
         var conv = await _history.CreateConversationAsync(role.Id, $"与{role.Name}的对话");
         Conversation = conv;
         Role = role;
+        IsGroupMode = false;
         Title = $"{role.Avatar}  {role.Name}";
+        ConversationSubtitle = role.Description;
         Messages.Clear();
 
         try
@@ -154,7 +159,7 @@ public partial class ChatViewModel : ViewModelBase
         InputText = string.Empty;
         SendCommand.NotifyCanExecuteChanged();
 
-        if (_isGroupMode)
+        if (IsGroupMode)
         {
             await SendGroupAsync(text);
             return;
@@ -299,7 +304,7 @@ public partial class ChatViewModel : ViewModelBase
     private ChatBubbleViewModel ToBubble(Message m)
     {
         // Group mode: resolve avatar/name per message via member map.
-        if (_isGroupMode)
+        if (IsGroupMode)
         {
             var gRole = m.Author == MessageAuthor.User ? null : _groupMembers.GetValueOrDefault(m.RoleId);
             return new ChatBubbleViewModel
