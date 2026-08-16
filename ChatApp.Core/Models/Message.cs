@@ -25,6 +25,38 @@ public class Message
     public int TokenEstimate { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public List<MessageAttachment> Attachments { get; set; } = new();
+}
+
+public enum MessageAttachmentKind
+{
+    Image = 0
+}
+
+/// <summary>An immutable snapshot attached to a persisted chat message.</summary>
+public class MessageAttachment
+{
+    public int Id { get; set; }
+
+    public int MessageId { get; set; }
+
+    public MessageAttachmentKind Kind { get; set; } = MessageAttachmentKind.Image;
+
+    /// <summary>Relative key below the managed chat-attachment directory.</summary>
+    public string StorageKey { get; set; } = string.Empty;
+
+    public string MimeType { get; set; } = string.Empty;
+
+    public string FileName { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Caption { get; set; } = string.Empty;
+
+    public int? SourceKnowledgeDocumentId { get; set; }
+
+    public Message? Message { get; set; }
 }
 
 /// <summary>

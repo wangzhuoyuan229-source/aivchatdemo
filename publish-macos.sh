@@ -27,8 +27,16 @@ dotnet publish "$project_dir/ChatApp.UI/ChatApp.UI.csproj" \
   -p:DebugSymbols=false \
   -o "$raw_dir"
 
+if [[ ! -d "$raw_dir/BundledKnowledge" ]]; then
+  echo "Bundled knowledge was not copied to the publish output." >&2
+  exit 1
+fi
+
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 cp -R "$raw_dir/." "$app_dir/Contents/MacOS/"
+if [[ -d "$app_dir/Contents/MacOS/BundledKnowledge" ]]; then
+  mv "$app_dir/Contents/MacOS/BundledKnowledge" "$app_dir/Contents/Resources/BundledKnowledge"
+fi
 cp "$project_dir/ChatApp.UI/Platforms/macOS/Info.plist" "$app_dir/Contents/Info.plist"
 chmod +x "$app_dir/Contents/MacOS/ChatApp.UI"
 find "$app_dir/Contents/MacOS" -type f -name '*.pdb' -delete
@@ -41,4 +49,10 @@ codesign --force --sign - "$app_dir"
 codesign --verify --deep --strict "$app_dir"
 xattr -cr "$app_dir" 2>/dev/null || true
 
-echo "Created $app_dir"
+knowledge_count="$(find "$app_dir/Contents/Resources/BundledKnowledge" -type f | wc -l | tr -d ' ')"
+archive_path="$output_dir/ChatApp-macOS-arm64.zip"
+ditto -c -k --sequesterRsrc --keepParent "$app_dir" "$archive_path"
+archive_sha256="$(shasum -a 256 "$archive_path" | awk '{print $1}')"
+echo "Created $app_dir with $knowledge_count bundled knowledge files"
+echo "Created $archive_path"
+echo "SHA-256: $archive_sha256"

@@ -4,6 +4,7 @@
              xmlns:vm="using:ChatApp.UI.ViewModels"
              xmlns:cm="using:ChatApp.Core.Models"
              xmlns:conv="using:ChatApp.UI.Converters"
+             xmlns:controls="using:ChatApp.UI.Controls"
              Background="White">
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="Bool2Vis"/>
@@ -48,9 +49,8 @@
                                 <Grid ColumnDefinitions="48,*,Auto" RowDefinitions="Auto,Auto">
                                     <Border Grid.Column="0" Grid.RowSpan="2" Width="42" Height="42"
                                             CornerRadius="9" Background="#E5F5EB" VerticalAlignment="Center"
-                                            Margin="0,0,10,0">
-                                        <TextBlock Text="{Binding Avatar}" FontSize="23"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            Margin="0,0,10,0" ClipToBounds="True">
+                                        <controls:AvatarView Avatar="{Binding Avatar}" FontSize="23"/>
                                     </Border>
                                     <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}"
                                                FontWeight="SemiBold" FontSize="14"
@@ -83,9 +83,8 @@
                         <Grid ColumnDefinitions="48,*" RowDefinitions="Auto,Auto">
                             <Border Grid.Column="0" Grid.RowSpan="2"
                                     Width="44" Height="44" CornerRadius="8" Background="#F2F2F2"
-                                    VerticalAlignment="Top" Margin="0,1,0,0">
-                                <TextBlock Text="{Binding Avatar}" FontSize="26"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    VerticalAlignment="Top" Margin="0,1,0,0" ClipToBounds="True">
+                                <controls:AvatarView Avatar="{Binding Avatar}" FontSize="26"/>
                             </Border>
 
                             <Grid Grid.Column="1" Grid.Row="0" Margin="10,0,0,0" ColumnDefinitions="*,Auto">

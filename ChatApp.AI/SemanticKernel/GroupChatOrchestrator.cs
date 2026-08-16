@@ -150,10 +150,10 @@ public class GroupChatOrchestrator : IGroupChatService
             }
 
             _logger.LogInformation(
-                "Group-chat role {RoleId} knowledge status {Status}; context chunks {Count}.",
-                role.Id, knowledgeResult.Status, knowledgeResult.Hits.Count);
+                "Group-chat role {RoleId} knowledge status {Status}; context chunks {Count}, image candidates {ImageCount}.",
+                role.Id, knowledgeResult.Status, knowledgeResult.Hits.Count, knowledgeResult.ImageHits.Count);
 
-            var systemPrompt = ChatOrchestrator.BuildSystemPrompt(role, memoryHits, knowledgeResult)
+            var systemPrompt = ChatOrchestrator.BuildSystemPrompt(role, memoryHits, knowledgeResult, knowledgeResult.ImageHits)
                 + BuildGroupRules(role, rolesById, settings.GroupChat);
             var skHistory = new ChatHistory(systemPrompt);
             skHistory.AddUserMessage(transcript + $"\n\n请以 {role.Name} 的身份发言。");
@@ -161,17 +161,24 @@ public class GroupChatOrchestrator : IGroupChatService
             progress?.Report(new SpeakerStarted(role.Id));
 
             var sb = new StringBuilder();
+            var visibleStream = new KnowledgeImageSelection.StreamFilter();
             await foreach (var chunk in chat.GetStreamingChatMessageContentsAsync(skHistory, execSettings, kernel, ct))
             {
                 var delta = chunk.Content;
                 if (string.IsNullOrEmpty(delta)) continue;
                 sb.Append(delta);
-                progress?.Report(new SpeakerDelta(role.Id, delta));
+                var visible = visibleStream.Push(delta);
+                if (visible.Length > 0) progress?.Report(new SpeakerDelta(role.Id, visible));
             }
+            var visibleTail = visibleStream.Complete();
+            if (visibleTail.Length > 0) progress?.Report(new SpeakerDelta(role.Id, visibleTail));
 
-            var reply = sb.ToString();
+            var selection = KnowledgeImageSelection.Parse(sb.ToString(), knowledgeResult.ImageHits);
+            var reply = selection.Text;
             if (string.IsNullOrWhiteSpace(reply))
                 reply = $"（{role.Name} 沉默了一会儿，没有说话。）";
+
+            var attachments = await _knowledge.CreateMessageAttachmentSnapshotsAsync(selection.DocumentIds, ct);
 
             var msg = await _history.AddMessageAsync(new Message
             {
@@ -179,14 +186,15 @@ public class GroupChatOrchestrator : IGroupChatService
                 RoleId = role.Id,
                 Author = MessageAuthor.Assistant,
                 Content = reply,
-                TokenEstimate = EstimateTokens(reply, settings)
+                TokenEstimate = EstimateTokens(reply, settings),
+                Attachments = attachments.ToList()
             }, ct);
 
             progress?.Report(new SpeakerFinished(role.Id, msg));
             results.Add(msg);
 
             // Append so the next speaker can react.
-            transcript += $"\n[{role.Name}] {reply}";
+            transcript += $"\n[{role.Name}] {ChatOrchestrator.FormatMessageForContext(msg)}";
         }
 
         progress?.Report(new TurnFinished());
@@ -326,12 +334,12 @@ public class GroupChatOrchestrator : IGroupChatService
         {
             if (m.Author == MessageAuthor.System) continue;
             if (m.Author == MessageAuthor.User)
-                sb.Append("[用户] ").Append(m.Content).Append('\n');
+                sb.Append("[用户] ").Append(ChatOrchestrator.FormatMessageForContext(m)).Append('\n');
             else
                 sb.Append('[')
                   .Append(rolesById.TryGetValue(m.RoleId, out var r) ? r.Name : "AI")
                   .Append("] ")
-                  .Append(m.Content)
+                  .Append(ChatOrchestrator.FormatMessageForContext(m))
                   .Append('\n');
         }
         return sb.ToString().TrimEnd('\n');

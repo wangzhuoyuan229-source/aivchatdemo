@@ -10,9 +10,11 @@ public static class DocumentLoader
         var ext = Path.GetExtension(filePath).TrimStart('.').ToLowerInvariant();
         return ext switch
         {
+            "" when !Path.GetFileName(filePath).StartsWith(".", StringComparison.Ordinal) =>
+                await File.ReadAllTextAsync(filePath, ct),
             "txt" or "md" or "markdown" => await File.ReadAllTextAsync(filePath, ct),
             "pdf" => LoadPdf(filePath),
-            _ => throw new NotSupportedException($"不支持的文件类型：.{ext}（仅支持 txt/md/pdf）")
+            _ => throw new NotSupportedException($"不支持的文件类型：.{ext}（仅支持无扩展名文本、txt/md/pdf）")
         };
     }
 

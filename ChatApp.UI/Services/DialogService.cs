@@ -14,27 +14,46 @@ public sealed class DialogService : IDialogService
 
     public async Task<string?> PickFileAsync()
     {
+        var files = await PickFilesAsync();
+        return files.FirstOrDefault();
+    }
+
+    public async Task<IReadOnlyList<string>> PickFilesAsync()
+    {
         var files = await Owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "选择知识库文档",
-            AllowMultiple = false,
+            Title = "选择知识库文档或图片",
+            AllowMultiple = true,
             FileTypeFilter =
             [
-                new FilePickerFileType("支持的文档") { Patterns = ["*.txt", "*.md", "*.pdf"] },
+                new FilePickerFileType("支持的知识文件") { Patterns = ["*.txt", "*.md", "*.markdown", "*.pdf", "*.png", "*.jpg", "*.jpeg", "*.webp"] },
+                new FilePickerFileType("图片") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.webp"] },
                 FilePickerFileTypes.All
             ]
         });
-        return files.Count == 0 ? null : files[0].TryGetLocalPath();
+        return files.Select(file => file.TryGetLocalPath())
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path!)
+            .ToList();
     }
 
     public async Task<string?> PickFolderAsync()
     {
+        var folders = await PickFoldersAsync();
+        return folders.FirstOrDefault();
+    }
+
+    public async Task<IReadOnlyList<string>> PickFoldersAsync()
+    {
         var folders = await Owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "选择知识库文件夹（含子文件夹）",
-            AllowMultiple = false
+            Title = "选择一个或多个知识库文件夹（含子文件夹）",
+            AllowMultiple = true
         });
-        return folders.Count == 0 ? null : folders[0].TryGetLocalPath();
+        return folders.Select(folder => folder.TryGetLocalPath())
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path!)
+            .ToList();
     }
 
     public async Task<bool> ConfirmAsync(string message, string title)

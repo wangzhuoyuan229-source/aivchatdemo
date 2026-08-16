@@ -2,7 +2,7 @@ using ChatApp.Core.Models;
 
 namespace ChatApp.Core.Services;
 
-/// <summary>Knowledge-base import, chunking and role-scoped lexical retrieval (F5).</summary>
+/// <summary>Knowledge document/image import, indexing and role-scoped semantic retrieval.</summary>
 public interface IKnowledgeService
 {
     Task<IReadOnlyList<KnowledgeDocument>> ListDocumentsAsync(CancellationToken ct = default);
@@ -12,18 +12,56 @@ public interface IKnowledgeService
 
     Task<KnowledgeDocument?> GetDocumentAsync(int id, CancellationToken ct = default);
 
-    /// <summary>Imports a file (.txt/.md/.pdf), chunks it and stores the text for local retrieval.</summary>
+    /// <summary>Imports one supported document or PNG/JPEG/WebP image.</summary>
     /// <param name="groupId">Optional target group. Null = ungrouped.</param>
     Task<KnowledgeDocument> ImportAsync(string filePath, IProgress<(int done, int total)>? progress = null, CancellationToken ct = default, int? groupId = null);
 
-    /// <summary>Imports all supported files (.txt/.md/.markdown/.pdf) from a directory, optionally recursively.</summary>
+    Task<IReadOnlyList<KnowledgeDocument>> ImportFilesAsync(
+        IReadOnlyList<string> filePaths,
+        IProgress<KnowledgeImportProgress>? progress = null,
+        CancellationToken ct = default,
+        int? groupId = null);
+    /// <summary>Imports all supported documents and images from a directory, optionally recursively.</summary>
     /// <param name="groupId">Optional target group. Null = ungrouped.</param>
     Task<IReadOnlyList<KnowledgeDocument>> ImportDirectoryAsync(string directoryPath, bool recursive, IProgress<(int doneFiles, int totalFiles, string currentFile)>? progress = null, CancellationToken ct = default, int? groupId = null);
+
+    Task<IReadOnlyList<KnowledgeDocument>> ImportDirectoriesAsync(
+        IReadOnlyList<string> directoryPaths,
+        bool recursive,
+        IProgress<KnowledgeImportProgress>? progress = null,
+        CancellationToken ct = default,
+        int? groupId = null);
 
     Task<IReadOnlyList<KnowledgeChunk>> GetChunksAsync(int documentId, CancellationToken ct = default);
 
     /// <summary>Retrieves role-scoped, thresholded and source-aware knowledge context.</summary>
     Task<KnowledgeRetrievalResult> RetrieveAsync(KnowledgeRetrievalRequest request, CancellationToken ct = default);
+
+    Task UpdateImageMetadataAsync(int documentId, string description, string tags, CancellationToken ct = default);
+
+    Task<KnowledgeDocument> RegenerateImageDescriptionAsync(int documentId, CancellationToken ct = default);
+
+    Task<IReadOnlyList<KnowledgeDocument>> RegenerateImageDescriptionsAsync(
+        IReadOnlyCollection<int> documentIds,
+        IProgress<KnowledgeImportProgress>? progress = null,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<MessageAttachment>> CreateMessageAttachmentSnapshotsAsync(
+        IReadOnlyCollection<int> imageDocumentIds,
+        CancellationToken ct = default);
+
+    /// <summary>Creates a compact, self-contained avatar data URI from a knowledge image.</summary>
+    Task<string> CreateRoleAvatarDataUriAsync(int imageDocumentId, CancellationToken ct = default);
+
+    /// <summary>Creates a compact avatar from a trusted local image, such as a bundled but not-yet-indexed file.</summary>
+    Task<string> CreateRoleAvatarDataUriFromFileAsync(string imagePath, CancellationToken ct = default);
+
+    /// <summary>Finds images whose folder, file name, title or tags contain the role name.</summary>
+    Task<IReadOnlyList<KnowledgeImageHit>> FindRoleAvatarCandidatesAsync(
+        string roleName,
+        IReadOnlyCollection<int> allowedGroupIds,
+        int maxResults = 20,
+        CancellationToken ct = default);
 
     Task DeleteDocumentAsync(int id, CancellationToken ct = default);
 

@@ -36,6 +36,8 @@ public static class InfrastructureModule
         await MigrateGroupChatAsync(db, ct);
         // 严格知识约束：角色示范对话 + 角色到知识分组的显式绑定
         await MigrateGroundedDialogueAsync(db, ct);
+        // 图片知识项、独立消息附件与历史快照。
+        await MigrateKnowledgeImagesAsync(db, ct);
 
         // Preset roles seeding disabled — new databases start with an empty role library.
         // var roleService = services.GetRequiredService<IRoleService>();
@@ -62,6 +64,12 @@ public static class InfrastructureModule
                     "ALTER TABLE \"Roles\" ADD COLUMN \"DialogueExamples\" TEXT NOT NULL DEFAULT '';", conn);
                 await addExamples.ExecuteNonQueryAsync(ct);
             }
+            if (!roleColumns.ContainsKey("UserPersona"))
+            {
+                using var addUserPersona = new SqliteCommand(
+                    "ALTER TABLE \"Roles\" ADD COLUMN \"UserPersona\" TEXT NOT NULL DEFAULT '';", conn);
+                await addUserPersona.ExecuteNonQueryAsync(ct);
+            }
 
             using (var createBindings = new SqliteCommand(
                 "CREATE TABLE IF NOT EXISTS \"RoleKnowledgeGroups\" (" +
@@ -83,6 +91,68 @@ public static class InfrastructureModule
             {
                 await groupIndex.ExecuteNonQueryAsync(ct);
             }
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
+    }
+
+    /// <summary>Adds image knowledge metadata and immutable message attachments. Idempotent.</summary>
+    internal static async Task MigrateKnowledgeImagesAsync(AppDbContext db, CancellationToken ct)
+    {
+        var conn = db.Database.GetDbConnection() as SqliteConnection;
+        if (conn is null) return;
+
+        await conn.OpenAsync(ct);
+        try
+        {
+            var columns = await ReadColumnsAsync(conn, "KnowledgeDocuments", ct);
+            var additions = new (string Name, string Sql)[]
+            {
+                ("Kind", "INTEGER NOT NULL DEFAULT 0"),
+                ("StorageKey", "TEXT NOT NULL DEFAULT ''"),
+                ("MimeType", "TEXT NOT NULL DEFAULT ''"),
+                ("FileSize", "INTEGER NOT NULL DEFAULT 0"),
+                ("SemanticDescription", "TEXT NOT NULL DEFAULT ''"),
+                ("Tags", "TEXT NOT NULL DEFAULT ''"),
+                ("DescriptionSource", "INTEGER NOT NULL DEFAULT 0"),
+                ("DescriptionProvider", "TEXT NOT NULL DEFAULT ''"),
+                ("DescriptionModel", "TEXT NOT NULL DEFAULT ''"),
+                ("SourceRelativePath", "TEXT NOT NULL DEFAULT ''")
+            };
+            foreach (var (name, sql) in additions)
+            {
+                if (columns.ContainsKey(name)) continue;
+                using var add = new SqliteCommand(
+                    $"ALTER TABLE \"KnowledgeDocuments\" ADD COLUMN \"{name}\" {sql};", conn);
+                await add.ExecuteNonQueryAsync(ct);
+            }
+
+            using (var create = new SqliteCommand(
+                "CREATE TABLE IF NOT EXISTS \"MessageAttachments\" (" +
+                "\"Id\" INTEGER NOT NULL CONSTRAINT \"PK_MessageAttachments\" PRIMARY KEY AUTOINCREMENT, " +
+                "\"MessageId\" INTEGER NOT NULL, " +
+                "\"Kind\" INTEGER NOT NULL DEFAULT 0, " +
+                "\"StorageKey\" TEXT NOT NULL DEFAULT '', " +
+                "\"MimeType\" TEXT NOT NULL DEFAULT '', " +
+                "\"FileName\" TEXT NOT NULL DEFAULT '', " +
+                "\"Title\" TEXT NOT NULL DEFAULT '', " +
+                "\"Caption\" TEXT NOT NULL DEFAULT '', " +
+                "\"SourceKnowledgeDocumentId\" INTEGER NULL);", conn))
+            {
+                await create.ExecuteNonQueryAsync(ct);
+            }
+            var attachmentColumns = await ReadColumnsAsync(conn, "MessageAttachments", ct);
+            if (!attachmentColumns.ContainsKey("Title"))
+            {
+                using var addTitle = new SqliteCommand(
+                    "ALTER TABLE \"MessageAttachments\" ADD COLUMN \"Title\" TEXT NOT NULL DEFAULT '';", conn);
+                await addTitle.ExecuteNonQueryAsync(ct);
+            }
+            using var index = new SqliteCommand(
+                "CREATE INDEX IF NOT EXISTS \"IX_MessageAttachments_MessageId\" ON \"MessageAttachments\" (\"MessageId\");", conn);
+            await index.ExecuteNonQueryAsync(ct);
         }
         finally
         {

@@ -1,6 +1,7 @@
 <Window x:Class="ChatApp.UI.Views.CreateGroupChatWindow"
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:ChatApp.UI.Controls"
         Title="创建群聊" Height="600" Width="480"
         WindowStartupLocation="CenterOwner" Background="{StaticResource BgBrush}">
     <Grid>
@@ -45,8 +46,8 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <Border Grid.Column="1" Width="34" Height="34" CornerRadius="5" Background="#F2F2F2" VerticalAlignment="Center" Margin="0,0,10,0">
-                                        <TextBlock Text="{Binding Avatar}" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Width="34" Height="34" CornerRadius="5" Background="#F2F2F2" VerticalAlignment="Center" Margin="0,0,10,0" ClipToBounds="True">
+                                        <controls:AvatarView Avatar="{Binding Avatar}" FontSize="20"/>
                                     </Border>
                                     <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"/>

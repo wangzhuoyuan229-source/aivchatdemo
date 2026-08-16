@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ConversationMember> ConversationMembers => Set<ConversationMember>();
     public DbSet<Message> Messages => Set<Message>();
+    public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
     public DbSet<MemoryEntry> MemoryEntries => Set<MemoryEntry>();
     public DbSet<KnowledgeDocument> KnowledgeDocuments => Set<KnowledgeDocument>();
     public DbSet<KnowledgeChunk> KnowledgeChunks => Set<KnowledgeChunk>();
@@ -35,6 +36,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.Avatar).HasDefaultValue("");
             e.Property(x => x.Description).HasDefaultValue("");
             e.Property(x => x.Background).HasDefaultValue("");
+            e.Property(x => x.UserPersona).HasDefaultValue("");
             e.Property(x => x.Personality).HasDefaultValue("");
             e.Property(x => x.SpeakingStyle).HasDefaultValue("");
             e.Property(x => x.SystemPrompt).HasDefaultValue("");
@@ -53,6 +55,20 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(x => x.ConversationId);
             e.Property(x => x.Content).IsRequired();
+            e.HasMany(x => x.Attachments)
+                .WithOne(x => x.Message)
+                .HasForeignKey(x => x.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<MessageAttachment>(e =>
+        {
+            e.HasIndex(x => x.MessageId);
+            e.Property(x => x.StorageKey).HasDefaultValue("");
+            e.Property(x => x.MimeType).HasDefaultValue("");
+            e.Property(x => x.FileName).HasDefaultValue("");
+            e.Property(x => x.Title).HasDefaultValue("");
+            e.Property(x => x.Caption).HasDefaultValue("");
         });
 
         b.Entity<Conversation>(e =>
@@ -78,6 +94,13 @@ public class AppDbContext : DbContext
         {
             e.Property(x => x.Title).HasDefaultValue("");
             e.Property(x => x.FileName).HasDefaultValue("");
+            e.Property(x => x.StorageKey).HasDefaultValue("");
+            e.Property(x => x.MimeType).HasDefaultValue("");
+            e.Property(x => x.SemanticDescription).HasDefaultValue("");
+            e.Property(x => x.Tags).HasDefaultValue("");
+            e.Property(x => x.DescriptionProvider).HasDefaultValue("");
+            e.Property(x => x.DescriptionModel).HasDefaultValue("");
+            e.Property(x => x.SourceRelativePath).HasDefaultValue("");
             e.HasIndex(x => x.GroupId);
         });
 

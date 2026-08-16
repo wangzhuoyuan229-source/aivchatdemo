@@ -2,6 +2,8 @@
 
 > .NET 8 + Avalonia 跨平台桌面应用 | Semantic Kernel AI 引擎 | EF Core + SQLite 持久化
 
+当前版本：**v1.1.0** · [更新日志](CHANGELOG.md)
+
 ## 项目概述
 
 ChatApp 是一款支持 macOS 与 Windows 的桌面 AI 角色扮演聊天应用，支持 1:1 私聊与多 AI 群聊。用户可以创建/管理 AI 角色（人设、性格、说话风格），导入知识库文档，并通过远程 OpenAI 兼容 API 驱动角色进行对话。应用采用 BYOK（自带密钥）模式，只允许 HTTPS 托管 API，不提供本地模型入口。
@@ -13,13 +15,20 @@ OpenAI 兼容的远程 HTTPS API；localhost、回环地址、私有网络地址
 会在界面、持久化与运行时三层被拒绝。仓库中的 LoRA 训练材料仅保留用于离线研究和
 评测，不再接入桌面应用；详情见 [training/README.md](training/README.md)。
 
+图片知识使用另一套完全独立的多模态 API 配置。内置阿里云百炼
+(`qwen3-vl-flash`)、智谱 (`glm-4.6v-flash`)、火山方舟 Responses API
+(`doubao-seed-2-0-lite-260215`) 和 SiliconFlow
+(`Qwen/Qwen3-VL-32B-Instruct`) 预设，也可填写自定义 Chat Completions 或
+Responses 兼容服务。多模态 API 只在导入图片和“重新识图”时调用，聊天回复阶段仍使用
+现有聊天模型和已保存的图片描述，不产生额外视觉调用。
+
 ## macOS Release 使用说明
 
-当前正式版为 [v1.0.2](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.0.2)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
+当前正式版为 [v1.1.0](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.1.0)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
 
 ### 下载与安装
 
-1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.0.2/ChatApp-macOS-arm64.zip)。
+1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.1.0/ChatApp-macOS-arm64.zip)。
 2. 双击 ZIP 文件解压，得到 `ChatApp.app`。
 3. 将 `ChatApp.app` 拖入“应用程序（Applications）”文件夹。
 4. 首次启动时，在 Finder 中右键 `ChatApp.app`，选择“打开”，然后在系统提示中再次选择“打开”。后续可正常双击启动。
@@ -40,23 +49,39 @@ open /Applications/ChatApp.app
 shasum -a 256 ~/Downloads/ChatApp-macOS-arm64.zip
 ```
 
-v1.0.2 的 SHA-256 应为：
+v1.1.0 的 SHA-256 应为：
 
 ```text
-0347d9e612501adf4fadcb987537486d844e622f7020064a2b2ced56c245e3e9
+8dcaeb3a4ebb58eb1c2469ce0feda4a4626918f09d1becbbd19c8eac9f50673e
 ```
 
 ### 首次配置
 
 1. 启动 ChatApp，打开左侧“设置”。
 2. 填写兼容 OpenAI 协议的 API Base URL 和自己的 API Key。
-3. 选择或填写聊天模型与 Embedding 模型；停止编辑约 700ms 后设置会自动保存。
+3. 选择或填写聊天模型与 Embedding 模型；如需图片知识，再配置独立多模态服务并点击“测试多模态连接”。停止编辑约 700ms 后设置会自动保存。
 4. 看到“已自动保存”提示后，进入角色库开始对话。
 
 使用 DeepSeek 聊天并启用知识库时，可在“Embedding 服务预设”选择
 “阿里云百炼（推荐 · text-embedding-v4）”。应用会自动填写
 `https://dashscope.aliyuncs.com/compatible-mode/v1` 和 `text-embedding-v4`，
 用户只需填写独立的百炼 API Key。
+
+### 内置知识库
+
+仓库根目录的 `知识库/` 会在构建时自动复制到应用发布内容（`.DS_Store` 除外），
+目前包含文本资料和角色立绘。启用知识库并配置 Embedding 后，应用会在后台把这些资料
+自动放入“内置知识库”分组并生成索引：
+
+- 首次安装到一台新设备时，需要使用用户配置的 Embedding API 自动生成一次向量；这是因为不同用户可能选择不同的向量模型，发布包不能安全地共用同一套预生成向量。
+- 后续启动和覆盖安装会复用本机数据库中的索引，仅做快速完整性检查，不会重复调用 Embedding 或多模态 API。
+- 首次索引被取消、断网或部分失败时，已完成项会保留，下次启动仅续传缺失项。
+- 以前手动导入且相对路径相同的未分组资料会迁移到“内置知识库”分组并直接复用。
+- 对话仍严格遵循角色的知识分组绑定；需要在角色设置中为相应角色绑定“内置知识库”。
+
+维护内置资料时，必须将根目录 `知识库/` 一并提交到版本控制。新增路径会被自动发现；
+如果原路径不变但文件内容发生变化，请同时更新
+`ChatApp.UI/Services/BundledKnowledgeService.cs` 中的 `BundleVersion`，使旧索引在升级时重建。
 
 应用采用 BYOK（自带密钥）模式，Release 中没有预置任何 API Key。用户填写的设置、聊天记录和知识库保存在本机：
 
@@ -90,7 +115,9 @@ v1.0.2 的 SHA-256 应为：
 .\publish-win-x64.ps1
 ```
 
-生成的单文件程序位于 `publish/win-x64/ChatApp.UI.exe`。API Key 不写入程序或发布目录，而是由用户在应用设置中输入并保存到本机 `%LOCALAPPDATA%\\ChatApp`；发布前不要把本地数据库或配置文件复制进发布包。
+生成内容位于 `publish/win-x64/`。由于内置知识原文件位于同目录的
+`BundledKnowledge/`，发布时必须打包整个 `win-x64` 文件夹，不能只分发
+`ChatApp.UI.exe`。API Key 不写入程序或发布目录，而是由用户在应用设置中输入并保存到本机 `%LOCALAPPDATA%\\ChatApp`；发布前不要把本地数据库或配置文件复制进发布包。
 
 ## 技术栈
 
@@ -139,14 +166,17 @@ ChatApp.UI ──────────────► ChatApp.AI ────
 
 | 功能 | 描述 |
 |------|------|
-| 🤖 **AI 角色管理** | 创建/编辑/删除角色，支持头像、人设、背景、性格、说话风格与示范对话 |
+| 🤖 **AI 角色管理** | 创建/编辑/删除角色，支持头像、人设、背景、用户所扮演身份、性格、说话风格与示范对话 |
+| 🧑‍🎨 **知识图片头像** | 新建角色时先查找名称匹配的图片目录/文件（内置图片尚未生成向量时也可使用），再回退语义检索；独立多模态模型定位主要人物面部，本地放大裁剪为 256×256 头像快照，无命中时保留 emoji |
 | 📦 **预设角色库** | 6 个内置角色（林溪、诸葛亮、福尔摩斯、Emma、苏念、李白） |
 | 💬 **1:1 私聊** | 单角色对话，流式输出，支持上下文窗口管理 |
 | 👥 **AI 群聊** | 多角色同台对话，支持混合导演(Hybrid)与轮询(RoundRobin)两种模式 |
 | 📚 **严格知识库 RAG** | 导入 txt/md/pdf 文档，按角色绑定的分组检索；无命中时不编造设定 |
+| 🖼️ **知识图片检索** | 导入 PNG/JPEG/WebP，独立多模态 API 生成中文描述与标签；私聊/群聊按角色检索并按需附带至多 3 张原图快照 |
 | 🧠 **长期记忆** | 按角色隔离的长期记忆，自动批量抽取+向量召回 |
 | ⚙️ **BYOK 设置** | 自定义 API 端点/密钥/模型，支持 OpenAI 兼容服务 |
-| 📁 **知识库分组** | 文档分组管理、批量移动/删除 |
+| 📁 **知识库目录与批处理** | 一次选择多个多层文件夹递归导入，保留完整相对目录树；可按分组/目录范围全选、移动、删除及批量重新识图 |
+| 📦 **内置知识库** | 根目录 `知识库/` 随应用发布，首次自动索引并支持断点续传，后续启动和覆盖安装直接复用本机向量 |
 
 ### Phase 2 规划
 
@@ -208,7 +238,7 @@ ConversationMember (群聊成员)
 ```
 ChatApp.Infrastructure/
 ├── Data/
-│   ├── AppDbContext.cs          # EF Core 上下文（9 张表 + 关系配置）
+│   ├── AppDbContext.cs          # EF Core 上下文（11 张表 + 关系配置）
 │   ├── AppPaths.cs              # 数据路径管理（支持 CHATAPP_DATA_DIR 环境变量）
 │   └── PresetRoles.cs           # 6 个预设角色定义
 ├── Repositories/
@@ -228,14 +258,16 @@ ChatApp.Infrastructure/
 | `Conversations` | 会话（私聊/群聊） |
 | `ConversationMembers` | 群聊成员关系 |
 | `Messages` | 聊天消息 |
+| `MessageAttachments` | 历史消息的独立图片快照；删除知识图片后仍可显示 |
 | `MemoryEntries` | 长期记忆元数据 |
 | `KnowledgeDocuments` | 知识文档 |
 | `KnowledgeChunks` | 文档分块 |
 | `KnowledgeGroups` | 文档分组 |
+| `RoleKnowledgeGroups` | 角色与可见知识分组的显式绑定 |
 | `Settings` | 键值对配置 |
 | `Vectors` | 向量数据（嵌入 BLOB） |
 
-**数据库迁移策略：** `InfrastructureModule.InitializeAsync` 在启动时执行幂等迁移（`MigrateKnowledgeGroupsAsync` + `MigrateGroupChatAsync`），支持从旧版本数据库升级而不丢失数据。
+**数据库迁移策略：** `InfrastructureModule.InitializeAsync` 在启动时执行幂等迁移（知识分组、群聊、角色知识绑定、图片知识与消息附件），支持从旧版本数据库重复升级而不丢失已有文档、消息和向量。
 
 ### ChatApp.AI — AI 引擎层
 
@@ -249,6 +281,9 @@ ChatApp.AI/
     ├── KernelFactory.cs         # Semantic Kernel 构建器（OpenAI 兼容端点）
     ├── ChatOrchestrator.cs      # 1:1 聊天编排器
     ├── GroupChatOrchestrator.cs # 群聊编排器（导演模式核心）
+    ├── MultimodalClient.cs      # 独立 Chat Completions / Responses 视觉协议适配
+    ├── ImageDescriptionService.cs # 图片规范化、识图 JSON 解析与元数据回退
+    ├── KnowledgeImageSelection.cs # 内部图片选择指令过滤、校验与限量
     ├── MemoryService.cs         # 长期记忆服务
     ├── KnowledgeService.cs      # 知识库服务
     └── OpenAIEmbeddingService.cs # 嵌入服务封装
@@ -261,11 +296,12 @@ ChatApp.AI/
   │
   ├─ 1. 持久化用户消息
   ├─ 2. 召回长期记忆（按角色，向量相似度检索）
-  ├─ 3. 按角色绑定分组检索知识库（阈值 + TopK + 相邻分块）
+  ├─ 3. 按角色绑定分组分别检索文本与图片（独立阈值 + TopK）
   ├─ 4. 取短期上下文窗口（最近 N 条消息）
   ├─ 5. 组装 System Prompt（角色人设 + 记忆 + 知识）
   ├─ 6. 构建 ChatHistory → Semantic Kernel 流式调用
-  └─ 7. 持久化 AI 回复 → 返回 Message
+  ├─ 7. 校验模型选择的 0–3 张候选图片并过滤内部指令
+  └─ 8. 创建图片快照、持久化 AI 回复与附件 → 返回 Message
 ```
 
 **群聊流程（GroupChatOrchestrator.SendAsync）：**
@@ -410,10 +446,19 @@ KnowledgeDocuments (M) ──< KnowledgeChunks (M)
 | `ApiKey` | (空) | API 密钥 |
 | `ChatModel` | `deepseek-v4-flash` | 聊天模型名 |
 | `EmbeddingModel` | (空) | 可选的远程嵌入模型名 |
+| `VisionProviderPreset` | `AlibabaModelStudio` | 独立多模态服务预设 |
+| `VisionProtocol` | `ChatCompletions` | `ChatCompletions` 或 `Responses` |
+| `VisionApiBaseUrl` | 阿里云百炼兼容地址 | 仅用于导入/重新识图的 HTTPS 地址 |
+| `VisionApiKey` | (空) | 独立多模态密钥，不写入日志 |
+| `VisionModel` | `qwen3-vl-flash` | 可编辑视觉模型或 Endpoint ID |
+| `VisionTimeoutSeconds` | 90 | 单张识图超时秒数 |
+| `VisionMaxConcurrency` | 3 | 视觉请求最大并发，限制为 1–3 |
 | `ContextWindowSize` | 20 | 短期上下文窗口消息数 |
 | `MemoryTopK` | 5 | 每轮召回的记忆片段数 |
 | `KnowledgeTopK` | 5 | 每轮召回的知识片段数 |
 | `KnowledgeMinScore` | 0.35 | 知识命中的最低余弦相似度 |
+| `KnowledgeImageTopK` | 5 | 每轮独立召回的图片候选数 |
+| `KnowledgeImageMinScore` | 0.35 | 图片命中的最低余弦相似度 |
 | `KnowledgeContextCharBudget` | 6000 | 每轮最多注入的知识字符数 |
 | `KnowledgeNeighborRadius` | 1 | 命中分块前后补充的相邻块数量 |
 | `ChatTemperature` | 0.65 | 私聊与群聊角色回复的生成温度 |
@@ -433,6 +478,8 @@ KnowledgeDocuments (M) ──< KnowledgeChunks (M)
 - 默认路径：`%LOCALAPPDATA%\ChatApp\`
 - 数据库文件：`chatapp.db`
 - 知识文件存储：`knowledge` 子目录
+- 知识原图存储：`knowledge/images` 子目录
+- 历史附件快照：`message-attachments` 子目录
 - 可通过环境变量 `CHATAPP_DATA_DIR` 重定向
 
 ---
@@ -486,6 +533,8 @@ dotnet run --project ChatApp.UI
 - `IConfigurationService` → `ConfigurationService`
 
 **AiModule**:
+- `IMultimodalClient` → `MultimodalClient`（独立 `HttpClient`）
+- `IImageDescriptionService` → `ImageDescriptionService`
 - `IEmbeddingService` → `OpenAIEmbeddingService`
 - `IChatService` → `ChatOrchestrator`
 - `IGroupChatService` → `GroupChatOrchestrator`
@@ -536,4 +585,4 @@ dotnet run --project ChatApp.UI
 
 ---
 
-> 文档生成日期：2026-08-16 | 项目版本：v1.0.2
+> 文档生成日期：2026-08-16 | 项目版本：v1.1.0

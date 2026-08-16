@@ -16,4 +16,17 @@ public class GroupNode
     public KnowledgeGroup? SourceGroup { get; set; }
 
     public int DocumentCount { get; set; }
+
+    /// <summary>当前分组内的虚拟目录路径；空字符串表示分组根节点。</summary>
+    public string FolderPath { get; set; } = string.Empty;
+
+    public int Depth { get; set; }
+
+    public bool IsFolder => !string.IsNullOrWhiteSpace(FolderPath);
+
+    public string Icon => IsFolder ? "📁" : "🗂";
+
+    public double IndentWidth => Depth * 14d;
+
+    public string SelectionKey => $"{GroupId?.ToString() ?? "ungrouped"}|{FolderPath}";
 }

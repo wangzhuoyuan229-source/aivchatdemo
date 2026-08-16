@@ -54,6 +54,21 @@ public class KernelFactoryTests
     }
 
     [Fact]
+    public void EmbeddingInputsAreSplitIntoProviderCompatibleBatches()
+    {
+        var inputs = Enumerable.Range(0, 25).Select(index => $"chunk-{index}").ToArray();
+
+        var batches = OpenAIEmbeddingService.CreateBatches(
+            inputs,
+            OpenAIEmbeddingService.MaxInputsPerRequest);
+
+        Assert.Equal(3, batches.Count);
+        Assert.Equal(new[] { 10, 10, 5 }, batches.Select(batch => batch.Texts.Count));
+        Assert.Equal(new[] { 0, 10, 20 }, batches.Select(batch => batch.Offset));
+        Assert.Equal(inputs, batches.SelectMany(batch => batch.Texts));
+    }
+
+    [Fact]
     public void LegacyLocalSettingsMigrateWithoutReusingPlaceholderKey()
     {
         var settings = new AiSettings

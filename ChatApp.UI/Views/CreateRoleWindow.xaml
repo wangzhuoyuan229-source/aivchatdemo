@@ -1,8 +1,14 @@
 <Window x:Class="ChatApp.UI.Views.CreateRoleWindow"
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="using:ChatApp.UI.Converters"
+        xmlns:controls="using:ChatApp.UI.Controls"
         Title="{Binding WindowTitle}" Height="780" Width="560"
         WindowStartupLocation="CenterOwner" Background="{StaticResource BgBrush}">
+    <Window.Resources>
+        <conv:BoolToVisibilityConverter x:Key="Bool2Vis"/>
+        <conv:BooleanToVisibilityInverseConverter x:Key="Bool2VisInv"/>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -16,13 +22,28 @@
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,16">
             <StackPanel>
-                <Grid Margin="0,0,0,12">
+                <Grid Margin="0,0,0,12" RowDefinitions="Auto,Auto">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="头像(emoji)" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
-                    <TextBox Grid.Column="1" Text="{Binding Avatar}" MaxLength="4" Width="80" HorizontalAlignment="Left"/>
+                    <TextBlock Grid.Column="0" Text="头像" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Border Width="52" Height="52" CornerRadius="8" Background="#F2F2F2"
+                                ClipToBounds="True" Margin="0,0,10,0">
+                            <controls:AvatarView Avatar="{Binding Avatar}" FontSize="27"/>
+                        </Border>
+                        <TextBox Text="{Binding Avatar}" MaxLength="8" Width="72" VerticalAlignment="Center"
+                                 IsVisible="{Binding HasImageAvatar, Converter={StaticResource Bool2VisInv}}"
+                                 Watermark="emoji"/>
+                        <Button Classes="ghost" Content="从知识库匹配" Command="{Binding MatchAvatarCommand}"
+                                IsEnabled="{Binding !IsSaving}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        <Button Classes="ghost" Content="改用 emoji" Command="{Binding UseEmojiAvatarCommand}"
+                                IsVisible="{Binding HasImageAvatar, Converter={StaticResource Bool2Vis}}"
+                                VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AvatarMatchStatus}" FontSize="10"
+                               Foreground="{StaticResource AccentDarkBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
                 </Grid>
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
@@ -47,6 +68,19 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="背景设定" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
                     <TextBox Grid.Column="1" Text="{Binding Background}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"/>
+                </Grid>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="你扮演谁" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBox Text="{Binding UserPersona}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56"
+                                 Watermark="例如：博士；或：你是罗德岛的博士，与凯尔希长期并肩工作。"/>
+                        <TextBlock Text="告诉角色如何称呼你、你们是什么关系；留空时按普通用户处理。"
+                                   FontSize="10" Foreground="{StaticResource TextSubBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
                 </Grid>
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>

@@ -22,6 +22,32 @@ public sealed class KnowledgeRetrievalRequest
     public int ContextCharBudget { get; init; } = 6000;
 
     public int NeighborRadius { get; init; } = 1;
+
+    public int ImageTopK { get; init; } = 5;
+
+    public double ImageMinScore { get; init; } = 0.35;
+}
+
+/// <summary>A managed knowledge image that may be attached to a grounded reply.</summary>
+public sealed class KnowledgeImageHit
+{
+    public int DocumentId { get; init; }
+
+    public string Title { get; init; } = string.Empty;
+
+    public string FileName { get; init; } = string.Empty;
+
+    public string SourceRelativePath { get; init; } = string.Empty;
+
+    public string Description { get; init; } = string.Empty;
+
+    public string Tags { get; init; } = string.Empty;
+
+    public string StorageKey { get; init; } = string.Empty;
+
+    public string MimeType { get; init; } = string.Empty;
+
+    public double Score { get; init; }
 }
 
 /// <summary>A source-aware knowledge chunk included in the grounded context.</summary>
@@ -50,6 +76,8 @@ public sealed class KnowledgeRetrievalResult
 
     public IReadOnlyList<KnowledgeHit> Hits { get; init; } = Array.Empty<KnowledgeHit>();
 
+    public IReadOnlyList<KnowledgeImageHit> ImageHits { get; init; } = Array.Empty<KnowledgeImageHit>();
+
     public string? Detail { get; init; }
 
     public static KnowledgeRetrievalResult Disabled(string? detail = null) => new()
@@ -69,4 +97,40 @@ public sealed class KnowledgeRetrievalResult
         Status = KnowledgeRetrievalStatus.Unavailable,
         Detail = detail
     };
+}
+
+public enum KnowledgeImportStage
+{
+    Scanning = 0,
+    Copying = 1,
+    Describing = 2,
+    Embedding = 3,
+    Persisting = 4,
+    Completed = 5
+}
+
+public sealed class KnowledgeImportProgress
+{
+    public KnowledgeImportStage Stage { get; init; }
+
+    public int Completed { get; init; }
+
+    public int Total { get; init; }
+
+    public int Succeeded { get; init; }
+
+    public int Failed { get; init; }
+
+    public int FallbackCount { get; init; }
+
+    public int SkippedCount { get; init; }
+
+    public long ProcessedBytes { get; init; }
+
+    public long TotalBytes { get; init; }
+
+    public string CurrentFile { get; init; } = string.Empty;
+
+    /// <summary>Most recent per-item failure, safe for display and never containing API keys.</summary>
+    public string LastError { get; init; } = string.Empty;
 }

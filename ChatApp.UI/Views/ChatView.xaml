@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ChatApp.UI.ViewModels"
              xmlns:conv="using:ChatApp.UI.Converters"
+             xmlns:controls="using:ChatApp.UI.Controls"
              Background="{StaticResource BgBrush}">
     <UserControl.Resources>
         <conv:BoolToAlignmentConverter x:Key="Align"/>
@@ -24,9 +25,8 @@
                 BorderThickness="0,0,0,1" Padding="18,10">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <Border Grid.Column="0" Width="38" Height="38" CornerRadius="9"
-                        Background="#E5F5EB" Margin="0,0,10,0"
-                        IsVisible="{Binding IsGroupMode, Converter={StaticResource Bool2Vis}}">
-                    <TextBlock Text="👥" FontSize="21" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        Background="#E5F5EB" Margin="0,0,10,0" ClipToBounds="True">
+                    <controls:AvatarView Avatar="{Binding ConversationAvatar}" FontSize="21"/>
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"
@@ -55,8 +55,8 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="6" Background="#F2F2F2" VerticalAlignment="Top" Margin="0,0,8,0">
-                                <TextBlock Text="{Binding Avatar}" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="6" Background="#F2F2F2" VerticalAlignment="Top" Margin="0,0,8,0" ClipToBounds="True">
+                                <controls:AvatarView Avatar="{Binding Avatar}" FontSize="22"/>
                             </Border>
                             <Border Grid.Column="1" MaxWidth="520" CornerRadius="8" Padding="12,8" VerticalAlignment="Top"
                                     Background="{Binding IsUser, Converter={StaticResource BubbleBrush}}">
@@ -67,6 +67,31 @@
                                     <TextBlock Text="{Binding TimeText}" FontSize="10" Foreground="#B0B0B0" Margin="0,0,0,4"
                                                HorizontalAlignment="{Binding IsUser, Converter={StaticResource Align}}"/>
                                     <TextBlock Text="{Binding Content}" FontSize="14" TextWrapping="Wrap" FlowDirection="LeftToRight"/>
+                                    <ItemsControl ItemsSource="{Binding Attachments}" Margin="0,8,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Command="{Binding OpenCommand}" Padding="0" Margin="0,0,8,8"
+                                                        ToolTip.Tip="{Binding Caption}">
+                                                    <Grid Width="180" Height="130">
+                                                        <Border Background="#ECECEC" CornerRadius="5"/>
+                                                        <Image Source="{Binding Preview}"
+                                                               Stretch="UniformToFill"
+                                                               IsVisible="{Binding IsAvailable, Converter={StaticResource Bool2Vis}}"/>
+                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                    IsVisible="{Binding IsAvailable, Converter={StaticResource Bool2VisInv}}">
+                                                            <TextBlock Text="🖼️" FontSize="24" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="图片缺失或损坏" FontSize="10" Foreground="{StaticResource TextSubBrush}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </StackPanel>
                             </Border>
                         </Grid>

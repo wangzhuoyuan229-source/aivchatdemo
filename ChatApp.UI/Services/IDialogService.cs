@@ -9,7 +9,9 @@ public enum DeleteGroupChoice
 public interface IDialogService
 {
     Task<string?> PickFileAsync();
+    Task<IReadOnlyList<string>> PickFilesAsync();
     Task<string?> PickFolderAsync();
+    Task<IReadOnlyList<string>> PickFoldersAsync();
     Task<bool> ConfirmAsync(string message, string title);
     Task ShowErrorAsync(string message, string title = "错误");
     Task<(bool confirmed, string text)> PromptAsync(string prompt, string defaultValue = "", string title = "输入");

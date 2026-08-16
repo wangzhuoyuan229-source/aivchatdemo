@@ -78,8 +78,71 @@
                 </StackPanel>
             </Border>
 
-            <!-- RAG / memory -->
+            <!-- Independent multimodal service -->
             <Border Grid.Row="2" Background="White" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="独立多模态图片识别 API" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,4"/>
+                    <TextBlock Text="仅在导入或重新识图时调用，不会替换聊天模型，也不会在正常回复时重复读取图片。"
+                               FontSize="11" Foreground="{StaticResource TextSubBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="服务预设" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                            <ComboBox ItemsSource="{Binding VisionProviderPresetOptions}"
+                                      SelectedItem="{Binding VisionProviderPresetName}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="协议" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                            <ComboBox ItemsSource="{Binding VisionProtocolOptions}"
+                                      SelectedItem="{Binding VisionProtocol}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="多模态 API Base URL（仅 HTTPS）" FontSize="12"
+                               Foreground="{StaticResource TextSubBrush}" Margin="0,12,0,0"/>
+                    <TextBox Text="{Binding VisionApiBaseUrl}" Margin="0,4,0,0"/>
+                    <TextBlock Text="多模态 API Key" FontSize="12"
+                               Foreground="{StaticResource TextSubBrush}" Margin="0,12,0,0"/>
+                    <TextBox Text="{Binding VisionApiKey}" PasswordChar="●" Margin="0,4,0,0"/>
+                    <TextBlock Text="视觉模型或 Endpoint ID" FontSize="12"
+                               Foreground="{StaticResource TextSubBrush}" Margin="0,12,0,0"/>
+                    <TextBox Text="{Binding VisionModel}" Margin="0,4,0,0"/>
+                    <TextBlock Text="百炼可换 qwen3-vl-plus，智谱可换 glm-4.6v；方舟也可填写控制台 Endpoint ID。SiliconFlow 模型可能上下架，字段始终可编辑。"
+                               FontSize="11" Foreground="{StaticResource TextSubBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="单次超时（秒）" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                            <TextBox Text="{Binding VisionTimeoutSeconds}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="导入并发（1–3）" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                            <TextBox Text="{Binding VisionMaxConcurrency}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0" Spacing="10">
+                        <Button Content="测试多模态连接" Command="{Binding TestVisionConnectionCommand}"/>
+                        <TextBlock Text="{Binding VisionTestStatus}" VerticalAlignment="Center" FontSize="11"
+                                   Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <TextBlock Text="切换预设会填充协议、地址和推荐模型，但不会覆盖已输入的 API Key。"
+                               FontSize="11" Foreground="{StaticResource TextSubBrush}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- RAG / memory -->
+            <Border Grid.Row="3" Background="White" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="记忆与知识库" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,10"/>
 
@@ -131,6 +194,21 @@
                             <TextBox Text="{Binding KnowledgeNeighborRadius}" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Grid>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="图片召回 Top-K" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                            <TextBox Text="{Binding KnowledgeImageTopK}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="图片最低相似度" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                            <TextBox Text="{Binding KnowledgeImageMinScore}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
                     <StackPanel Margin="0,12,0,0" Width="220" HorizontalAlignment="Left">
                         <TextBlock Text="对话温度（0–2，默认 0.65）" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
                         <TextBox Text="{Binding ChatTemperature}" Margin="0,4,0,0"/>
@@ -141,7 +219,7 @@
             </Border>
 
             <!-- P2 toggles -->
-            <Border Grid.Row="3" Background="White" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
+            <Border Grid.Row="4" Background="White" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="扩展功能（P2）" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,10"/>
                     <CheckBox Content="启用语音交互" IsChecked="{Binding EnableVoice}" Margin="0,4"/>
@@ -150,7 +228,7 @@
             </Border>
 
             <!-- Group chat -->
-            <Border Grid.Row="4" Background="White" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
+            <Border Grid.Row="5" Background="White" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="群聊设置" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,10"/>
 

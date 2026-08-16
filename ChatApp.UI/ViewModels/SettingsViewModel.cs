@@ -3,6 +3,7 @@ using System.ComponentModel;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace ChatApp.UI.ViewModels;
 
@@ -15,16 +16,22 @@ public partial class SettingsViewModel : ViewModelBase
     public const string CustomEmbeddingPreset = "自定义远程服务";
 
     private readonly IConfigurationService _config;
+    private readonly IImageDescriptionService? _imageDescriptions;
+    private readonly KnowledgeViewModel? _knowledgeViewModel;
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private CancellationTokenSource? _autoSaveCts;
     private AiSettings _settings = new();
     private bool _isApplyingEmbeddingPreset;
+    private bool _isApplyingVisionPreset;
 
     private static readonly HashSet<string> PersistedPropertyNames = new()
     {
         nameof(ApiBaseUrl), nameof(ApiKey), nameof(ChatModel), nameof(EmbeddingModel),
         nameof(EmbeddingApiBaseUrl), nameof(EmbeddingApiKey), nameof(ContextWindowSize),
         nameof(MemoryTopK), nameof(KnowledgeTopK), nameof(KnowledgeMinScore),
+        nameof(VisionProviderPresetName), nameof(VisionProtocol), nameof(VisionApiBaseUrl),
+        nameof(VisionApiKey), nameof(VisionModel), nameof(VisionTimeoutSeconds),
+        nameof(VisionMaxConcurrency), nameof(KnowledgeImageTopK), nameof(KnowledgeImageMinScore),
         nameof(KnowledgeContextCharBudget), nameof(KnowledgeNeighborRadius),
         nameof(ChatTemperature), nameof(MemoryBatchSize), nameof(EnableLongTermMemory),
         nameof(EnableKnowledgeBase), nameof(EnableVoice), nameof(EnableAffinity),
@@ -38,10 +45,19 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _embeddingApiBaseUrl = string.Empty;
     [ObservableProperty] private string _embeddingApiKey = string.Empty;
     [ObservableProperty] private string _embeddingProviderPreset = NoEmbeddingPreset;
+    [ObservableProperty] private string _visionProviderPresetName = VisionPresetNames.Alibaba;
+    [ObservableProperty] private MultimodalApiProtocol _visionProtocol = MultimodalApiProtocol.ChatCompletions;
+    [ObservableProperty] private string _visionApiBaseUrl = string.Empty;
+    [ObservableProperty] private string _visionApiKey = string.Empty;
+    [ObservableProperty] private string _visionModel = string.Empty;
+    [ObservableProperty] private int _visionTimeoutSeconds = 90;
+    [ObservableProperty] private int _visionMaxConcurrency = 3;
     [ObservableProperty] private int _contextWindowSize = 20;
     [ObservableProperty] private int _memoryTopK = 5;
     [ObservableProperty] private int _knowledgeTopK = 5;
     [ObservableProperty] private double _knowledgeMinScore = 0.35;
+    [ObservableProperty] private int _knowledgeImageTopK = 5;
+    [ObservableProperty] private double _knowledgeImageMinScore = 0.35;
     [ObservableProperty] private int _knowledgeContextCharBudget = 6000;
     [ObservableProperty] private int _knowledgeNeighborRadius = 1;
     [ObservableProperty] private double _chatTemperature = 0.65;
@@ -55,6 +71,17 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private bool _respondToOtherAgents = true;
     [ObservableProperty] private string _statusText = string.Empty;
     [ObservableProperty] private string _providerHint = string.Empty;
+    [ObservableProperty] private bool _isTestingVision;
+    [ObservableProperty] private string _visionTestStatus = string.Empty;
+
+    private static class VisionPresetNames
+    {
+        public const string Alibaba = "阿里云百炼（推荐）";
+        public const string Zhipu = "智谱开放平台";
+        public const string Volcengine = "火山方舟";
+        public const string SiliconFlow = "SiliconFlow";
+        public const string Custom = "自定义 OpenAI 兼容服务";
+    }
 
     /// <summary>Group-chat mode options for the settings dropdown.</summary>
     public ObservableCollection<GroupChatMode> GroupChatModeOptions { get; } = new()
@@ -169,6 +196,41 @@ public partial class SettingsViewModel : ViewModelBase
         "https://api.siliconflow.cn/v1"
     };
 
+    public ObservableCollection<string> VisionProviderPresetOptions { get; } = new()
+    {
+        VisionPresetNames.Alibaba,
+        VisionPresetNames.Zhipu,
+        VisionPresetNames.Volcengine,
+        VisionPresetNames.SiliconFlow,
+        VisionPresetNames.Custom
+    };
+
+    public ObservableCollection<MultimodalApiProtocol> VisionProtocolOptions { get; } = new()
+    {
+        MultimodalApiProtocol.ChatCompletions,
+        MultimodalApiProtocol.Responses
+    };
+
+    partial void OnVisionProviderPresetNameChanged(string value)
+    {
+        if (_isLoading || _isApplyingVisionPreset) return;
+        var preset = ParseVisionPreset(value);
+        if (preset == VisionProviderPreset.Custom) return;
+        var profile = VisionProviderProfiles.Get(preset);
+        _isApplyingVisionPreset = true;
+        try
+        {
+            VisionProtocol = profile.protocol;
+            VisionApiBaseUrl = profile.baseUrl;
+            VisionModel = profile.model;
+            // The API key deliberately remains untouched when switching presets.
+        }
+        finally
+        {
+            _isApplyingVisionPreset = false;
+        }
+    }
+
     public ObservableCollection<string> CommonChatModels { get; } = new()
     {
         "deepseek-v4-flash", "deepseek-v4-pro", "gpt-4o-mini", "gpt-4o", "qwen-plus", "qwen-turbo"
@@ -268,9 +330,14 @@ public partial class SettingsViewModel : ViewModelBase
         return CustomEmbeddingPreset;
     }
 
-    public SettingsViewModel(IConfigurationService config)
+    public SettingsViewModel(
+        IConfigurationService config,
+        IImageDescriptionService? imageDescriptions = null,
+        KnowledgeViewModel? knowledgeViewModel = null)
     {
         _config = config;
+        _imageDescriptions = imageDescriptions;
+        _knowledgeViewModel = knowledgeViewModel;
         PropertyChanged += OnSettingPropertyChanged;
     }
 
@@ -318,10 +385,19 @@ public partial class SettingsViewModel : ViewModelBase
             EmbeddingApiKey = _settings.EmbeddingApiKey;
             EmbeddingProviderPreset = DetectEmbeddingPreset(
                 _settings.EmbeddingApiBaseUrl, _settings.EmbeddingModel);
+            VisionProviderPresetName = FormatVisionPreset(_settings.VisionProviderPreset);
+            VisionProtocol = _settings.VisionProtocol;
+            VisionApiBaseUrl = _settings.VisionApiBaseUrl;
+            VisionApiKey = _settings.VisionApiKey;
+            VisionModel = _settings.VisionModel;
+            VisionTimeoutSeconds = _settings.VisionTimeoutSeconds;
+            VisionMaxConcurrency = _settings.VisionMaxConcurrency;
             ContextWindowSize = _settings.ContextWindowSize;
             MemoryTopK = _settings.MemoryTopK;
             KnowledgeTopK = _settings.KnowledgeTopK;
             KnowledgeMinScore = _settings.KnowledgeMinScore;
+            KnowledgeImageTopK = _settings.KnowledgeImageTopK;
+            KnowledgeImageMinScore = _settings.KnowledgeImageMinScore;
             KnowledgeContextCharBudget = _settings.KnowledgeContextCharBudget;
             KnowledgeNeighborRadius = _settings.KnowledgeNeighborRadius;
             ChatTemperature = _settings.ChatTemperature;
@@ -335,6 +411,7 @@ public partial class SettingsViewModel : ViewModelBase
             RespondToOtherAgents = _settings.GroupChat.RespondToOtherAgents;
             StatusText = string.Empty;
             ProviderHint = string.Empty;
+            VisionTestStatus = string.Empty;
         }
         finally
         {
@@ -360,12 +437,12 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
-    private async Task SaveCoreAsync()
+    private async Task<bool> SaveCoreAsync()
     {
         if (!RemoteApiEndpointPolicy.TryNormalize(ApiBaseUrl, out var chatEndpoint, out var chatError))
         {
             StatusText = $"自动保存失败：{chatError}";
-            return;
+            return false;
         }
 
         Uri? embeddingEndpoint = null;
@@ -373,7 +450,15 @@ public partial class SettingsViewModel : ViewModelBase
             !RemoteApiEndpointPolicy.TryNormalize(EmbeddingApiBaseUrl, out embeddingEndpoint, out var embeddingError))
         {
             StatusText = $"自动保存失败：Embedding 端点{embeddingError}";
-            return;
+            return false;
+        }
+
+        Uri? visionEndpoint = null;
+        if (!string.IsNullOrWhiteSpace(VisionApiBaseUrl) &&
+            !RemoteApiEndpointPolicy.TryNormalizeHostedApi(VisionApiBaseUrl, out visionEndpoint, out var visionError))
+        {
+            StatusText = $"自动保存失败：多模态端点{visionError}";
+            return false;
         }
 
         _settings.ApiBaseUrl = chatEndpoint.ToString().TrimEnd('/');
@@ -382,10 +467,19 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.EmbeddingModel = EmbeddingModel;
         _settings.EmbeddingApiBaseUrl = embeddingEndpoint?.ToString().TrimEnd('/') ?? string.Empty;
         _settings.EmbeddingApiKey = EmbeddingApiKey;
+        _settings.VisionProviderPreset = ParseVisionPreset(VisionProviderPresetName);
+        _settings.VisionProtocol = VisionProtocol;
+        _settings.VisionApiBaseUrl = visionEndpoint?.ToString().TrimEnd('/') ?? string.Empty;
+        _settings.VisionApiKey = VisionApiKey;
+        _settings.VisionModel = VisionModel.Trim();
+        _settings.VisionTimeoutSeconds = Math.Clamp(VisionTimeoutSeconds, 10, 600);
+        _settings.VisionMaxConcurrency = Math.Clamp(VisionMaxConcurrency, 1, 3);
         _settings.ContextWindowSize = Math.Clamp(ContextWindowSize, 4, 200);
         _settings.MemoryTopK = Math.Clamp(MemoryTopK, 1, 50);
         _settings.KnowledgeTopK = Math.Clamp(KnowledgeTopK, 1, 50);
         _settings.KnowledgeMinScore = Math.Clamp(KnowledgeMinScore, 0, 1);
+        _settings.KnowledgeImageTopK = Math.Clamp(KnowledgeImageTopK, 1, 20);
+        _settings.KnowledgeImageMinScore = Math.Clamp(KnowledgeImageMinScore, 0, 1);
         _settings.KnowledgeContextCharBudget = Math.Clamp(KnowledgeContextCharBudget, 200, 50_000);
         _settings.KnowledgeNeighborRadius = Math.Clamp(KnowledgeNeighborRadius, 0, 3);
         _settings.ChatTemperature = Math.Clamp(ChatTemperature, 0, 2);
@@ -399,6 +493,12 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.GroupChat.RespondToOtherAgents = RespondToOtherAgents;
 
         await _config.SaveAsync(_settings);
+        if (_settings.EnableKnowledgeBase &&
+            !string.IsNullOrWhiteSpace(_settings.EmbeddingModel) &&
+            (!string.IsNullOrWhiteSpace(_settings.EmbeddingApiKey) || !string.IsNullOrWhiteSpace(_settings.ApiKey)))
+        {
+            _ = _knowledgeViewModel?.ImportBundledKnowledgeAsync();
+        }
         if (string.IsNullOrWhiteSpace(ApiKey) || string.IsNullOrWhiteSpace(ChatModel))
         {
             StatusText = "已自动保存；填写 API Key 和聊天模型后即可对话";
@@ -414,5 +514,62 @@ public partial class SettingsViewModel : ViewModelBase
         {
             StatusText = "已自动保存 ✓";
         }
+        return true;
     }
+
+    [RelayCommand]
+    private async Task TestVisionConnectionAsync()
+    {
+        if (_imageDescriptions is null)
+        {
+            VisionTestStatus = "图片识别服务未注册。";
+            return;
+        }
+
+        IsTestingVision = true;
+        VisionTestStatus = "正在验证鉴权、图片输入和响应解析…";
+        try
+        {
+            await _saveGate.WaitAsync();
+            try
+            {
+                if (!await SaveCoreAsync())
+                {
+                    VisionTestStatus = StatusText;
+                    return;
+                }
+            }
+            finally { _saveGate.Release(); }
+            var result = await _imageDescriptions.TestConnectionAsync();
+            VisionTestStatus = result.IsSuccess
+                ? $"连接成功：{result.Provider} / {result.Model}"
+                : $"连接失败：{result.ErrorDetail}";
+        }
+        catch (Exception ex)
+        {
+            VisionTestStatus = $"连接失败：{ex.Message}";
+        }
+        finally
+        {
+            IsTestingVision = false;
+        }
+    }
+
+    private static VisionProviderPreset ParseVisionPreset(string value) => value switch
+    {
+        VisionPresetNames.Zhipu => VisionProviderPreset.Zhipu,
+        VisionPresetNames.Volcengine => VisionProviderPreset.VolcengineArk,
+        VisionPresetNames.SiliconFlow => VisionProviderPreset.SiliconFlow,
+        VisionPresetNames.Custom => VisionProviderPreset.Custom,
+        _ => VisionProviderPreset.AlibabaModelStudio
+    };
+
+    private static string FormatVisionPreset(VisionProviderPreset value) => value switch
+    {
+        VisionProviderPreset.Zhipu => VisionPresetNames.Zhipu,
+        VisionProviderPreset.VolcengineArk => VisionPresetNames.Volcengine,
+        VisionProviderPreset.SiliconFlow => VisionPresetNames.SiliconFlow,
+        VisionProviderPreset.Custom => VisionPresetNames.Custom,
+        _ => VisionPresetNames.Alibaba
+    };
 }

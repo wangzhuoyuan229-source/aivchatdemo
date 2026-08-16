@@ -4,6 +4,7 @@ using ChatApp.Core.Services;
 using ChatApp.Infrastructure;
 using ChatApp.Infrastructure.Data;
 using ChatApp.Infrastructure.Repositories;
+using ChatApp.Infrastructure.VectorStore;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -12,6 +13,37 @@ namespace ChatApp.Tests;
 
 public class PersistenceTests
 {
+    [Fact]
+    public async Task VectorBatchUpsertPersistsAllRecordsInOneStoreOperation()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            var store = new SqliteVectorStore(
+                NullLogger<SqliteVectorStore>.Instance,
+                $"Data Source={path};Pooling=False");
+            var records = Enumerable.Range(0, 25).Select(index => new VectorRecord
+            {
+                Id = $"record-{index}",
+                Scope = "knowledge",
+                Content = $"content-{index}",
+                Embedding = new[] { (float)index, 1f }
+            }).ToList();
+
+            await store.UpsertBatchAsync(records);
+
+            await using var connection = new SqliteConnection($"Data Source={path};Pooling=False");
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT count(*) FROM Vectors WHERE Scope='knowledge';";
+            Assert.Equal(25L, (long)(await command.ExecuteScalarAsync())!);
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
     [Fact]
     public async Task GroundingMigrationIsIdempotentForAnOldRolesTable()
     {
@@ -36,7 +68,42 @@ public class PersistenceTests
             await using var verify = new SqliteConnection($"Data Source={path}");
             await verify.OpenAsync();
             Assert.True(await ColumnExistsAsync(verify, "Roles", "DialogueExamples"));
+            Assert.True(await ColumnExistsAsync(verify, "Roles", "UserPersona"));
             Assert.True(await TableExistsAsync(verify, "RoleKnowledgeGroups"));
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
+    [Fact]
+    public async Task ImageKnowledgeMigrationIsIdempotentForOldKnowledgeTable()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            await using (var connection = new SqliteConnection($"Data Source={path}"))
+            {
+                await connection.OpenAsync();
+                await using var command = connection.CreateCommand();
+                command.CommandText = "CREATE TABLE KnowledgeDocuments (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT);";
+                await command.ExecuteNonQueryAsync();
+            }
+
+            var factory = new TestDbContextFactory(path);
+            await using (var db = await factory.CreateDbContextAsync())
+            {
+                await InfrastructureModule.MigrateKnowledgeImagesAsync(db, CancellationToken.None);
+                await InfrastructureModule.MigrateKnowledgeImagesAsync(db, CancellationToken.None);
+            }
+
+            await using var verify = new SqliteConnection($"Data Source={path}");
+            await verify.OpenAsync();
+            Assert.True(await ColumnExistsAsync(verify, "KnowledgeDocuments", "Kind"));
+            Assert.True(await ColumnExistsAsync(verify, "KnowledgeDocuments", "SemanticDescription"));
+            Assert.True(await TableExistsAsync(verify, "MessageAttachments"));
+            Assert.True(await ColumnExistsAsync(verify, "MessageAttachments", "Title"));
         }
         finally
         {
@@ -154,6 +221,72 @@ public class PersistenceTests
             var window = await history.GetMessagesAsync(conversationId, limit: 2);
 
             Assert.Equal(new[] { "消息3", "消息4" }, window.Select(m => m.Content));
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
+    [Fact]
+    public async Task DeletingKnowledgeImageKeepsHistoricalAttachmentRowAndDeletingConversationRemovesIt()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            var factory = new TestDbContextFactory(path);
+            int documentId;
+            int conversationId;
+            await using (var db = await factory.CreateDbContextAsync())
+            {
+                await db.Database.EnsureCreatedAsync();
+                var document = new KnowledgeDocument
+                {
+                    Kind = KnowledgeItemKind.Image,
+                    Title = "图",
+                    FileName = "missing.png",
+                    StorageKey = "images/missing.png"
+                };
+                var conversation = new Conversation { RoleId = 1, Type = ConversationType.Private };
+                db.AddRange(document, conversation);
+                await db.SaveChangesAsync();
+                documentId = document.Id;
+                conversationId = conversation.Id;
+                db.KnowledgeChunks.Add(new KnowledgeChunk
+                {
+                    DocumentId = documentId,
+                    ExternalId = $"image_doc{documentId}",
+                    Content = "图片"
+                });
+                db.Messages.Add(new Message
+                {
+                    ConversationId = conversationId,
+                    RoleId = 1,
+                    Author = MessageAuthor.Assistant,
+                    Content = "看图",
+                    Attachments =
+                    [
+                        new MessageAttachment
+                        {
+                            StorageKey = "missing-snapshot.png",
+                            FileName = "图.png",
+                            SourceKnowledgeDocumentId = documentId
+                        }
+                    ]
+                });
+                await db.SaveChangesAsync();
+            }
+
+            var knowledge = new KnowledgeService(
+                factory, new UnusedEmbeddingService(), new UnusedVectorStore(), NullLogger<KnowledgeService>.Instance);
+            await knowledge.DeleteDocumentAsync(documentId);
+            await using (var verify = await factory.CreateDbContextAsync())
+                Assert.Single(await verify.MessageAttachments.AsNoTracking().ToListAsync());
+
+            var history = new ChatHistoryService(factory, NullLogger<ChatHistoryService>.Instance);
+            await history.DeleteConversationAsync(conversationId);
+            await using (var verify = await factory.CreateDbContextAsync())
+                Assert.Empty(await verify.MessageAttachments.AsNoTracking().ToListAsync());
         }
         finally
         {

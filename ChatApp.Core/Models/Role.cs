@@ -18,6 +18,9 @@ public class Role
     /// <summary>Background / world setting injected into the system prompt.</summary>
     public string Background { get; set; } = string.Empty;
 
+    /// <summary>The identity or relationship the human user plays opposite this AI role.</summary>
+    public string UserPersona { get; set; } = string.Empty;
+
     /// <summary>Personality traits injected into the system prompt.</summary>
     public string Personality { get; set; } = string.Empty;
 

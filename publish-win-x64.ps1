@@ -6,4 +6,9 @@ dotnet publish .\ChatApp.UI\ChatApp.UI.csproj `
   -p:PublishProfile=Win-x64 `
   -o .\publish\win-x64
 
-Write-Host "Published to .\publish\win-x64\ChatApp.UI.exe"
+$knowledgePath = '.\publish\win-x64\BundledKnowledge'
+if (-not (Test-Path $knowledgePath -PathType Container)) {
+  throw 'Bundled knowledge was not copied to the publish output.'
+}
+$knowledgeCount = (Get-ChildItem $knowledgePath -File -Recurse).Count
+Write-Host "Published to .\publish\win-x64 with $knowledgeCount bundled knowledge files. Distribute the complete folder, not only ChatApp.UI.exe."

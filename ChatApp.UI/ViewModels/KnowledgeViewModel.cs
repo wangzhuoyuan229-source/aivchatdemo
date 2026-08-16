@@ -5,14 +5,18 @@ using ChatApp.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace ChatApp.UI.ViewModels;
 
 public partial class KnowledgeViewModel : ViewModelBase
 {
     private readonly IKnowledgeService _knowledge;
+    private readonly BundledKnowledgeService _bundledKnowledge;
     private readonly ILogger<KnowledgeViewModel> _logger;
     private readonly IDialogService _dialogs;
+    private CancellationTokenSource? _importCts;
+    private bool _suppressGroupRefresh;
 
     public ObservableCollection<GroupNode> Groups { get; } = new();
     public ObservableCollection<SelectableDocument> Documents { get; } = new();
@@ -40,50 +44,99 @@ public partial class KnowledgeViewModel : ViewModelBase
         { GroupId: var id } => id,
     };
 
-    public KnowledgeViewModel(IKnowledgeService knowledge, ILogger<KnowledgeViewModel> logger, IDialogService dialogs)
+    public KnowledgeViewModel(
+        IKnowledgeService knowledge,
+        ILogger<KnowledgeViewModel> logger,
+        IDialogService dialogs,
+        BundledKnowledgeService bundledKnowledge)
     {
         _knowledge = knowledge;
         _logger = logger;
         _dialogs = dialogs;
+        _bundledKnowledge = bundledKnowledge;
     }
 
     public async Task LoadAsync()
     {
         try
         {
+            var previousSelectionKey = SelectedGroup?.SelectionKey;
             var groups = await _knowledge.ListGroupsAsync();
             var allDocs = await _knowledge.ListDocumentsAsync();
 
+            _suppressGroupRefresh = true;
             Groups.Clear();
-            Groups.Add(new GroupNode { DisplayName = "全部", GroupId = -1, DocumentCount = allDocs.Count });
-            Groups.Add(new GroupNode { DisplayName = "未分组", GroupId = null, DocumentCount = allDocs.Count(d => d.GroupId == null) });
-            foreach (var g in groups)
-                Groups.Add(new GroupNode
-                {
-                    DisplayName = g.Name,
-                    GroupId = g.Id,
-                    SourceGroup = g,
-                    DocumentCount = allDocs.Count(d => d.GroupId == g.Id)
-                });
-
-            if (SelectedGroup is null)
-                SelectedGroup = Groups[0];
-            else
-            {
-                var prev = SelectedGroup;
-                SelectedGroup = prev.GroupId switch
-                {
-                    -1 => Groups[0],
-                    null => Groups.FirstOrDefault(x => x.GroupId == null) ?? Groups[0],
-                    var id => Groups.FirstOrDefault(x => x.GroupId == id) ?? Groups[0]
-                };
-            }
+            foreach (var node in KnowledgeFolderTree.Build(groups, allDocs))
+                Groups.Add(node);
+            SelectedGroup = Groups.FirstOrDefault(node => node.SelectionKey == previousSelectionKey) ?? Groups.FirstOrDefault();
+            _suppressGroupRefresh = false;
 
             await RefreshDocumentsAsync();
         }
         catch (Exception ex)
         {
+            _suppressGroupRefresh = false;
             _logger.LogError(ex, "Failed to load knowledge view.");
+        }
+    }
+
+    /// <summary>
+    /// Starts/resumes the one-time indexing of the corpus shipped with the app.
+    /// Safe to call after every startup or settings save: the persistent marker and
+    /// per-path resume logic prevent duplicate vectors and repeated paid API calls.
+    /// </summary>
+    public async Task ImportBundledKnowledgeAsync()
+    {
+        if (IsImporting || !_bundledKnowledge.IsPackaged) return;
+
+        IsImporting = true;
+        ProgressText = "正在检查内置知识库…";
+        _importCts = new CancellationTokenSource();
+        try
+        {
+            var importTimer = Stopwatch.StartNew();
+            var progress = new Progress<KnowledgeImportProgress>(p =>
+            {
+                ProgressText = "内置知识库 · " + FormatImportProgress(p, importTimer.Elapsed);
+            });
+            var result = await _bundledKnowledge.EnsureImportedAsync(progress, _importCts.Token);
+            switch (result.Status)
+            {
+                case BundledKnowledgeImportStatus.Imported:
+                    await LoadAsync();
+                    ProgressText = $"内置知识库就绪（共 {result.Total} 项，新增 {result.Imported}，" +
+                                   $"复用 {result.Skipped}，从未分组迁移 {result.MovedFromUngrouped}）；" +
+                                   "已放入“内置知识库”分组，可在角色设置中绑定。";
+                    break;
+                case BundledKnowledgeImportStatus.Partial:
+                    await LoadAsync();
+                    ProgressText = $"内置知识库本次新增 {result.Imported}，仍有 {result.Failed} 项未完成；" +
+                                   $"下次启动会自动续传。{result.Detail}";
+                    break;
+                case BundledKnowledgeImportStatus.Deferred:
+                    if (result.GroupId.HasValue) await LoadAsync();
+                    ProgressText = result.Detail;
+                    break;
+                case BundledKnowledgeImportStatus.AlreadyCurrent:
+                    ProgressText = result.Detail;
+                    break;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            await LoadAsync();
+            ProgressText = "内置知识库索引已取消；已完成项保留，下次启动会自动续传。";
+        }
+        catch (Exception ex)
+        {
+            ProgressText = $"内置知识库索引失败：{ex.Message}；下次启动会自动重试。";
+            _logger.LogError(ex, "Built-in knowledge import failed.");
+        }
+        finally
+        {
+            IsImporting = false;
+            _importCts?.Dispose();
+            _importCts = null;
         }
     }
 
@@ -102,6 +155,8 @@ public partial class KnowledgeViewModel : ViewModelBase
                 { GroupId: null } => await _knowledge.ListDocumentsByGroupAsync(null),
                 { GroupId: var id } => await _knowledge.ListDocumentsByGroupAsync(id),
             };
+            if (SelectedGroup is { IsFolder: true } folder)
+                docs = docs.Where(document => KnowledgeFolderTree.Contains(document, folder.FolderPath)).ToList();
             foreach (var d in docs)
             {
                 var sd = new SelectableDocument(d);
@@ -145,7 +200,10 @@ public partial class KnowledgeViewModel : ViewModelBase
         SelectedCount = value.Value ? Documents.Count : 0;
     }
 
-    partial void OnSelectedGroupChanged(GroupNode? value) => _ = RefreshDocumentsAsync();
+    partial void OnSelectedGroupChanged(GroupNode? value)
+    {
+        if (!_suppressGroupRefresh) _ = RefreshDocumentsAsync();
+    }
 
     [RelayCommand]
     private async Task RefreshAsync() => await LoadAsync();
@@ -178,18 +236,36 @@ public partial class KnowledgeViewModel : ViewModelBase
     [RelayCommand]
     private async Task ImportAsync()
     {
-        var filePath = await _dialogs.PickFileAsync();
-        if (string.IsNullOrWhiteSpace(filePath)) return;
+        if (IsImporting) return;
+        var filePaths = await _dialogs.PickFilesAsync();
+        if (filePaths.Count == 0) return;
 
         IsImporting = true;
         ProgressText = "导入中…";
+        _importCts = new CancellationTokenSource();
         try
         {
             var targetGroup = CurrentImportGroupId;
-            var progress = new Progress<(int done, int total)>(p => ProgressText = p.total > 0 ? $"分块并嵌入 {p.done}/{p.total}" : "处理中…");
-            await _knowledge.ImportAsync(filePath, progress, groupId: targetGroup);
+            KnowledgeImportProgress? latestProgress = null;
+            var importTimer = Stopwatch.StartNew();
+            var progress = new Progress<KnowledgeImportProgress>(p =>
+            {
+                latestProgress = p;
+                ProgressText = FormatImportProgress(p, importTimer.Elapsed);
+            });
+            var documents = await _knowledge.ImportFilesAsync(filePaths, progress, _importCts.Token, targetGroup);
             await LoadAsync();
-            ProgressText = $"导入完成 ✓（已加入：{SelectedGroup?.DisplayName ?? "未分组"}）";
+            var total = latestProgress?.Total ?? filePaths.Count;
+            var failed = latestProgress?.Failed ?? Math.Max(0, total - documents.Count);
+            var skipped = latestProgress?.SkippedCount ?? 0;
+            ProgressText = $"导入完成（新增 {documents.Count}，跳过 {skipped}，失败 {failed}，已加入：{SelectedGroup?.DisplayName ?? "未分组"}）";
+            if (failed > 0)
+                await ShowImportFailureSummaryAsync(documents.Count, failed, latestProgress?.LastError);
+        }
+        catch (OperationCanceledException)
+        {
+            await LoadAsync();
+            ProgressText = "导入已取消；已完成的知识项已保留。";
         }
         catch (Exception ex)
         {
@@ -199,29 +275,50 @@ public partial class KnowledgeViewModel : ViewModelBase
         finally
         {
             IsImporting = false;
+            _importCts?.Dispose();
+            _importCts = null;
         }
     }
 
     [RelayCommand]
     private async Task ImportFolderAsync()
     {
-        var folderPath = await _dialogs.PickFolderAsync();
-        if (string.IsNullOrWhiteSpace(folderPath)) return;
+        if (IsImporting) return;
+        var folderPaths = await _dialogs.PickFoldersAsync();
+        if (folderPaths.Count == 0) return;
 
         IsImporting = true;
         ProgressText = "扫描文件夹…";
+        _importCts = new CancellationTokenSource();
         try
         {
             var targetGroup = CurrentImportGroupId;
-            var progress = new Progress<(int doneFiles, int totalFiles, string currentFile)>(p =>
+            KnowledgeImportProgress? latestProgress = null;
+            var importTimer = Stopwatch.StartNew();
+            var progress = new Progress<KnowledgeImportProgress>(p =>
             {
-                if (p.totalFiles <= 0) ProgressText = "扫描中…";
-                else if (string.IsNullOrEmpty(p.currentFile)) ProgressText = $"完成 {p.doneFiles}/{p.totalFiles}";
-                else ProgressText = $"导入 {p.doneFiles + 1}/{p.totalFiles}：{p.currentFile}";
+                latestProgress = p;
+                ProgressText = FormatImportProgress(p, importTimer.Elapsed);
             });
-            var docs = await _knowledge.ImportDirectoryAsync(folderPath, recursive: true, progress, groupId: targetGroup);
+            var docs = await _knowledge.ImportDirectoriesAsync(
+                folderPaths,
+                recursive: true,
+                progress: progress,
+                ct: _importCts.Token,
+                groupId: targetGroup);
             await LoadAsync();
-            ProgressText = docs.Count > 0 ? $"文件夹导入完成 ✓（{docs.Count} 个文档）" : "未发现可导入的文档";
+            var failed = latestProgress?.Failed ?? 0;
+            var skipped = latestProgress?.SkippedCount ?? 0;
+            ProgressText = docs.Count > 0 || skipped > 0 || failed > 0
+                ? $"文件夹批量导入完成（{folderPaths.Count} 个根目录，新增 {docs.Count}，跳过 {skipped}，失败 {failed}，目录层级已保留）"
+                : "所选文件夹中未发现可导入的文件";
+            if (failed > 0)
+                await ShowImportFailureSummaryAsync(docs.Count, failed, latestProgress?.LastError);
+        }
+        catch (OperationCanceledException)
+        {
+            await LoadAsync();
+            ProgressText = "导入已取消；已完成的知识项已保留。";
         }
         catch (Exception ex)
         {
@@ -231,7 +328,121 @@ public partial class KnowledgeViewModel : ViewModelBase
         finally
         {
             IsImporting = false;
+            _importCts?.Dispose();
+            _importCts = null;
         }
+    }
+
+    [RelayCommand]
+    private void CancelImport() => _importCts?.Cancel();
+
+    [RelayCommand]
+    private async Task EditImageMetadataAsync(SelectableDocument doc)
+    {
+        if (!doc.IsImage) return;
+        var (descriptionOk, description) = await _dialogs.PromptAsync(
+            "编辑用于检索和后续对话指代的图片描述：", doc.Description, "编辑图片描述");
+        if (!descriptionOk || string.IsNullOrWhiteSpace(description)) return;
+        var (tagsOk, tags) = await _dialogs.PromptAsync(
+            "编辑标签（使用逗号分隔）：", doc.Tags, "编辑图片标签");
+        if (!tagsOk) return;
+
+        try
+        {
+            ProgressText = "正在重新生成图片向量索引…";
+            await _knowledge.UpdateImageMetadataAsync(doc.Id, description, tags);
+            await RefreshDocumentsAsync();
+            ProgressText = "图片描述与标签已更新 ✓";
+        }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowErrorAsync($"更新图片语义失败：{ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task RegenerateImageDescriptionAsync(SelectableDocument doc)
+    {
+        if (!doc.IsImage) return;
+        try
+        {
+            ProgressText = $"正在使用当前多模态模型识别「{doc.Title}」…";
+            await _knowledge.RegenerateImageDescriptionAsync(doc.Id);
+            await RefreshDocumentsAsync();
+            ProgressText = "重新识图并索引完成 ✓";
+        }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowErrorAsync($"重新识图失败：{ex.Message}");
+            ProgressText = $"重新识图失败：{ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenImageAsync(SelectableDocument doc)
+    {
+        if (!doc.IsImage || string.IsNullOrWhiteSpace(doc.PreviewPath) || !File.Exists(doc.PreviewPath))
+        {
+            await _dialogs.ShowErrorAsync("图片原文件缺失或已损坏。", "无法打开图片");
+            return;
+        }
+        try
+        {
+            Process.Start(new ProcessStartInfo(doc.PreviewPath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowErrorAsync($"无法打开图片：{ex.Message}");
+        }
+    }
+
+    private static string FormatImportStage(KnowledgeImportStage stage) => stage switch
+    {
+        KnowledgeImportStage.Scanning => "扫描",
+        KnowledgeImportStage.Copying => "复制原图",
+        KnowledgeImportStage.Describing => "识别图片",
+        KnowledgeImportStage.Embedding => "生成向量",
+        KnowledgeImportStage.Persisting => "保存",
+        _ => "完成"
+    };
+
+    private static string FormatImportProgress(KnowledgeImportProgress progress, TimeSpan elapsed)
+    {
+        var current = string.IsNullOrWhiteSpace(progress.CurrentFile)
+            ? string.Empty
+            : $"：{progress.CurrentFile}";
+        var error = string.IsNullOrWhiteSpace(progress.LastError)
+            ? string.Empty
+            : $"；最近错误：{progress.LastError}";
+        var work = string.Empty;
+        if (progress.TotalBytes > 0)
+        {
+            var ratio = Math.Clamp((double)progress.ProcessedBytes / progress.TotalBytes, 0, 1);
+            var eta = ratio > 0.005
+                ? TimeSpan.FromSeconds(elapsed.TotalSeconds * (1 - ratio) / ratio)
+                : TimeSpan.Zero;
+            var etaText = eta > TimeSpan.Zero ? $"，预计剩余 {FormatDuration(eta)}" : string.Empty;
+            work = $"，数据 {ratio:P1}{etaText}";
+        }
+        return $"{FormatImportStage(progress.Stage)} {progress.Completed}/{progress.Total}{work}，" +
+               $"新增 {progress.Succeeded}，跳过 {progress.SkippedCount}，失败 {progress.Failed}，" +
+               $"回退 {progress.FallbackCount}{current}{error}";
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+            return $"{(int)duration.TotalHours} 小时 {duration.Minutes} 分钟";
+        if (duration.TotalMinutes >= 1)
+            return $"{Math.Max(1, (int)Math.Ceiling(duration.TotalMinutes))} 分钟";
+        return $"{Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds))} 秒";
+    }
+
+    private Task ShowImportFailureSummaryAsync(int succeeded, int failed, string? lastError)
+    {
+        var detail = string.IsNullOrWhiteSpace(lastError) ? "请检查 Embedding 配置和网络连接。" : lastError;
+        var title = succeeded == 0 ? "知识库导入失败" : "部分知识文件导入失败";
+        return _dialogs.ShowErrorAsync($"成功 {succeeded} 项，失败 {failed} 项。\n\n最近错误：{detail}", title);
     }
 
     [RelayCommand]
@@ -291,6 +502,55 @@ public partial class KnowledgeViewModel : ViewModelBase
     }
 
     // ----- 批量操作 -----
+
+    [RelayCommand]
+    private async Task BatchRegenerateImagesAsync()
+    {
+        if (IsImporting) return;
+        var selected = Documents.Where(document => document.IsSelected && document.IsImage)
+            .Select(document => document.Id)
+            .ToList();
+        if (selected.Count == 0)
+        {
+            await _dialogs.ShowErrorAsync("请先选择至少一张图片知识项。", "批量重新识图");
+            return;
+        }
+        var confirmed = await _dialogs.ConfirmAsync(
+            $"将使用当前多模态 API 重新识别并索引 {selected.Count} 张图片，是否继续？",
+            "批量重新识图");
+        if (!confirmed) return;
+
+        IsImporting = true;
+        ProgressText = "正在批量识图…";
+        _importCts = new CancellationTokenSource();
+        try
+        {
+            var progress = new Progress<KnowledgeImportProgress>(p =>
+            {
+                ProgressText = $"批量识图 {p.Completed}/{p.Total}，成功 {p.Succeeded}，失败 {p.Failed}，回退 {p.FallbackCount}";
+            });
+            var regenerated = await _knowledge.RegenerateImageDescriptionsAsync(selected, progress, _importCts.Token);
+            await LoadAsync();
+            ProgressText = $"批量识图完成 ✓（成功 {regenerated.Count}，失败 {selected.Count - regenerated.Count}）";
+        }
+        catch (OperationCanceledException)
+        {
+            await LoadAsync();
+            ProgressText = "批量识图已取消；已完成项已保留。";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Batch image recognition failed.");
+            ProgressText = $"批量识图失败：{ex.Message}";
+            await _dialogs.ShowErrorAsync($"批量识图失败：{ex.Message}");
+        }
+        finally
+        {
+            IsImporting = false;
+            _importCts?.Dispose();
+            _importCts = null;
+        }
+    }
 
     [RelayCommand]
     private async Task BatchDeleteAsync()
@@ -367,7 +627,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         {
             await _knowledge.CreateGroupAsync(name);
             await LoadAsync();
-            var created = Groups.FirstOrDefault(g => g.DisplayName == name.Trim() && g.GroupId > 0);
+            var created = Groups.FirstOrDefault(g => g.DisplayName == name.Trim() && g.SourceGroup is not null);
             if (created is not null) SelectedGroup = created;
         }
         catch (Exception ex)

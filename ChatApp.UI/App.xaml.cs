@@ -32,6 +32,7 @@ public partial class App : Application
                 services.AddInfrastructure();
                 services.AddChatAppAi();
                 services.AddSingleton<IDialogService, DialogService>();
+                services.AddSingleton<BundledKnowledgeService>();
                 services.AddSingleton<MainViewModel>();
                 services.AddSingleton<INavigation>(sp => sp.GetRequiredService<MainViewModel>());
                 services.AddSingleton<ChatViewModel>();
@@ -55,7 +56,9 @@ public partial class App : Application
             try
             {
                 await InfrastructureModule.InitializeAsync(_host.Services);
-                await ((MainViewModel)window.DataContext).InitializeAsync();
+                var mainViewModel = (MainViewModel)window.DataContext;
+                await mainViewModel.InitializeAsync();
+                _ = mainViewModel.Knowledge.ImportBundledKnowledgeAsync();
             }
             catch (Exception ex)
             {

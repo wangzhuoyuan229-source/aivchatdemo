@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using ChatApp.Core.Models;
+using System.Collections.ObjectModel;
 
 namespace ChatApp.UI.ViewModels;
 
@@ -19,4 +20,13 @@ public partial class ChatBubbleViewModel : ViewModelBase
     public bool IsGroupBubble { get; init; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public string TimeText => CreatedAt.ToLocalTime().ToString("HH:mm");
+
+    public ObservableCollection<ChatAttachmentViewModel> Attachments { get; } = new();
+
+    public void SetAttachments(IEnumerable<MessageAttachment> attachments)
+    {
+        Attachments.Clear();
+        foreach (var attachment in attachments.Where(a => a.Kind == MessageAttachmentKind.Image))
+            Attachments.Add(new ChatAttachmentViewModel(attachment));
+    }
 }

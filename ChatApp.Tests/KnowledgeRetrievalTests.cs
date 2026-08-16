@@ -153,6 +153,78 @@ public class KnowledgeRetrievalTests
         }
     }
 
+    [Fact]
+    public async Task ImageRetrievalUsesIndependentScopeTopKAndGroupBoundary()
+    {
+        var databasePath = NewDatabasePath();
+        try
+        {
+            var factory = new TestDbContextFactory(databasePath);
+            await using (var db = await factory.CreateDbContextAsync())
+            {
+                await db.Database.EnsureCreatedAsync();
+                db.KnowledgeGroups.AddRange(
+                    new KnowledgeGroup { Id = 1, Name = "可见" },
+                    new KnowledgeGroup { Id = 2, Name = "不可见" });
+                db.KnowledgeDocuments.AddRange(
+                    new KnowledgeDocument
+                    {
+                        Id = 11, GroupId = 1, Kind = KnowledgeItemKind.Image, Title = "月港图",
+                        FileName = "moon.png", StorageKey = "images/moon.png", MimeType = "image/png",
+                        SourceRelativePath = "立绘/Y/月港/JPEG/立绘-月港-精二.png",
+                        SemanticDescription = "月光下的港口", Tags = "月光,港口"
+                    },
+                    new KnowledgeDocument
+                    {
+                        Id = 22, GroupId = 2, Kind = KnowledgeItemKind.Image, Title = "沙漠图",
+                        FileName = "sand.png", StorageKey = "images/sand.png", MimeType = "image/png",
+                        SemanticDescription = "沙漠", Tags = "沙漠"
+                    });
+                db.KnowledgeChunks.AddRange(
+                    new KnowledgeChunk { DocumentId = 11, ChunkIndex = 0, ExternalId = "image_doc11", Content = "月光下的港口" },
+                    new KnowledgeChunk { DocumentId = 22, ChunkIndex = 0, ExternalId = "image_doc22", Content = "沙漠" });
+                await db.SaveChangesAsync();
+            }
+            var vectors = new FakeVectorStore(new[]
+            {
+                new VectorRecord { Id = "image_doc11", Scope = "knowledge-image", Content = "月港", Embedding = new[] { 1f, 0f } },
+                new VectorRecord { Id = "image_doc22", Scope = "knowledge-image", Content = "沙漠", Embedding = new[] { 1f, 0f } }
+            });
+            var service = new KnowledgeService(factory, new FakeEmbeddingService(), vectors, NullLogger<KnowledgeService>.Instance);
+
+            var result = await service.RetrieveAsync(new KnowledgeRetrievalRequest
+            {
+                Query = "月港图片",
+                AllowedGroupIds = new[] { 1 },
+                ImageTopK = 1,
+                ImageMinScore = 0.35
+            });
+
+            var image = Assert.Single(result.ImageHits);
+            Assert.Equal(11, image.DocumentId);
+            Assert.DoesNotContain("image_doc22", vectors.LastAllowedIds!);
+            Assert.Empty(result.Hits);
+
+            var avatarCandidates = await service.FindRoleAvatarCandidatesAsync("月港", new[] { 1 });
+            var avatarCandidate = Assert.Single(avatarCandidates);
+            Assert.Equal(11, avatarCandidate.DocumentId);
+            Assert.Equal(1.0, avatarCandidate.Score);
+
+            await service.UpdateImageMetadataAsync(11, "手动更新后的月港图片", "月港，夜景");
+            Assert.NotNull(vectors.LastUpsert);
+            Assert.Equal("knowledge-image", vectors.LastUpsert!.Scope);
+            Assert.Contains("手动更新后的月港图片", vectors.LastUpsert.Content);
+            await using var verify = await factory.CreateDbContextAsync();
+            var updated = await verify.KnowledgeDocuments.AsNoTracking().SingleAsync(d => d.Id == 11);
+            Assert.Equal(ImageDescriptionSource.Manual, updated.DescriptionSource);
+            Assert.Equal("月港,夜景", updated.Tags);
+        }
+        finally
+        {
+            DeleteDatabase(databasePath);
+        }
+    }
+
     private static VectorRecord Record(string id, float x, float y) => new()
     {
         Id = id,
@@ -227,6 +299,7 @@ public class KnowledgeRetrievalTests
     {
         private readonly IReadOnlyList<VectorRecord> _records;
         public IReadOnlySet<string>? LastAllowedIds { get; private set; }
+        public VectorRecord? LastUpsert { get; private set; }
 
         public FakeVectorStore(IReadOnlyList<VectorRecord> records) => _records = records;
 
@@ -242,7 +315,11 @@ public class KnowledgeRetrievalTests
             return Task.FromResult(SqliteVectorStore.Rank(_records, queryVector, topK, minScore, allowedIds));
         }
 
-        public Task UpsertAsync(VectorRecord record, CancellationToken ct = default) => Task.CompletedTask;
+        public Task UpsertAsync(VectorRecord record, CancellationToken ct = default)
+        {
+            LastUpsert = record;
+            return Task.CompletedTask;
+        }
         public Task UpsertBatchAsync(IEnumerable<VectorRecord> records, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteAsync(string id, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteByScopeAsync(string scope, CancellationToken ct = default) => Task.CompletedTask;

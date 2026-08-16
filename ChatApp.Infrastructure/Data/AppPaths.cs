@@ -16,9 +16,31 @@ public static class AppPaths
 
     public static string KnowledgeDir { get; } = Path.Combine(AppDataDir, "knowledge");
 
+    public static string KnowledgeImagesDir { get; } = Path.Combine(KnowledgeDir, "images");
+
+    public static string MessageAttachmentsDir { get; } = Path.Combine(AppDataDir, "message-attachments");
+
+    public static string ResolveKnowledgeStorageKey(string storageKey) =>
+        ResolveStorageKey(KnowledgeDir, storageKey);
+
+    public static string ResolveMessageAttachmentStorageKey(string storageKey) =>
+        ResolveStorageKey(MessageAttachmentsDir, storageKey);
+
     static AppPaths()
     {
         Directory.CreateDirectory(AppDataDir);
         Directory.CreateDirectory(KnowledgeDir);
+        Directory.CreateDirectory(KnowledgeImagesDir);
+        Directory.CreateDirectory(MessageAttachmentsDir);
+    }
+
+    private static string ResolveStorageKey(string root, string storageKey)
+    {
+        if (string.IsNullOrWhiteSpace(storageKey)) return string.Empty;
+        var normalizedRoot = Path.GetFullPath(root) + Path.DirectorySeparatorChar;
+        var resolved = Path.GetFullPath(Path.Combine(root, storageKey.Replace('/', Path.DirectorySeparatorChar)));
+        if (!resolved.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("无效的本地存储键。");
+        return resolved;
     }
 }

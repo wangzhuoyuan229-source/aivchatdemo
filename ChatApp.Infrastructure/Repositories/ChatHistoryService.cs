@@ -94,6 +94,7 @@ public class ChatHistoryService : IChatHistoryService
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
         var recent = await db.Messages.AsNoTracking()
+            .Include(m => m.Attachments)
             .Where(m => m.ConversationId == conversationId)
             .OrderByDescending(m => m.Id)
             .Take(limit)
@@ -105,21 +106,32 @@ public class ChatHistoryService : IChatHistoryService
     public async Task<Message> AddMessageAsync(Message message, CancellationToken ct = default)
     {
         message.CreatedAt = DateTime.UtcNow;
-        await using var db = await _factory.CreateDbContextAsync(ct);
-        db.Messages.Add(message);
-        var conv = await db.Conversations.FirstOrDefaultAsync(c => c.Id == message.ConversationId, ct);
-        if (conv is not null) conv.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
-        return message;
+        try
+        {
+            await using var db = await _factory.CreateDbContextAsync(ct);
+            db.Messages.Add(message);
+            var conv = await db.Conversations.FirstOrDefaultAsync(c => c.Id == message.ConversationId, ct);
+            if (conv is not null) conv.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return message;
+        }
+        catch
+        {
+            DeleteAttachmentFiles(message.Attachments.Select(a => a.StorageKey));
+            throw;
+        }
     }
 
     public async Task DeleteMessageAsync(int messageId, CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
-        var msg = await db.Messages.FirstOrDefaultAsync(m => m.Id == messageId, ct);
+        var msg = await db.Messages.Include(m => m.Attachments).FirstOrDefaultAsync(m => m.Id == messageId, ct);
         if (msg is null) return;
+        var storageKeys = msg.Attachments.Select(a => a.StorageKey).ToList();
+        db.MessageAttachments.RemoveRange(msg.Attachments);
         db.Messages.Remove(msg);
         await db.SaveChangesAsync(ct);
+        DeleteAttachmentFiles(storageKeys);
     }
 
     public async Task DeleteConversationAsync(int conversationId, CancellationToken ct = default)
@@ -127,9 +139,14 @@ public class ChatHistoryService : IChatHistoryService
         await using var db = await _factory.CreateDbContextAsync(ct);
         var conv = await db.Conversations.FirstOrDefaultAsync(c => c.Id == conversationId, ct);
         if (conv is null) return;
+        var messageIds = await db.Messages.Where(m => m.ConversationId == conversationId).Select(m => m.Id).ToListAsync(ct);
+        var attachments = await db.MessageAttachments.Where(a => messageIds.Contains(a.MessageId)).ToListAsync(ct);
+        var storageKeys = attachments.Select(a => a.StorageKey).ToList();
+        db.MessageAttachments.RemoveRange(attachments);
         db.Messages.RemoveRange(db.Messages.Where(m => m.ConversationId == conversationId));
         db.Conversations.Remove(conv);
         await db.SaveChangesAsync(ct);
+        DeleteAttachmentFiles(storageKeys);
     }
 
     public async Task<IReadOnlyList<Message>> SearchAsync(string keyword, int? conversationId = null, CancellationToken ct = default)
@@ -137,8 +154,25 @@ public class ChatHistoryService : IChatHistoryService
         if (string.IsNullOrWhiteSpace(keyword)) return Array.Empty<Message>();
         await using var db = await _factory.CreateDbContextAsync(ct);
         var pattern = $"%{keyword}%";
-        var q = db.Messages.AsNoTracking().Where(m => EF.Functions.Like(m.Content, pattern));
+        var q = db.Messages.AsNoTracking().Include(m => m.Attachments)
+            .Where(m => EF.Functions.Like(m.Content, pattern));
         if (conversationId.HasValue) q = q.Where(m => m.ConversationId == conversationId.Value);
         return await q.OrderByDescending(m => m.Id).Take(200).ToListAsync(ct);
+    }
+
+    private static void DeleteAttachmentFiles(IEnumerable<string> storageKeys)
+    {
+        foreach (var key in storageKeys.Where(k => !string.IsNullOrWhiteSpace(k)))
+        {
+            try
+            {
+                var path = AppPaths.ResolveMessageAttachmentStorageKey(key);
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch
+            {
+                // Database state is authoritative; stale files may be cleaned manually.
+            }
+        }
     }
 }

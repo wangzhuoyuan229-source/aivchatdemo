@@ -21,8 +21,13 @@ public class SqliteVectorStore : IVectorStore
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
     public SqliteVectorStore(ILogger<SqliteVectorStore> logger)
+        : this(logger, $"Data Source={AppPaths.DbPath}")
     {
-        _connStr = $"Data Source={AppPaths.DbPath}";
+    }
+
+    internal SqliteVectorStore(ILogger<SqliteVectorStore> logger, string connectionString)
+    {
+        _connStr = connectionString;
         _logger = logger;
         EnsureTable();
     }
@@ -54,41 +59,58 @@ public class SqliteVectorStore : IVectorStore
         }
     }
 
-    public async Task UpsertAsync(VectorRecord record, CancellationToken ct = default)
+    public Task UpsertAsync(VectorRecord record, CancellationToken ct = default) =>
+        UpsertBatchAsync(new[] { record }, ct);
+
+    public async Task UpsertBatchAsync(IEnumerable<VectorRecord> records, CancellationToken ct = default)
     {
+        var batch = records.ToList();
+        if (batch.Count == 0) return;
+
         await _gate.WaitAsync(ct);
         try
         {
-            await using var c = new SqliteConnection(_connStr);
-            await c.OpenAsync(ct);
-            using var cmd = c.CreateCommand();
-            cmd.CommandText =
+            await using var connection = new SqliteConnection(_connStr);
+            await connection.OpenAsync(ct);
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText =
                 "INSERT OR REPLACE INTO Vectors (Id,Scope,Content,Embedding,Metadata) VALUES (@id,@scope,@content,@emb,@meta);";
-            cmd.Parameters.AddWithValue("@id", record.Id);
-            cmd.Parameters.AddWithValue("@scope", record.Scope);
-            cmd.Parameters.AddWithValue("@content", record.Content);
-            cmd.Parameters.AddWithValue("@emb", ToBytes(record.Embedding));
-            cmd.Parameters.AddWithValue("@meta", JsonSerializer.Serialize(record.Metadata ?? new Dictionary<string, string>(), JsonOpts));
-            await cmd.ExecuteNonQueryAsync(ct);
+            var id = command.Parameters.Add("@id", SqliteType.Text);
+            var scope = command.Parameters.Add("@scope", SqliteType.Text);
+            var content = command.Parameters.Add("@content", SqliteType.Text);
+            var embedding = command.Parameters.Add("@emb", SqliteType.Blob);
+            var metadata = command.Parameters.Add("@meta", SqliteType.Text);
 
-            if (!_cache.TryGetValue(record.Scope, out var list))
+            foreach (var record in batch)
             {
-                list = new List<VectorRecord>();
-                _cache[record.Scope] = list;
+                ct.ThrowIfCancellationRequested();
+                id.Value = record.Id;
+                scope.Value = record.Scope;
+                content.Value = record.Content;
+                embedding.Value = ToBytes(record.Embedding);
+                metadata.Value = JsonSerializer.Serialize(
+                    record.Metadata ?? new Dictionary<string, string>(), JsonOpts);
+                await command.ExecuteNonQueryAsync(ct);
             }
-            var idx = list.FindIndex(x => x.Id == record.Id);
-            if (idx >= 0) list[idx] = record; else list.Add(record);
+            transaction.Commit();
+
+            foreach (var record in batch)
+            {
+                if (!_cache.TryGetValue(record.Scope, out var list))
+                {
+                    list = new List<VectorRecord>();
+                    _cache[record.Scope] = list;
+                }
+                var index = list.FindIndex(item => item.Id == record.Id);
+                if (index >= 0) list[index] = record; else list.Add(record);
+            }
         }
         finally
         {
             _gate.Release();
         }
-    }
-
-    public async Task UpsertBatchAsync(IEnumerable<VectorRecord> records, CancellationToken ct = default)
-    {
-        foreach (var r in records)
-            await UpsertAsync(r, ct);
     }
 
     public async Task<IReadOnlyList<VectorSearchHit>> SearchAsync(

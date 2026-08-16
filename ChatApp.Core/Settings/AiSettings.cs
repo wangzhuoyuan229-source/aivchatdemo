@@ -24,6 +24,23 @@ public class AiSettings
     /// <summary>Optional embedding-service key. Blank means use <see cref="ApiKey"/>.</summary>
     public string EmbeddingApiKey { get; set; } = string.Empty;
 
+    /// <summary>Independent image-understanding provider used only while importing/re-describing images.</summary>
+    public VisionProviderPreset VisionProviderPreset { get; set; } = VisionProviderPreset.AlibabaModelStudio;
+
+    public MultimodalApiProtocol VisionProtocol { get; set; } = MultimodalApiProtocol.ChatCompletions;
+
+    public string VisionApiBaseUrl { get; set; } = VisionProviderProfiles
+        .Get(VisionProviderPreset.AlibabaModelStudio).baseUrl;
+
+    public string VisionApiKey { get; set; } = string.Empty;
+
+    public string VisionModel { get; set; } = VisionProviderProfiles
+        .Get(VisionProviderPreset.AlibabaModelStudio).model;
+
+    public int VisionTimeoutSeconds { get; set; } = 90;
+
+    public int VisionMaxConcurrency { get; set; } = 3;
+
     /// <summary>Number of most-recent messages kept in the short-term context window.</summary>
     public int ContextWindowSize { get; set; } = 20;
 
@@ -35,6 +52,10 @@ public class AiSettings
 
     /// <summary>Minimum cosine similarity accepted for a knowledge hit.</summary>
     public double KnowledgeMinScore { get; set; } = 0.35;
+
+    public int KnowledgeImageTopK { get; set; } = 5;
+
+    public double KnowledgeImageMinScore { get; set; } = 0.35;
 
     /// <summary>Maximum characters injected from retrieved knowledge per turn.</summary>
     public int KnowledgeContextCharBudget { get; set; } = 6000;
@@ -118,6 +139,26 @@ public class AiSettings
                 EmbeddingModel = string.Empty;
                 EnableLongTermMemory = false;
                 EnableKnowledgeBase = false;
+                changed = true;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(VisionApiBaseUrl))
+        {
+            if (RemoteApiEndpointPolicy.TryNormalizeHostedApi(VisionApiBaseUrl, out var visionEndpoint, out _))
+            {
+                var normalized = visionEndpoint.ToString().TrimEnd('/');
+                if (!string.Equals(VisionApiBaseUrl, normalized, StringComparison.Ordinal))
+                {
+                    VisionApiBaseUrl = normalized;
+                    changed = true;
+                }
+            }
+            else
+            {
+                VisionApiBaseUrl = string.Empty;
+                VisionApiKey = string.Empty;
+                VisionModel = string.Empty;
                 changed = true;
             }
         }

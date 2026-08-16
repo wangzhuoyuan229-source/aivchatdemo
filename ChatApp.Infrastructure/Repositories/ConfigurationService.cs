@@ -37,6 +37,18 @@ public class ConfigurationService : IConfigurationService
         settings.ApiBaseUrl = RemoteApiEndpointPolicy
             .NormalizeOrThrow(settings.ApiBaseUrl)
             .ToString().TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(settings.EmbeddingApiBaseUrl))
+        {
+            settings.EmbeddingApiBaseUrl = RemoteApiEndpointPolicy
+                .NormalizeOrThrow(settings.EmbeddingApiBaseUrl)
+                .ToString().TrimEnd('/');
+        }
+        if (!string.IsNullOrWhiteSpace(settings.VisionApiBaseUrl))
+        {
+            settings.VisionApiBaseUrl = RemoteApiEndpointPolicy
+                .NormalizeHostedApiOrThrow(settings.VisionApiBaseUrl)
+                .ToString().TrimEnd('/');
+        }
         await using var db = await _factory.CreateDbContextAsync(ct);
         var json = JsonSerializer.Serialize(settings, JsonOpts);
         var row = await db.Settings.FirstOrDefaultAsync(s => s.Key == Key, ct);

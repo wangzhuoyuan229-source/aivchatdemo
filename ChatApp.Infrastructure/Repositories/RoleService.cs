@@ -97,6 +97,7 @@ public class RoleService : IRoleService
         await using var db = await _factory.CreateDbContextAsync(ct);
         var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == id, ct);
         if (role is null) return;
+        var attachmentStorageKeys = new HashSet<string>(StringComparer.Ordinal);
 
         // 级联删除：先收集私聊会话 ID，删除其下所有消息，再删会话、记忆条目，最后删角色本身
         var conversationIds = await db.Conversations
@@ -106,6 +107,11 @@ public class RoleService : IRoleService
 
         if (conversationIds.Count > 0)
         {
+            var messageIds = await db.Messages.Where(m => conversationIds.Contains(m.ConversationId))
+                .Select(m => m.Id).ToListAsync(ct);
+            var attachments = await db.MessageAttachments.Where(a => messageIds.Contains(a.MessageId)).ToListAsync(ct);
+            foreach (var attachment in attachments) attachmentStorageKeys.Add(attachment.StorageKey);
+            db.MessageAttachments.RemoveRange(attachments);
             db.Messages.RemoveRange(db.Messages.Where(m => conversationIds.Contains(m.ConversationId)));
             db.Conversations.RemoveRange(db.Conversations.Where(c => c.RoleId == id));
         }
@@ -133,6 +139,11 @@ public class RoleService : IRoleService
 
             if (emptyGroupIds.Count > 0)
             {
+                var messageIds = await db.Messages.Where(m => emptyGroupIds.Contains(m.ConversationId))
+                    .Select(m => m.Id).ToListAsync(ct);
+                var attachments = await db.MessageAttachments.Where(a => messageIds.Contains(a.MessageId)).ToListAsync(ct);
+                foreach (var attachment in attachments) attachmentStorageKeys.Add(attachment.StorageKey);
+                db.MessageAttachments.RemoveRange(attachments);
                 db.Messages.RemoveRange(db.Messages.Where(m => emptyGroupIds.Contains(m.ConversationId)));
                 db.Conversations.RemoveRange(db.Conversations.Where(c => emptyGroupIds.Contains(c.Id)));
             }
@@ -143,6 +154,15 @@ public class RoleService : IRoleService
         db.Roles.Remove(role);
 
         await db.SaveChangesAsync(ct);
+        foreach (var storageKey in attachmentStorageKeys.Where(key => !string.IsNullOrWhiteSpace(key)))
+        {
+            try
+            {
+                var path = AppPaths.ResolveMessageAttachmentStorageKey(storageKey);
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch { /* database deletion remains authoritative */ }
+        }
         _logger.LogInformation("Deleted role {Id} ({IsPreset}) along with {Conv} conversation(s).", id, role.IsPreset, conversationIds.Count);
     }
 

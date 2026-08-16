@@ -28,6 +28,7 @@ public partial class ChatViewModel : ViewModelBase
     [ObservableProperty] private string _statusText = string.Empty;
     [ObservableProperty] private bool _isGroupMode;
     [ObservableProperty] private string _conversationSubtitle = string.Empty;
+    [ObservableProperty] private string _conversationAvatar = "🤖";
 
     public ObservableCollection<ChatBubbleViewModel> Messages { get; } = new();
 
@@ -55,7 +56,8 @@ public partial class ChatViewModel : ViewModelBase
         _groupMembers.Clear();
         _activeBubbles.Clear();
         Role = await _roles.GetAsync(conv.RoleId ?? 0);
-        Title = Role is null ? conv.Title : $"{Role.Avatar}  {Role.Name}";
+        Title = Role is null ? conv.Title : Role.Name;
+        ConversationAvatar = Role?.Avatar ?? "🤖";
         ConversationSubtitle = Role?.Description ?? string.Empty;
         Messages.Clear();
         var msgs = await _history.GetMessagesAsync(conversationId);
@@ -69,6 +71,7 @@ public partial class ChatViewModel : ViewModelBase
         if (conv is null) return;
         Conversation = conv;
         IsGroupMode = true;
+        ConversationAvatar = "👥";
         Role = null;
         _groupMembers.Clear();
         _activeBubbles.Clear();
@@ -100,6 +103,7 @@ public partial class ChatViewModel : ViewModelBase
         _activeBubbles.Clear();
         Messages.Clear();
         Title = "对话";
+        ConversationAvatar = "🤖";
         ConversationSubtitle = string.Empty;
         StatusText = string.Empty;
         InputText = string.Empty;
@@ -134,7 +138,8 @@ public partial class ChatViewModel : ViewModelBase
         Conversation = conv;
         Role = role;
         IsGroupMode = false;
-        Title = $"{role.Avatar}  {role.Name}";
+        Title = role.Name;
+        ConversationAvatar = role.Avatar;
         ConversationSubtitle = role.Description;
         Messages.Clear();
 
@@ -190,6 +195,7 @@ public partial class ChatViewModel : ViewModelBase
             var final = await _chat.SendAsync(Conversation.Id, text, progress, _cts.Token);
             assistantBubble.Id = final.Id;
             assistantBubble.Content = final.Content;
+            assistantBubble.SetAttachments(final.Attachments);
         }
         catch (OperationCanceledException)
         {
@@ -284,6 +290,7 @@ public partial class ChatViewModel : ViewModelBase
                 {
                     fb.Id = finished.FinalMessage.Id;
                     fb.Content = finished.FinalMessage.Content;
+                    fb.SetAttachments(finished.FinalMessage.Attachments);
                     fb.IsStreaming = false;
                     _activeBubbles.Remove(finished.RoleId);
                 }
@@ -307,7 +314,7 @@ public partial class ChatViewModel : ViewModelBase
         if (IsGroupMode)
         {
             var gRole = m.Author == MessageAuthor.User ? null : _groupMembers.GetValueOrDefault(m.RoleId);
-            return new ChatBubbleViewModel
+            var bubble = new ChatBubbleViewModel
             {
                 Id = m.Id,
                 Author = m.Author,
@@ -318,10 +325,12 @@ public partial class ChatViewModel : ViewModelBase
                 CreatedAt = m.CreatedAt,
                 IsStreaming = false
             };
+            bubble.SetAttachments(m.Attachments);
+            return bubble;
         }
 
         var role = Role;
-        return new ChatBubbleViewModel
+        var privateBubble = new ChatBubbleViewModel
         {
             Id = m.Id,
             Author = m.Author,
@@ -331,5 +340,7 @@ public partial class ChatViewModel : ViewModelBase
             CreatedAt = m.CreatedAt,
             IsStreaming = false
         };
+        privateBubble.SetAttachments(m.Attachments);
+        return privateBubble;
     }
 }

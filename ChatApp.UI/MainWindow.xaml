@@ -23,7 +23,7 @@
           <Button Classes="nav" ToolTip.Tip="设置" Command="{Binding ShowSettingsCommand}"
                   Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=settings}" Content="⚙️"/>
         </StackPanel>
-        <TextBlock Grid.Row="2" Text="v1.0.2" Foreground="#888" FontSize="10"
+        <TextBlock Grid.Row="2" Text="v1.1.0" Foreground="#888" FontSize="10"
                    HorizontalAlignment="Center" Margin="0,0,0,12"/>
       </Grid>
     </Border>

@@ -35,5 +35,6 @@ training/reports/generated/
 __pycache__/
 *.py[cod]
 
-# Local knowledge corpora imported into the app (not redistributed with releases)
+# Legacy local corpus. The versioned root-level `知识库/` directory is intentionally
+# shipped with releases and therefore must not be added to this ignore list.
 明日方舟设定/

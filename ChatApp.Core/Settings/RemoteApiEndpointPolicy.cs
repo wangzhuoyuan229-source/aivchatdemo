@@ -19,7 +19,17 @@ public static class RemoteApiEndpointPolicy
         throw new InvalidOperationException($"{fieldName} 无效：{error}");
     }
 
-    public static bool TryNormalize(string? baseUrl, out Uri endpoint, out string error)
+    /// <summary>
+    /// Validates a hosted HTTPS API base while preserving its vendor-specific path.
+    /// Vision vendors commonly use /api/paas/v4 or /api/v3 rather than /v1.
+    /// </summary>
+    public static Uri NormalizeHostedApiOrThrow(string? baseUrl, string fieldName = "API Base URL")
+    {
+        if (TryNormalizeHostedApi(baseUrl, out var endpoint, out var error)) return endpoint;
+        throw new InvalidOperationException($"{fieldName} 无效：{error}");
+    }
+
+    public static bool TryNormalizeHostedApi(string? baseUrl, out Uri endpoint, out string error)
     {
         endpoint = new Uri(DefaultBaseUrl);
         error = string.Empty;
@@ -53,6 +63,19 @@ public static class RemoteApiEndpointPolicy
         if (IsLocalOrPrivateHost(parsed.Host))
         {
             error = "不支持 localhost、回环地址或私有网络中的本地模型服务。";
+            return false;
+        }
+
+        var builder = new UriBuilder(parsed) { Path = parsed.AbsolutePath.TrimEnd('/') };
+        endpoint = builder.Uri;
+        return true;
+    }
+
+    public static bool TryNormalize(string? baseUrl, out Uri endpoint, out string error)
+    {
+        if (!TryNormalizeHostedApi(baseUrl, out var parsed, out error))
+        {
+            endpoint = new Uri(DefaultBaseUrl);
             return false;
         }
 
