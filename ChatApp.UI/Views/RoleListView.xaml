@@ -5,7 +5,7 @@
              xmlns:cm="using:ChatApp.Core.Models"
              xmlns:conv="using:ChatApp.UI.Converters"
              xmlns:controls="using:ChatApp.UI.Controls"
-             Background="White">
+             Background="{DynamicResource PanelBrush}">
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="Bool2Vis"/>
     </UserControl.Resources>
@@ -37,33 +37,46 @@
         <StackPanel Grid.Row="1" Margin="0,2,0,8"
                     IsVisible="{Binding HasGroupChats, Converter={StaticResource Bool2Vis}}">
             <TextBlock Text="最近群聊" FontSize="12" FontWeight="SemiBold"
-                       Foreground="{StaticResource TextSubBrush}" Margin="16,4,12,6"/>
+                       Foreground="{DynamicResource TextSubBrush}" Margin="16,4,12,6"/>
             <ItemsControl ItemsSource="{Binding GroupChats}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Button Command="{Binding DataContext.OpenGroupChatCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
-                                Classes="ghost" HorizontalContentAlignment="Stretch" Margin="8,2" Padding="0">
-                            <Border Background="#F7FAF8" BorderBrush="#E3EEE7" BorderThickness="1"
+                                Classes="ghost" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Margin="8,2" Padding="0">
+                            <Border Background="{DynamicResource SubtlePanelBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1"
                                     CornerRadius="9" Padding="10">
-                                <Grid ColumnDefinitions="48,*,Auto" RowDefinitions="Auto,Auto">
+                                <Grid ColumnDefinitions="48,*,Auto" RowDefinitions="Auto,Auto,Auto">
                                     <Border Grid.Column="0" Grid.RowSpan="2" Width="42" Height="42"
-                                            CornerRadius="9" Background="#E5F5EB" VerticalAlignment="Center"
+                                            CornerRadius="9" Background="{DynamicResource AvatarRingBrush}" VerticalAlignment="Center"
                                             Margin="0,0,10,0" ClipToBounds="True">
                                         <controls:AvatarView Avatar="{Binding Avatar}" FontSize="23"/>
                                     </Border>
-                                    <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}"
-                                               FontWeight="SemiBold" FontSize="14"
-                                               Foreground="{StaticResource TextMainBrush}"
-                                               TextTrimming="CharacterEllipsis" Margin="0,0,8,2"/>
+                                    <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Horizontal">
+                                        <TextBlock Text="{Binding PinIcon}" FontSize="11" VerticalAlignment="Center"
+                                                   Margin="0,0,4,0"/>
+                                        <TextBlock Text="{Binding Title}"
+                                                   FontWeight="SemiBold" FontSize="14"
+                                                   Foreground="{DynamicResource TextMainBrush}"
+                                                   TextTrimming="CharacterEllipsis" Margin="0,0,8,2"/>
+                                    </StackPanel>
                                     <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding UpdatedText}"
-                                               FontSize="10" Foreground="{StaticResource TextSubBrush}"
+                                               FontSize="10" Foreground="{DynamicResource TextSubBrush}"
                                                VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal">
-                                        <TextBlock Text="成员 · " FontSize="11" Foreground="#6F8177"/>
+                                        <TextBlock Text="成员 · " FontSize="11" Foreground="{DynamicResource TextSubBrush}"/>
                                         <TextBlock Text="{Binding RoleName}" FontSize="11"
-                                                   Foreground="{StaticResource TextSubBrush}"
+                                                   Foreground="{DynamicResource TextSubBrush}"
                                                    TextTrimming="CharacterEllipsis" MaxWidth="155"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="2" Orientation="Horizontal"
+                                                Margin="0,4,0,0">
+                                        <Button Classes="ghost" Content="置顶/取消置顶" Padding="6,2" FontSize="11" Margin="0,0,4,0"
+                                                Command="{Binding $parent[ItemsControl].DataContext.ToggleGroupChatPinCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Classes="ghost" Content="重命名" Padding="6,2" FontSize="11"
+                                                Command="{Binding $parent[ItemsControl].DataContext.RenameGroupChatCommand}"
+                                                CommandParameter="{Binding}"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -79,10 +92,10 @@
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Border Margin="2,4" Padding="10" CornerRadius="8" Background="#FFFFFF">
+                    <Border Margin="2,4" Padding="10" CornerRadius="8" Background="{DynamicResource PanelBrush}">
                         <Grid ColumnDefinitions="48,*" RowDefinitions="Auto,Auto">
                             <Border Grid.Column="0" Grid.RowSpan="2"
-                                    Width="44" Height="44" CornerRadius="8" Background="#F2F2F2"
+                                    Width="44" Height="44" CornerRadius="8" Background="{DynamicResource SubtleBrush}"
                                     VerticalAlignment="Top" Margin="0,1,0,0" ClipToBounds="True">
                                 <controls:AvatarView Avatar="{Binding Avatar}" FontSize="26"/>
                             </Border>
@@ -90,12 +103,12 @@
                             <Grid Grid.Column="1" Grid.Row="0" Margin="10,0,0,0" ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"
-                                               Foreground="{StaticResource TextMainBrush}"
+                                               Foreground="{DynamicResource TextMainBrush}"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding Description}" FontSize="11"
-                                               Foreground="{StaticResource TextSubBrush}"
+                                               Foreground="{DynamicResource TextSubBrush}"
                                                TextTrimming="CharacterEllipsis" MaxLines="1"/>
-                                    <TextBlock Text="未绑定知识库" FontSize="10" Foreground="#C47A00"
+                                    <TextBlock Text="未绑定知识库" FontSize="10" Foreground="{DynamicResource WarnBrush}"
                                                IsVisible="{Binding HasNoKnowledgeGroups, Converter={StaticResource Bool2Vis}}"/>
                                 </StackPanel>
                                 <Button Grid.Column="1" Classes="primary" Content="对话 →" Padding="12,6"
@@ -108,7 +121,7 @@
                                 <Button Classes="ghost" Content="编辑" Click="EditRole_Click" Padding="6,3" Margin="0,0,4,0"/>
                                 <Button Classes="ghost" Content="删除" Padding="6,3"
                                         Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                        CommandParameter="{Binding}" Foreground="#E53935"/>
+                                        CommandParameter="{Binding}" Foreground="{DynamicResource DangerBrush}"/>
                             </StackPanel>
                         </Grid>
                     </Border>

@@ -22,7 +22,10 @@ public class ChatHistoryService : IChatHistoryService
         await using var db = await _factory.CreateDbContextAsync(ct);
         var q = db.Conversations.AsNoTracking();
         if (roleId.HasValue) q = q.Where(c => c.RoleId == roleId.Value);
-        return await q.OrderByDescending(c => c.UpdatedAt).ToListAsync(ct);
+        return await q
+            .OrderByDescending(c => c.IsPinned)
+            .ThenByDescending(c => c.UpdatedAt)
+            .ToListAsync(ct);
     }
 
     public async Task<Conversation> CreateConversationAsync(int roleId, string? title = null, CancellationToken ct = default)
@@ -90,12 +93,15 @@ public class ChatHistoryService : IChatHistoryService
         return await db.Conversations.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
     }
 
-    public async Task<IReadOnlyList<Message>> GetMessagesAsync(int conversationId, int limit = 1000, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Message>> GetMessagesAsync(int conversationId, int limit = 1000, CancellationToken ct = default, int? beforeId = null)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
-        var recent = await db.Messages.AsNoTracking()
+        var q = db.Messages.AsNoTracking()
             .Include(m => m.Attachments)
-            .Where(m => m.ConversationId == conversationId)
+            .Where(m => m.ConversationId == conversationId);
+        if (beforeId.HasValue)
+            q = q.Where(m => m.Id < beforeId.Value);
+        var recent = await q
             .OrderByDescending(m => m.Id)
             .Take(limit)
             .ToListAsync(ct);
@@ -132,6 +138,43 @@ public class ChatHistoryService : IChatHistoryService
         db.Messages.Remove(msg);
         await db.SaveChangesAsync(ct);
         DeleteAttachmentFiles(storageKeys);
+    }
+
+    public async Task<int> DeleteMessagesFromAsync(int conversationId, int messageIdInclusive, CancellationToken ct = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        var targets = await db.Messages
+            .Where(m => m.ConversationId == conversationId && m.Id >= messageIdInclusive)
+            .Select(m => m.Id)
+            .ToListAsync(ct);
+        if (targets.Count == 0) return 0;
+
+        var attachments = await db.MessageAttachments.Where(a => targets.Contains(a.MessageId)).ToListAsync(ct);
+        var storageKeys = attachments.Select(a => a.StorageKey).ToList();
+        db.MessageAttachments.RemoveRange(attachments);
+        db.Messages.RemoveRange(db.Messages.Where(m => targets.Contains(m.Id)));
+        await db.SaveChangesAsync(ct);
+        DeleteAttachmentFiles(storageKeys);
+        return targets.Count;
+    }
+
+    public async Task RenameConversationAsync(int conversationId, string title, CancellationToken ct = default)
+    {
+        var normalized = title.Trim();
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        var conv = await db.Conversations.FirstOrDefaultAsync(c => c.Id == conversationId, ct);
+        if (conv is null || string.IsNullOrWhiteSpace(normalized)) return;
+        conv.Title = normalized;
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task SetConversationPinnedAsync(int conversationId, bool pinned, CancellationToken ct = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        var conv = await db.Conversations.FirstOrDefaultAsync(c => c.Id == conversationId, ct);
+        if (conv is null || conv.IsPinned == pinned) return;
+        conv.IsPinned = pinned;
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task DeleteConversationAsync(int conversationId, CancellationToken ct = default)

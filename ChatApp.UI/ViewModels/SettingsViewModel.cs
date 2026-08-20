@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using ChatApp.Core.Security;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
+using ChatApp.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -16,16 +18,20 @@ public partial class SettingsViewModel : ViewModelBase
     public const string CustomEmbeddingPreset = "自定义远程服务";
 
     private readonly IConfigurationService _config;
+    private readonly IUiSettingsService _uiConfig;
     private readonly IImageDescriptionService? _imageDescriptions;
+    private readonly IApiProbeService? _apiProbe;
     private readonly KnowledgeViewModel? _knowledgeViewModel;
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private CancellationTokenSource? _autoSaveCts;
     private AiSettings _settings = new();
     private bool _isApplyingEmbeddingPreset;
     private bool _isApplyingVisionPreset;
+    private bool _isLoadingUiSettings;
 
     private static readonly HashSet<string> PersistedPropertyNames = new()
     {
+        nameof(UseUnifiedApi),
         nameof(ApiBaseUrl), nameof(ApiKey), nameof(ChatModel), nameof(EmbeddingModel),
         nameof(EmbeddingApiBaseUrl), nameof(EmbeddingApiKey), nameof(ContextWindowSize),
         nameof(MemoryTopK), nameof(KnowledgeTopK), nameof(KnowledgeMinScore),
@@ -35,9 +41,11 @@ public partial class SettingsViewModel : ViewModelBase
         nameof(KnowledgeContextCharBudget), nameof(KnowledgeNeighborRadius),
         nameof(ChatTemperature), nameof(MemoryBatchSize), nameof(EnableLongTermMemory),
         nameof(EnableKnowledgeBase), nameof(EnableVoice), nameof(EnableAffinity),
+        nameof(EnableContextSummarization), nameof(ContextSummaryKeepRecent),
         nameof(GroupChatMode), nameof(MaxSpeakersPerTurn), nameof(RespondToOtherAgents)
     };
 
+    [ObservableProperty] private bool _useUnifiedApi;
     [ObservableProperty] private string _apiBaseUrl = string.Empty;
     [ObservableProperty] private string _apiKey = string.Empty;
     [ObservableProperty] private string _chatModel = string.Empty;
@@ -73,6 +81,55 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _providerHint = string.Empty;
     [ObservableProperty] private bool _isTestingVision;
     [ObservableProperty] private string _visionTestStatus = string.Empty;
+    [ObservableProperty] private bool _isTestingChat;
+    [ObservableProperty] private string _chatTestStatus = string.Empty;
+    [ObservableProperty] private bool _isTestingEmbedding;
+    [ObservableProperty] private string _embeddingTestStatus = string.Empty;
+
+    // ----- 2.5 长对话摘要压缩 / 2.6 外观 -----
+    [ObservableProperty] private bool _enableContextSummarization;
+    [ObservableProperty] private int _contextSummaryKeepRecent = 10;
+    [ObservableProperty] private ThemeMode _themeMode = ThemeMode.Light;
+    [ObservableProperty] private double _chatFontSize = 14;
+
+    public ObservableCollection<ThemeMode> ThemeModeOptions { get; } = new()
+    {
+        ThemeMode.Light,
+        ThemeMode.Dark,
+        ThemeMode.FollowSystem
+    };
+
+    public ThemeMode[] ThemeModes => new[] { ThemeMode.Light, ThemeMode.Dark, ThemeMode.FollowSystem };
+
+    /// <summary>Applies theme immediately when the dropdown changes.</summary>
+    partial void OnThemeModeChanged(ThemeMode value)
+    {
+        if (_isLoadingUiSettings) return;
+        ThemeService.Apply(value);
+        _ = SaveUiSettingsAsync();
+    }
+
+    partial void OnChatFontSizeChanged(double value)
+    {
+        if (_isLoadingUiSettings) return;
+        _ = SaveUiSettingsAsync();
+    }
+
+    private async Task SaveUiSettingsAsync()
+    {
+        try
+        {
+            await _uiConfig.SaveAsync(new UiSettings
+            {
+                Theme = ThemeMode,
+                ChatFontSize = ChatFontSize
+            });
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"外观设置保存失败：{ex.Message}";
+        }
+    }
 
     private static class VisionPresetNames
     {
@@ -332,12 +389,16 @@ public partial class SettingsViewModel : ViewModelBase
 
     public SettingsViewModel(
         IConfigurationService config,
+        IUiSettingsService uiConfig,
         IImageDescriptionService? imageDescriptions = null,
-        KnowledgeViewModel? knowledgeViewModel = null)
+        KnowledgeViewModel? knowledgeViewModel = null,
+        IApiProbeService? apiProbe = null)
     {
         _config = config;
+        _uiConfig = uiConfig;
         _imageDescriptions = imageDescriptions;
         _knowledgeViewModel = knowledgeViewModel;
+        _apiProbe = apiProbe;
         PropertyChanged += OnSettingPropertyChanged;
     }
 
@@ -377,6 +438,8 @@ public partial class SettingsViewModel : ViewModelBase
         try
         {
             _settings = await _config.LoadAsync();
+            RegisterSecrets();
+            UseUnifiedApi = _settings.UseUnifiedApi;
             ApiBaseUrl = _settings.ApiBaseUrl;
             ApiKey = _settings.ApiKey;
             ChatModel = _settings.ChatModel;
@@ -393,6 +456,8 @@ public partial class SettingsViewModel : ViewModelBase
             VisionTimeoutSeconds = _settings.VisionTimeoutSeconds;
             VisionMaxConcurrency = _settings.VisionMaxConcurrency;
             ContextWindowSize = _settings.ContextWindowSize;
+            EnableContextSummarization = _settings.EnableContextSummarization;
+            ContextSummaryKeepRecent = _settings.ContextSummaryKeepRecent;
             MemoryTopK = _settings.MemoryTopK;
             KnowledgeTopK = _settings.KnowledgeTopK;
             KnowledgeMinScore = _settings.KnowledgeMinScore;
@@ -416,6 +481,18 @@ public partial class SettingsViewModel : ViewModelBase
         finally
         {
             _isLoading = false;
+        }
+
+        _isLoadingUiSettings = true;
+        try
+        {
+            var ui = await _uiConfig.LoadAsync();
+            ThemeMode = ui.Theme;
+            ChatFontSize = ui.ChatFontSize;
+        }
+        finally
+        {
+            _isLoadingUiSettings = false;
         }
     }
 
@@ -446,7 +523,8 @@ public partial class SettingsViewModel : ViewModelBase
         }
 
         Uri? embeddingEndpoint = null;
-        if (!string.IsNullOrWhiteSpace(EmbeddingApiBaseUrl) &&
+        if (!UseUnifiedApi &&
+            !string.IsNullOrWhiteSpace(EmbeddingApiBaseUrl) &&
             !RemoteApiEndpointPolicy.TryNormalize(EmbeddingApiBaseUrl, out embeddingEndpoint, out var embeddingError))
         {
             StatusText = $"自动保存失败：Embedding 端点{embeddingError}";
@@ -454,27 +532,40 @@ public partial class SettingsViewModel : ViewModelBase
         }
 
         Uri? visionEndpoint = null;
-        if (!string.IsNullOrWhiteSpace(VisionApiBaseUrl) &&
+        if (!UseUnifiedApi &&
+            !string.IsNullOrWhiteSpace(VisionApiBaseUrl) &&
             !RemoteApiEndpointPolicy.TryNormalizeHostedApi(VisionApiBaseUrl, out visionEndpoint, out var visionError))
         {
             StatusText = $"自动保存失败：多模态端点{visionError}";
             return false;
         }
 
+        _settings.UseUnifiedApi = UseUnifiedApi;
         _settings.ApiBaseUrl = chatEndpoint.ToString().TrimEnd('/');
         _settings.ApiKey = ApiKey;
         _settings.ChatModel = ChatModel;
         _settings.EmbeddingModel = EmbeddingModel;
-        _settings.EmbeddingApiBaseUrl = embeddingEndpoint?.ToString().TrimEnd('/') ?? string.Empty;
-        _settings.EmbeddingApiKey = EmbeddingApiKey;
+        if (!UseUnifiedApi)
+        {
+            // In unified mode the independent endpoint/key fields are hidden and
+            // ignored at runtime; keep the stored values so switching back to
+            // independent mode restores the previous configuration.
+            _settings.EmbeddingApiBaseUrl = embeddingEndpoint?.ToString().TrimEnd('/') ?? string.Empty;
+            _settings.EmbeddingApiKey = EmbeddingApiKey;
+        }
         _settings.VisionProviderPreset = ParseVisionPreset(VisionProviderPresetName);
         _settings.VisionProtocol = VisionProtocol;
-        _settings.VisionApiBaseUrl = visionEndpoint?.ToString().TrimEnd('/') ?? string.Empty;
-        _settings.VisionApiKey = VisionApiKey;
+        if (!UseUnifiedApi)
+        {
+            _settings.VisionApiBaseUrl = visionEndpoint?.ToString().TrimEnd('/') ?? string.Empty;
+            _settings.VisionApiKey = VisionApiKey;
+        }
         _settings.VisionModel = VisionModel.Trim();
         _settings.VisionTimeoutSeconds = Math.Clamp(VisionTimeoutSeconds, 10, 600);
         _settings.VisionMaxConcurrency = Math.Clamp(VisionMaxConcurrency, 1, 3);
         _settings.ContextWindowSize = Math.Clamp(ContextWindowSize, 4, 200);
+        _settings.EnableContextSummarization = EnableContextSummarization;
+        _settings.ContextSummaryKeepRecent = Math.Clamp(ContextSummaryKeepRecent, 2, 200);
         _settings.MemoryTopK = Math.Clamp(MemoryTopK, 1, 50);
         _settings.KnowledgeTopK = Math.Clamp(KnowledgeTopK, 1, 50);
         _settings.KnowledgeMinScore = Math.Clamp(KnowledgeMinScore, 0, 1);
@@ -493,9 +584,10 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.GroupChat.RespondToOtherAgents = RespondToOtherAgents;
 
         await _config.SaveAsync(_settings);
+        RegisterSecrets();
         if (_settings.EnableKnowledgeBase &&
             !string.IsNullOrWhiteSpace(_settings.EmbeddingModel) &&
-            (!string.IsNullOrWhiteSpace(_settings.EmbeddingApiKey) || !string.IsNullOrWhiteSpace(_settings.ApiKey)))
+            !string.IsNullOrWhiteSpace(_settings.ResolveEmbeddingApiKey()))
         {
             _ = _knowledgeViewModel?.ImportBundledKnowledgeAsync();
         }
@@ -505,16 +597,96 @@ public partial class SettingsViewModel : ViewModelBase
         }
         else if ((EnableLongTermMemory || EnableKnowledgeBase) &&
                  (string.IsNullOrWhiteSpace(EmbeddingModel) ||
-                  string.IsNullOrWhiteSpace(EmbeddingApiBaseUrl) &&
+                  (UseUnifiedApi || string.IsNullOrWhiteSpace(EmbeddingApiBaseUrl)) &&
                   chatEndpoint.Host.EndsWith("deepseek.com", StringComparison.OrdinalIgnoreCase)))
         {
-            StatusText = "聊天配置已自动保存 ✓；RAG 仍需独立远程 Embedding API";
+            StatusText = UseUnifiedApi
+                ? "聊天配置已自动保存 ✓；当前统一端点不提供 Embedding，建议改用聚合平台或切换为三路独立模式"
+                : "聊天配置已自动保存 ✓；RAG 仍需独立远程 Embedding API";
         }
         else
         {
             StatusText = "已自动保存 ✓";
         }
         return true;
+    }
+
+    /// <summary>Registers the active API keys with the log redactor (never persisted there).</summary>
+    private void RegisterSecrets()
+    {
+        SecretRedaction.Register(_settings.ApiKey);
+        SecretRedaction.Register(_settings.ResolveEmbeddingApiKey());
+        SecretRedaction.Register(_settings.ResolveVisionApiKey());
+    }
+
+    [RelayCommand]
+    private async Task TestChatConnectionAsync()
+    {
+        if (_apiProbe is null)
+        {
+            ChatTestStatus = "连接测试服务未注册。";
+            return;
+        }
+        IsTestingChat = true;
+        ChatTestStatus = "正在发送最小聊天请求…";
+        try
+        {
+            await _saveGate.WaitAsync();
+            try
+            {
+                if (!await SaveCoreAsync())
+                {
+                    ChatTestStatus = StatusText;
+                    return;
+                }
+            }
+            finally { _saveGate.Release(); }
+            var result = await _apiProbe.TestChatAsync();
+            ChatTestStatus = result.IsSuccess ? result.Message : $"连接失败：{result.Message}";
+        }
+        catch (Exception ex)
+        {
+            ChatTestStatus = $"连接失败：{ex.Message}";
+        }
+        finally
+        {
+            IsTestingChat = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task TestEmbeddingConnectionAsync()
+    {
+        if (_apiProbe is null)
+        {
+            EmbeddingTestStatus = "连接测试服务未注册。";
+            return;
+        }
+        IsTestingEmbedding = true;
+        EmbeddingTestStatus = "正在发送最小 Embedding 请求…";
+        try
+        {
+            await _saveGate.WaitAsync();
+            try
+            {
+                if (!await SaveCoreAsync())
+                {
+                    EmbeddingTestStatus = StatusText;
+                    return;
+                }
+            }
+            finally { _saveGate.Release(); }
+            var result = await _apiProbe.TestEmbeddingAsync();
+            EmbeddingTestStatus = result.IsSuccess ? result.Message : $"连接失败：{result.Message}";
+        }
+        catch (Exception ex)
+        {
+            EmbeddingTestStatus = $"连接失败：{ex.Message}";
+        }
+        finally
+        {
+            IsTestingEmbedding = false;
+        }
     }
 
     [RelayCommand]

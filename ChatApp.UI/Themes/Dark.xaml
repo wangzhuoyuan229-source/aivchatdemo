@@ -1,0 +1,26 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <SolidColorBrush x:Key="AccentBrush" Color="#07C160"/>
+  <SolidColorBrush x:Key="AccentDarkBrush" Color="#06AD56"/>
+  <SolidColorBrush x:Key="BgBrush" Color="#1E1E1E"/>
+  <SolidColorBrush x:Key="PanelBrush" Color="#252525"/>
+  <SolidColorBrush x:Key="TextMainBrush" Color="#E8E8E8"/>
+  <SolidColorBrush x:Key="TextSubBrush" Color="#9A9A9A"/>
+  <SolidColorBrush x:Key="UserBubbleBrush" Color="#2F6B4F"/>
+  <SolidColorBrush x:Key="AssistantBubbleBrush" Color="#2D2D2D"/>
+  <SolidColorBrush x:Key="DividerBrush" Color="#3A3A3A"/>
+  <SolidColorBrush x:Key="SubtleBrush" Color="#2C2C2C"/>
+  <SolidColorBrush x:Key="SubtlePanelBrush" Color="#232826"/>
+  <SolidColorBrush x:Key="SubtleBorderBrush" Color="#33413A"/>
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="#1C3325"/>
+  <SolidColorBrush x:Key="AccentSoftTextBrush" Color="#7FD9A6"/>
+  <SolidColorBrush x:Key="AvatarRingBrush" Color="#1F3A2A"/>
+  <SolidColorBrush x:Key="PlaceholderBrush" Color="#333333"/>
+  <SolidColorBrush x:Key="TimeBrush" Color="#808080"/>
+  <SolidColorBrush x:Key="HoverOverlayBrush" Color="#14FFFFFF"/>
+  <SolidColorBrush x:Key="NavRailBrush" Color="#181818"/>
+  <SolidColorBrush x:Key="WarnBrush" Color="#E0A040"/>
+  <SolidColorBrush x:Key="WarnSoftBrush" Color="#3A2F1A"/>
+  <SolidColorBrush x:Key="InfoSoftBrush" Color="#1C2B3A"/>
+  <SolidColorBrush x:Key="DangerBrush" Color="#EF5350"/>
+</ResourceDictionary>

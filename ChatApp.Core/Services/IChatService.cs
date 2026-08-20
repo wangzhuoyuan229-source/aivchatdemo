@@ -13,6 +13,13 @@ public interface IChatService
     /// Streaming deltas are reported via <paramref name="streamingProgress"/>.</summary>
     Task<Message> SendAsync(int conversationId, string userText, IProgress<string>? streamingProgress = null, CancellationToken ct = default);
 
+    /// <summary>
+    /// Regenerates the latest assistant reply: the previous assistant message is deleted
+    /// and a replacement is generated from the same preceding context without persisting
+    /// a duplicate user message.
+    /// </summary>
+    Task<Message> RegenerateAsync(int conversationId, IProgress<string>? streamingProgress = null, CancellationToken ct = default);
+
     /// <summary>Produces the role's greeting for a new (or empty) conversation.</summary>
     Task<Message> GreetAsync(int conversationId, CancellationToken ct = default);
 }

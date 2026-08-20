@@ -11,4 +11,6 @@ public class ConversationItemViewModel : ViewModelBase
     public bool IsGroup { get; init; }
     public string Title => string.IsNullOrWhiteSpace(Conversation.Title) ? RoleName : Conversation.Title;
     public string UpdatedText => Conversation.UpdatedAt.ToLocalTime().ToString("MM-dd HH:mm");
+    public bool IsPinned => Conversation.IsPinned;
+    public string PinIcon => Conversation.IsPinned ? "📌" : "";
 }

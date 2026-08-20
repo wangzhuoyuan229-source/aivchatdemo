@@ -19,6 +19,9 @@ public interface IMemoryService
 
     Task<IReadOnlyList<MemoryEntry>> ListAsync(int roleId, CancellationToken ct = default);
 
+    /// <summary>Updates a memory fragment's content and re-embeds its vector.</summary>
+    Task UpdateAsync(int memoryId, string content, CancellationToken ct = default);
+
     Task ForgetAsync(int memoryId, CancellationToken ct = default);
 
     Task ClearForRoleAsync(int roleId, CancellationToken ct = default);

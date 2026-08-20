@@ -10,7 +10,7 @@ public class SettingsAutoSaveTests
     public async Task ChangingApiKeyAutomaticallyPersistsAfterDebounce()
     {
         var config = new RecordingConfigurationService();
-        var viewModel = new SettingsViewModel(config);
+        var viewModel = new SettingsViewModel(config, new MemoryUiSettingsService());
         await viewModel.LoadAsync();
 
         viewModel.EnableKnowledgeBase = true;
@@ -28,7 +28,7 @@ public class SettingsAutoSaveTests
     public async Task AlibabaPresetFillsAndPersistsEmbeddingSettings()
     {
         var config = new RecordingConfigurationService();
-        var viewModel = new SettingsViewModel(config);
+        var viewModel = new SettingsViewModel(config, new MemoryUiSettingsService());
         await viewModel.LoadAsync();
 
         viewModel.EmbeddingApiKey = "sk-test-bailian";
@@ -58,5 +58,16 @@ public class SettingsAutoSaveTests
 
         public Task<bool> IsConfiguredAsync(CancellationToken ct = default) =>
             Task.FromResult(false);
+    }
+
+    private sealed class MemoryUiSettingsService : IUiSettingsService
+    {
+        private UiSettings _settings = new();
+        public Task<UiSettings> LoadAsync(CancellationToken ct = default) => Task.FromResult(_settings);
+        public Task SaveAsync(UiSettings settings, CancellationToken ct = default)
+        {
+            _settings = settings;
+            return Task.CompletedTask;
+        }
     }
 }

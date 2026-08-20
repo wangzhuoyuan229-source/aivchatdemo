@@ -5,21 +5,17 @@
              xmlns:views="using:ChatApp.UI.Views"
              RequestedThemeVariant="Light">
   <Application.Resources>
-    <SolidColorBrush x:Key="AccentBrush" Color="#07C160"/>
-    <SolidColorBrush x:Key="AccentDarkBrush" Color="#06AD56"/>
-    <SolidColorBrush x:Key="BgBrush" Color="#F5F5F5"/>
-    <SolidColorBrush x:Key="PanelBrush" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="TextMainBrush" Color="#191919"/>
-    <SolidColorBrush x:Key="TextSubBrush" Color="#757575"/>
-    <SolidColorBrush x:Key="UserBubbleBrush" Color="#95EC69"/>
-    <SolidColorBrush x:Key="AssistantBubbleBrush" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="DividerBrush" Color="#E5E5E5"/>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://ChatApp.UI/Themes/Light.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
   </Application.Resources>
 
   <Application.Styles>
     <FluentTheme/>
     <Style Selector="Button.primary">
-      <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
       <Setter Property="Foreground" Value="White"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="Padding" Value="16,8"/>
@@ -28,18 +24,18 @@
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
     <Style Selector="Button.primary:pointerover">
-      <Setter Property="Background" Value="{StaticResource AccentDarkBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource AccentDarkBrush}"/>
     </Style>
     <Style Selector="Button.ghost">
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="Foreground" Value="{StaticResource TextMainBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
       <Setter Property="Padding" Value="10,6"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="CornerRadius" Value="5"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
     <Style Selector="Button.ghost:pointerover">
-      <Setter Property="Background" Value="#12000000"/>
+      <Setter Property="Background" Value="{DynamicResource HoverOverlayBrush}"/>
     </Style>
     <Style Selector="Button.nav">
       <Setter Property="Width" Value="48"/>
@@ -54,18 +50,18 @@
     </Style>
     <Style Selector="TextBox">
       <Setter Property="Padding" Value="8,6"/>
-      <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="TextBlock.title">
       <Setter Property="FontSize" Value="16"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="{StaticResource TextMainBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
     </Style>
     <Style Selector="TextBlock.sub">
       <Setter Property="FontSize" Value="12"/>
-      <Setter Property="Foreground" Value="{StaticResource TextSubBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextSubBrush}"/>
     </Style>
     <Style Selector="ListBoxItem">
       <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

@@ -14,7 +14,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="{Binding PromptText}" FontWeight="SemiBold" TextWrapping="Wrap"
-                   Foreground="{StaticResource TextMainBrush}"/>
+                   Foreground="{DynamicResource TextMainBrush}"/>
         <ComboBox Grid.Row="2" x:Name="SelectionBox" ItemsSource="{Binding Options}"
                   Padding="6,4" FontSize="14">
             <ComboBox.ItemTemplate>

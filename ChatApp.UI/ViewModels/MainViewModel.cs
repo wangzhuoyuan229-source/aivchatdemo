@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Avalonia;
 
 namespace ChatApp.UI.ViewModels;
 
@@ -34,14 +35,15 @@ public partial class MainViewModel : ViewModelBase, INavigation
     {
         try
         {
-            await Roles.LoadAsync();
-            await Knowledge.LoadAsync();
-            await Settings.LoadAsync();
+            // Load roles / knowledge / settings concurrently; the DbContextFactory
+            // creates isolated contexts per call so parallel access is safe.
+            await Task.WhenAll(Roles.LoadAsync(), Knowledge.LoadAsync(), Settings.LoadAsync());
         }
         catch (Exception ex)
         {
             // Log without crashing startup.
             System.Diagnostics.Debug.WriteLine($"Init error: {ex}");
+            _logger.LogWarning(ex, "Startup initialization partially failed.");
         }
         Navigate("roles");
     }
@@ -123,5 +125,45 @@ public partial class MainViewModel : ViewModelBase, INavigation
         await Chat.LoadGroupAsync(conv.Id);
         // Refresh the "最近群聊" list so the new group appears immediately.
         await Roles.LoadGroupChatsAsync();
+    }
+
+    public async Task RevealKnowledgeDocumentAsync(int documentId)
+    {
+        Navigate("knowledge");
+        await Knowledge.RevealDocumentAsync(documentId);
+    }
+
+    /// <summary>Opens the memory-management window scoped to the current conversation.</summary>
+    public async Task OpenMemoryManagementAsync()
+    {
+        var memory = _services.GetRequiredService<MemoryManagementViewModel>();
+        if (Chat.Conversation is null) return;
+
+        if (Chat.Conversation.Type == ConversationType.Group)
+        {
+            var history = _services.GetRequiredService<IChatHistoryService>();
+            var members = await history.GetMembersAsync(Chat.Conversation.Id);
+            var roles = new List<Role>();
+            foreach (var member in members)
+            {
+                var role = await _services.GetRequiredService<IRoleService>().GetAsync(member.RoleId);
+                if (role is not null) roles.Add(role);
+            }
+            if (roles.Count == 0) return;
+            await memory.InitializeGroupAsync(roles);
+        }
+        else
+        {
+            var role = await _services.GetRequiredService<IRoleService>().GetAsync(Chat.Conversation.RoleId ?? 0);
+            if (role is null) return;
+            await memory.InitializeAsync(role);
+        }
+
+        if (Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop &&
+            desktop.MainWindow is { } owner)
+        {
+            var window = new Views.MemoryManagementWindow { DataContext = memory };
+            await window.ShowDialog(owner);
+        }
     }
 }

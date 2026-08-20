@@ -13,6 +13,14 @@ public class AiSettings
 
     public string ChatModel { get; set; } = DefaultChatModel;
 
+    /// <summary>
+    /// When true, chat, embeddings and vision all share <see cref="ApiBaseUrl"/> and
+    /// <see cref="ApiKey"/> (single-provider setups such as SiliconFlow). The three
+    /// services keep independent model IDs. When false, each service may use its own
+    /// endpoint and key as before.
+    /// </summary>
+    public bool UseUnifiedApi { get; set; } = false;
+
     public string EmbeddingModel { get; set; } = string.Empty;
 
     /// <summary>
@@ -43,6 +51,16 @@ public class AiSettings
 
     /// <summary>Number of most-recent messages kept in the short-term context window.</summary>
     public int ContextWindowSize { get; set; } = 20;
+
+    /// <summary>
+    /// When true, messages older than the context window are folded into a running
+    /// LLM summary instead of being dropped outright. Summary failures fall back to
+    /// plain truncation.
+    /// </summary>
+    public bool EnableContextSummarization { get; set; } = false;
+
+    /// <summary>Number of recent messages always kept verbatim when summarizing.</summary>
+    public int ContextSummaryKeepRecent { get; set; } = 10;
 
     /// <summary>Number of long-term memory fragments retrieved per turn.</summary>
     public int MemoryTopK { get; set; } = 5;
@@ -83,6 +101,38 @@ public class AiSettings
 
     /// <summary>Approximate characters per token, used for cheap context accounting.</summary>
     public double CharsPerToken { get; set; } = 4.0;
+
+    /// <summary>
+    /// Effective embedding endpoint: the main chat endpoint in unified mode or when
+    /// no dedicated embedding endpoint is configured.
+    /// </summary>
+    public string ResolveEmbeddingApiBaseUrl() =>
+        UseUnifiedApi || string.IsNullOrWhiteSpace(EmbeddingApiBaseUrl)
+            ? ApiBaseUrl
+            : EmbeddingApiBaseUrl;
+
+    /// <summary>
+    /// Effective embedding key: the main chat key in unified mode or when no
+    /// dedicated embedding key is configured.
+    /// </summary>
+    public string ResolveEmbeddingApiKey() =>
+        UseUnifiedApi || string.IsNullOrWhiteSpace(EmbeddingApiKey)
+            ? ApiKey
+            : EmbeddingApiKey;
+
+    /// <summary>
+    /// Effective vision endpoint: the main chat endpoint in unified mode, otherwise
+    /// the dedicated multimodal endpoint.
+    /// </summary>
+    public string ResolveVisionApiBaseUrl() =>
+        UseUnifiedApi ? ApiBaseUrl : VisionApiBaseUrl;
+
+    /// <summary>
+    /// Effective vision key: the main chat key in unified mode, otherwise the
+    /// dedicated multimodal key.
+    /// </summary>
+    public string ResolveVisionApiKey() =>
+        UseUnifiedApi ? ApiKey : VisionApiKey;
 
     /// <summary>
     /// Migrates legacy local-model settings without ever forwarding their placeholder key

@@ -20,18 +20,21 @@ public static class AppPaths
 
     public static string MessageAttachmentsDir { get; } = Path.Combine(AppDataDir, "message-attachments");
 
+    public static string LogDir { get; } = Path.Combine(AppDataDir, "logs");
+
     public static string ResolveKnowledgeStorageKey(string storageKey) =>
         ResolveStorageKey(KnowledgeDir, storageKey);
 
     public static string ResolveMessageAttachmentStorageKey(string storageKey) =>
         ResolveStorageKey(MessageAttachmentsDir, storageKey);
 
-    static AppPaths()
+static AppPaths()
     {
         Directory.CreateDirectory(AppDataDir);
         Directory.CreateDirectory(KnowledgeDir);
         Directory.CreateDirectory(KnowledgeImagesDir);
         Directory.CreateDirectory(MessageAttachmentsDir);
+        Directory.CreateDirectory(LogDir);
     }
 
     private static string ResolveStorageKey(string root, string storageKey)

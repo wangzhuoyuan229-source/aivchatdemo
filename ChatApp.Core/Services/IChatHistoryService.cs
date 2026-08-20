@@ -14,7 +14,12 @@ public interface IChatHistoryService
 
     Task<Conversation?> GetConversationAsync(int id, CancellationToken ct = default);
 
-    Task<IReadOnlyList<Message>> GetMessagesAsync(int conversationId, int limit = 1000, CancellationToken ct = default);
+    /// <summary>
+    /// Returns up to <paramref name="limit"/> messages in ascending order. When
+    /// <paramref name="beforeId"/> is set, only messages older than that id are
+    /// returned (cursor pagination for the "load earlier" window).
+    /// </summary>
+    Task<IReadOnlyList<Message>> GetMessagesAsync(int conversationId, int limit = 1000, CancellationToken ct = default, int? beforeId = null);
 
     /// <summary>Returns group members ordered by <see cref="ConversationMember.DisplayOrder"/>.</summary>
     Task<IReadOnlyList<ConversationMember>> GetMembersAsync(int conversationId, CancellationToken ct = default);
@@ -22,6 +27,15 @@ public interface IChatHistoryService
     Task<Message> AddMessageAsync(Message message, CancellationToken ct = default);
 
     Task DeleteMessageAsync(int messageId, CancellationToken ct = default);
+
+    /// <summary>Deletes the given message and every later message in the same conversation.</summary>
+    Task<int> DeleteMessagesFromAsync(int conversationId, int messageIdInclusive, CancellationToken ct = default);
+
+    /// <summary>Renames a conversation title.</summary>
+    Task RenameConversationAsync(int conversationId, string title, CancellationToken ct = default);
+
+    /// <summary>Pins or unpins a conversation (pinned ones sort first).</summary>
+    Task SetConversationPinnedAsync(int conversationId, bool pinned, CancellationToken ct = default);
 
     Task DeleteConversationAsync(int conversationId, CancellationToken ct = default);
 

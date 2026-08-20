@@ -49,8 +49,8 @@ public sealed class ImageDescriptionService : IImageDescriptionService
             _logger.LogWarning(ex, "Unable to load vision settings; using metadata fallback for {File}.", fileName);
             return fallback with { Detail = "无法读取多模态配置" };
         }
-        if (string.IsNullOrWhiteSpace(settings.VisionApiBaseUrl) ||
-            string.IsNullOrWhiteSpace(settings.VisionApiKey) ||
+        if (string.IsNullOrWhiteSpace(settings.ResolveVisionApiBaseUrl()) ||
+            string.IsNullOrWhiteSpace(settings.ResolveVisionApiKey()) ||
             string.IsNullOrWhiteSpace(settings.VisionModel))
             return fallback with { Detail = "多模态 API 未配置" };
 
@@ -81,7 +81,7 @@ public sealed class ImageDescriptionService : IImageDescriptionService
                 Description = parsed.description,
                 Tags = parsed.tags,
                 Source = ImageDescriptionSource.VisionModel,
-                Provider = ProviderLabel(settings.VisionProviderPreset),
+                Provider = ProviderLabel(settings),
                 Model = settings.VisionModel
             };
         }
@@ -121,8 +121,8 @@ public sealed class ImageDescriptionService : IImageDescriptionService
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(settings.VisionApiBaseUrl) ||
-            string.IsNullOrWhiteSpace(settings.VisionApiKey) ||
+        if (string.IsNullOrWhiteSpace(settings.ResolveVisionApiBaseUrl()) ||
+            string.IsNullOrWhiteSpace(settings.ResolveVisionApiKey()) ||
             string.IsNullOrWhiteSpace(settings.VisionModel))
             return null;
 
@@ -171,9 +171,9 @@ public sealed class ImageDescriptionService : IImageDescriptionService
     public async Task<VisionConnectionTestResult> TestConnectionAsync(CancellationToken ct = default)
     {
         var settings = await _configuration.LoadAsync(ct);
-        var provider = ProviderLabel(settings.VisionProviderPreset);
-        if (string.IsNullOrWhiteSpace(settings.VisionApiBaseUrl) ||
-            string.IsNullOrWhiteSpace(settings.VisionApiKey) ||
+        var provider = ProviderLabel(settings);
+        if (string.IsNullOrWhiteSpace(settings.ResolveVisionApiBaseUrl()) ||
+            string.IsNullOrWhiteSpace(settings.ResolveVisionApiKey()) ||
             string.IsNullOrWhiteSpace(settings.VisionModel))
         {
             return new VisionConnectionTestResult
@@ -181,7 +181,9 @@ public sealed class ImageDescriptionService : IImageDescriptionService
                 Provider = provider,
                 Model = settings.VisionModel,
                 ErrorCategory = "not_configured",
-                ErrorDetail = "请完整填写多模态地址、API Key 和模型。"
+                ErrorDetail = settings.UseUnifiedApi
+                    ? "统一 API 模式下请填写主 API Base URL、API Key 和视觉模型。"
+                    : "请完整填写多模态地址、API Key 和模型。"
             };
         }
 
@@ -276,14 +278,16 @@ public sealed class ImageDescriptionService : IImageDescriptionService
                (text.Contains("not support") || text.Contains("unsupported") || text.Contains("不支持"));
     }
 
-    private static string ProviderLabel(VisionProviderPreset preset) => preset switch
-    {
-        VisionProviderPreset.AlibabaModelStudio => "阿里云百炼",
-        VisionProviderPreset.Zhipu => "智谱开放平台",
-        VisionProviderPreset.VolcengineArk => "火山方舟",
-        VisionProviderPreset.SiliconFlow => "SiliconFlow",
-        _ => "自定义多模态服务"
-    };
+    private static string ProviderLabel(AiSettings settings) => settings.UseUnifiedApi
+        ? "统一 API（主端点）"
+        : settings.VisionProviderPreset switch
+        {
+            VisionProviderPreset.AlibabaModelStudio => "阿里云百炼",
+            VisionProviderPreset.Zhipu => "智谱开放平台",
+            VisionProviderPreset.VolcengineArk => "火山方舟",
+            VisionProviderPreset.SiliconFlow => "SiliconFlow",
+            _ => "自定义多模态服务"
+        };
 
     private static ImageDescriptionResult BuildFallback(string fileName, string relativePath)
     {

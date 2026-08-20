@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:ChatApp.UI.Controls"
         Title="创建群聊" Height="600" Width="480"
-        WindowStartupLocation="CenterOwner" Background="{StaticResource BgBrush}">
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource BgBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -11,7 +11,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,14">
+        <Border Grid.Row="0" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,14">
             <TextBlock Text="👥 创建群聊" FontSize="16" FontWeight="SemiBold"/>
         </Border>
 
@@ -27,14 +27,14 @@
                     <ColumnDefinition Width="64"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="群名" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextSubBrush}"/>
+                <TextBlock Grid.Column="0" Text="群名" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
                 <TextBox Grid.Column="1" Text="{Binding Title}"
                          ToolTip.Tip="留空将自动生成"/>
             </Grid>
 
-            <TextBlock Grid.Row="1" Text="选择群成员（至少 2 个）" FontSize="12" Foreground="{StaticResource TextSubBrush}" Margin="0,0,0,6"/>
+            <TextBlock Grid.Row="1" Text="选择群成员（至少 2 个）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" Margin="0,0,0,6"/>
 
-            <Border Grid.Row="2" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="4" Background="White">
+            <Border Grid.Row="2" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="4" Background="{DynamicResource PanelBrush}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding Roles}">
                         <ItemsControl.ItemTemplate>
@@ -46,12 +46,12 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <Border Grid.Column="1" Width="34" Height="34" CornerRadius="5" Background="#F2F2F2" VerticalAlignment="Center" Margin="0,0,10,0" ClipToBounds="True">
+                                    <Border Grid.Column="1" Width="34" Height="34" CornerRadius="5" Background="{DynamicResource SubtleBrush}" VerticalAlignment="Center" Margin="0,0,10,0" ClipToBounds="True">
                                         <controls:AvatarView Avatar="{Binding Avatar}" FontSize="20"/>
                                     </Border>
                                     <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"/>
-                                        <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{StaticResource TextSubBrush}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource TextSubBrush}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -61,9 +61,9 @@
             </Border>
         </Grid>
 
-        <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="20,12">
+        <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="20,12">
             <Grid>
-                <TextBlock Text="{Binding ErrorText}" Foreground="#E53935" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                <TextBlock Text="{Binding ErrorText}" Foreground="{DynamicResource DangerBrush}" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Left"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Classes="ghost" Content="取消" Command="{Binding CancelCommand}" Padding="20,8" Margin="0,0,8,0"/>
                     <Button Classes="primary" Content="创建并进入" Command="{Binding CreateCommand}" Padding="24,8"/>

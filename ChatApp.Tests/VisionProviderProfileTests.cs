@@ -27,7 +27,7 @@ public class VisionProviderProfileTests
     [Fact]
     public async Task SwitchingPresetDoesNotOverwriteVisionApiKey()
     {
-        var viewModel = new SettingsViewModel(new MemoryConfigurationService());
+        var viewModel = new SettingsViewModel(new MemoryConfigurationService(), new MemoryUiSettingsService());
         await viewModel.LoadAsync();
         viewModel.VisionApiKey = "keep-this-key";
 
@@ -48,5 +48,16 @@ public class VisionProviderProfileTests
             return Task.CompletedTask;
         }
         public Task<bool> IsConfiguredAsync(CancellationToken ct = default) => Task.FromResult(false);
+    }
+
+    private sealed class MemoryUiSettingsService : IUiSettingsService
+    {
+        private UiSettings _settings = new();
+        public Task<UiSettings> LoadAsync(CancellationToken ct = default) => Task.FromResult(_settings);
+        public Task SaveAsync(UiSettings settings, CancellationToken ct = default)
+        {
+            _settings = settings;
+            return Task.CompletedTask;
+        }
     }
 }

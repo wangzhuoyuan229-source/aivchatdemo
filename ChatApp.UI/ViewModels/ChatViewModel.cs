@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using ChatApp.Core.Models;
 using ChatApp.Core.Services;
+using ChatApp.Core.Settings;
+using ChatApp.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -13,13 +15,18 @@ public partial class ChatViewModel : ViewModelBase
     private readonly IGroupChatService _groupChat;
     private readonly IChatHistoryService _history;
     private readonly IRoleService _roles;
+    private readonly IKnowledgeService _knowledge;
+    private readonly IDialogService _dialogs;
     private readonly ILogger<ChatViewModel> _logger;
+    private readonly INavigation _navigation;
     private CancellationTokenSource? _cts;
 
     /// <summary>Member roles keyed by RoleId (group mode only).</summary>
     private readonly Dictionary<int, Role> _groupMembers = new();
     /// <summary>Streaming bubbles keyed by RoleId (group mode only).</summary>
     private readonly Dictionary<int, ChatBubbleViewModel> _activeBubbles = new();
+    /// <summary>Cached document titles for citation tags (documentId → title).</summary>
+    private readonly Dictionary<int, string> _citationTitles = new();
 
     [ObservableProperty] private Conversation? _conversation;
     [ObservableProperty] private Role? _role;
@@ -29,23 +36,51 @@ public partial class ChatViewModel : ViewModelBase
     [ObservableProperty] private bool _isGroupMode;
     [ObservableProperty] private string _conversationSubtitle = string.Empty;
     [ObservableProperty] private string _conversationAvatar = "🤖";
+    [ObservableProperty] private double _chatFontSize = 14;
+    [ObservableProperty] private bool _isEditingMessage;
+    [ObservableProperty] private bool _isLoadingEarlier;
+    [ObservableProperty] private bool _hasMoreMessages;
+    private int _editingMessageId;
+
+    /// <summary>Messages fetched per "load earlier" page (virtualized list keeps rendering cheap).</summary>
+    private const int MessagePageSize = 120;
 
     public ObservableCollection<ChatBubbleViewModel> Messages { get; } = new();
 
+    public string PinText => Conversation is { IsPinned: true } ? "📌 已置顶" : "📌 置顶";
+
     public bool CanSend => !IsSending && !string.IsNullOrWhiteSpace(InputText) && Conversation is not null;
 
-    public ChatViewModel(IChatService chat, IGroupChatService groupChat, IChatHistoryService history, IRoleService roles, ILogger<ChatViewModel> logger)
+    public ChatViewModel(
+        IChatService chat,
+        IGroupChatService groupChat,
+        IChatHistoryService history,
+        IRoleService roles,
+        IKnowledgeService knowledge,
+        IDialogService dialogs,
+        INavigation navigation,
+        ILogger<ChatViewModel> logger)
     {
         _chat = chat;
         _groupChat = groupChat;
         _history = history;
         _roles = roles;
+        _knowledge = knowledge;
+        _dialogs = dialogs;
+        _navigation = navigation;
         _logger = logger;
     }
 
     partial void OnInputTextChanged(string value) => SendCommand.NotifyCanExecuteChanged();
     partial void OnIsSendingChanged(bool value) => SendCommand.NotifyCanExecuteChanged();
-    partial void OnConversationChanged(Conversation? value) => SendCommand.NotifyCanExecuteChanged();
+    partial void OnConversationChanged(Conversation? value)
+    {
+        SendCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(PinText));
+    }
+
+    /// <summary>Applies reading preferences loaded from UI settings.</summary>
+    public void ApplyUiSettings(UiSettings settings) => ChatFontSize = settings.ChatFontSize;
 
     public async Task LoadAsync(int conversationId)
     {
@@ -59,12 +94,39 @@ public partial class ChatViewModel : ViewModelBase
         Title = Role is null ? conv.Title : Role.Name;
         ConversationAvatar = Role?.Avatar ?? "🤖";
         ConversationSubtitle = Role?.Description ?? string.Empty;
+        IsEditingMessage = false;
         Messages.Clear();
-        var msgs = await _history.GetMessagesAsync(conversationId);
-        foreach (var m in msgs) Messages.Add(ToBubble(m));
+        await LoadLatestMessagesAsync(conversationId);
+        UpdateMessageOperationFlags();
     }
 
-    /// <summary>Loads a group conversation: resolves members and renders history with per-speaker avatars.</summary>
+    /// <summary>Loads the most recent <see cref="MessagePageSize"/> messages into the list.</summary>
+    private async Task LoadLatestMessagesAsync(int conversationId)
+    {
+        var page = await _history.GetMessagesAsync(conversationId, MessagePageSize, beforeId: null);
+        foreach (var m in page) Messages.Add(await ToBubbleAsync(m));
+        HasMoreMessages = page.Count == MessagePageSize;
+    }
+
+    /// <summary>Prepends the page of messages older than the current oldest bubble (3.5 pagination).</summary>
+    [RelayCommand]
+    private async Task LoadEarlierAsync()
+    {
+        if (IsLoadingEarlier || Conversation is null || Messages.Count == 0) return;
+        IsLoadingEarlier = true;
+        try
+        {
+            var oldestId = Messages[0].Id;
+            var page = await _history.GetMessagesAsync(Conversation.Id, MessagePageSize, beforeId: oldestId);
+            for (int i = page.Count - 1; i >= 0; i--)
+                Messages.Insert(0, await ToBubbleAsync(page[i]));
+            HasMoreMessages = page.Count == MessagePageSize;
+        }
+        finally
+        {
+            IsLoadingEarlier = false;
+        }
+    }
     public async Task LoadGroupAsync(int conversationId)
     {
         var conv = await _history.GetConversationAsync(conversationId);
@@ -75,6 +137,7 @@ public partial class ChatViewModel : ViewModelBase
         Role = null;
         _groupMembers.Clear();
         _activeBubbles.Clear();
+        IsEditingMessage = false;
 
         var members = await _history.GetMembersAsync(conversationId);
         foreach (var m in members)
@@ -89,8 +152,8 @@ public partial class ChatViewModel : ViewModelBase
         ConversationSubtitle = $"{_groupMembers.Count} 位成员 · {string.Join("、", _groupMembers.Values.Select(r => r.Name))}";
 
         Messages.Clear();
-        var msgs = await _history.GetMessagesAsync(conversationId);
-        foreach (var m in msgs) Messages.Add(ToBubble(m));
+        await LoadLatestMessagesAsync(conversationId);
+        UpdateMessageOperationFlags();
     }
 
     /// <summary>清空当前对话状态（删除当前会话或退出对话时调用）。</summary>
@@ -107,6 +170,7 @@ public partial class ChatViewModel : ViewModelBase
         ConversationSubtitle = string.Empty;
         StatusText = string.Empty;
         InputText = string.Empty;
+        IsEditingMessage = false;
     }
 
     /// <summary>
@@ -146,13 +210,14 @@ public partial class ChatViewModel : ViewModelBase
         try
         {
             var greeting = await _chat.GreetAsync(conv.Id);
-            Messages.Add(ToBubble(greeting));
+            Messages.Add(await ToBubbleAsync(greeting));
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Greeting failed.");
             Messages.Add(new ChatBubbleViewModel { Author = MessageAuthor.Assistant, Content = $"（无法生成问候语：{ex.Message}）", Avatar = role.Avatar, RoleName = role.Name });
         }
+        UpdateMessageOperationFlags();
     }
 
     [RelayCommand(CanExecute = nameof(CanSend))]
@@ -163,6 +228,17 @@ public partial class ChatViewModel : ViewModelBase
         if (string.IsNullOrEmpty(text)) return;
         InputText = string.Empty;
         SendCommand.NotifyCanExecuteChanged();
+
+        // Edit-and-resend: truncate everything from the edited user message, then re-send.
+        if (IsEditingMessage)
+        {
+            IsEditingMessage = false;
+            await _history.DeleteMessagesFromAsync(Conversation.Id, _editingMessageId);
+            if (IsGroupMode)
+                await LoadGroupAsync(Conversation.Id);
+            else
+                await LoadAsync(Conversation.Id);
+        }
 
         if (IsGroupMode)
         {
@@ -196,6 +272,7 @@ public partial class ChatViewModel : ViewModelBase
             assistantBubble.Id = final.Id;
             assistantBubble.Content = final.Content;
             assistantBubble.SetAttachments(final.Attachments);
+            await SetCitationsAsync(assistantBubble, final);
         }
         catch (OperationCanceledException)
         {
@@ -213,6 +290,7 @@ public partial class ChatViewModel : ViewModelBase
             StatusText = string.Empty;
             _cts?.Dispose();
             _cts = null;
+            UpdateMessageOperationFlags();
         }
     }
 
@@ -255,6 +333,7 @@ public partial class ChatViewModel : ViewModelBase
             StatusText = string.Empty;
             _cts?.Dispose();
             _cts = null;
+            UpdateMessageOperationFlags();
         }
     }
 
@@ -291,6 +370,7 @@ public partial class ChatViewModel : ViewModelBase
                     fb.Id = finished.FinalMessage.Id;
                     fb.Content = finished.FinalMessage.Content;
                     fb.SetAttachments(finished.FinalMessage.Attachments);
+                    _ = SetCitationsAsync(fb, finished.FinalMessage);
                     fb.IsStreaming = false;
                     _activeBubbles.Remove(finished.RoleId);
                 }
@@ -308,13 +388,212 @@ public partial class ChatViewModel : ViewModelBase
         _cts?.Cancel();
     }
 
-    private ChatBubbleViewModel ToBubble(Message m)
+    // ----- 2.1 记忆管理入口 -----
+
+    [RelayCommand]
+    private Task OpenMemoryAsync() => _navigation.OpenMemoryManagementAsync();
+
+    // ----- 2.2 消息操作：复制 / 重新生成 / 编辑重发 -----
+
+    [RelayCommand]
+    private async Task CopyMessageAsync(ChatBubbleViewModel bubble)
+    {
+        if (bubble is null) return;
+        var text = bubble.Content;
+        if (bubble.Attachments.Count > 0)
+        {
+            var attachmentLines = bubble.Attachments
+                .Select(a => $"[图片附件：{(string.IsNullOrWhiteSpace(a.Title) ? a.FileName : a.Title)}]")
+                .ToList();
+            if (attachmentLines.Count > 0)
+                text = text + "\n" + string.Join("\n", attachmentLines);
+        }
+        await ClipboardService.CopyTextAsync(text);
+        StatusText = "已复制到剪贴板";
+    }
+
+    [RelayCommand]
+    private async Task RegenerateAsync()
+    {
+        if (Conversation is null || IsGroupMode || IsSending) return;
+        IsSending = true;
+        StatusText = "正在重新生成...";
+        _cts = new CancellationTokenSource();
+
+        var streamingBubble = new ChatBubbleViewModel
+        {
+            Author = MessageAuthor.Assistant,
+            Content = string.Empty,
+            Avatar = Role?.Avatar ?? "🤖",
+            RoleName = Role?.Name ?? "AI",
+            IsStreaming = true
+        };
+
+        try
+        {
+            // Remove the trailing assistant bubble from the UI first (RegenerateAsync
+            // deletes the persisted row), then stream the replacement.
+            var last = Messages.LastOrDefault();
+            if (last is not null && last.IsAssistant)
+                Messages.Remove(last);
+            Messages.Add(streamingBubble);
+
+            var progress = new Progress<string>(delta => streamingBubble.Content += delta);
+            var final = await _chat.RegenerateAsync(Conversation.Id, progress, _cts.Token);
+            streamingBubble.Id = final.Id;
+            streamingBubble.Content = final.Content;
+            streamingBubble.SetAttachments(final.Attachments);
+            await SetCitationsAsync(streamingBubble, final);
+        }
+        catch (OperationCanceledException)
+        {
+            streamingBubble.Content += "\n\n[已停止]";
+            await RefreshCurrentAsync();
+        }
+        catch (Exception ex)
+        {
+            streamingBubble.Content = $"⚠️ {ex.Message}";
+            _logger.LogError(ex, "Regenerate failed.");
+        }
+        finally
+        {
+            streamingBubble.IsStreaming = false;
+            IsSending = false;
+            StatusText = string.Empty;
+            _cts?.Dispose();
+            _cts = null;
+            UpdateMessageOperationFlags();
+        }
+    }
+
+    [RelayCommand]
+    private void StartEditMessage(ChatBubbleViewModel bubble)
+    {
+        if (bubble is not { IsUser: true }) return;
+        _editingMessageId = bubble.Id;
+        InputText = bubble.Content;
+        IsEditingMessage = true;
+    }
+
+    [RelayCommand]
+    private void CancelEditMessage()
+    {
+        IsEditingMessage = false;
+        InputText = string.Empty;
+    }
+
+    private void UpdateMessageOperationFlags()
+    {
+        var last = Messages.LastOrDefault();
+        foreach (var bubble in Messages)
+        {
+            bubble.CanRegenerate = !IsGroupMode &&
+                ReferenceEquals(bubble, last) && bubble.IsAssistant && !IsSending;
+            bubble.CanEdit = bubble.IsUser;
+        }
+    }
+
+    // ----- 2.3 会话整理：重命名 / 置顶 / 导出 -----
+
+    [RelayCommand]
+    private async Task RenameConversationAsync()
+    {
+        if (Conversation is null) return;
+        var (confirmed, text) = await _dialogs.PromptAsync("请输入新的会话名称：", Conversation.Title, "重命名会话");
+        if (!confirmed || string.IsNullOrWhiteSpace(text)) return;
+        await _history.RenameConversationAsync(Conversation.Id, text);
+        Conversation = await _history.GetConversationAsync(Conversation.Id) ?? Conversation;
+        if (IsGroupMode || Role is null) Title = Conversation.Title;
+    }
+
+    [RelayCommand]
+    private async Task TogglePinAsync()
+    {
+        if (Conversation is null) return;
+        var pinned = !Conversation.IsPinned;
+        await _history.SetConversationPinnedAsync(Conversation.Id, pinned);
+        Conversation = await _history.GetConversationAsync(Conversation.Id) ?? Conversation;
+        OnPropertyChanged(nameof(PinText));
+        StatusText = pinned ? "已置顶" : "已取消置顶";
+    }
+
+    /// <summary>Exports the current conversation as Markdown ("md") or JSON ("json").</summary>
+    public async Task ExportAsync(string format)
+    {
+        if (Conversation is null) return;
+        try
+        {
+            var messages = await _history.GetMessagesAsync(Conversation.Id);
+            string roleNameResolver(int roleId) =>
+                _groupMembers.TryGetValue(roleId, out var r) ? r.Name :
+                (Role is not null && Role.Id == roleId ? Role.Name : "AI");
+
+            var isJson = string.Equals(format, "json", StringComparison.OrdinalIgnoreCase);
+            var content = isJson
+                ? ChatExportService.ToJson(Title, messages, roleNameResolver)
+                : ChatExportService.ToMarkdown(Title, messages, roleNameResolver);
+            var extension = isJson ? "json" : "md";
+            var path = await FileSaveService.PickSavePathAsync(
+                ChatExportService.SanitizeFileName(Title), "会话导出", $"*.{extension}");
+            if (string.IsNullOrWhiteSpace(path)) return;
+            await File.WriteAllTextAsync(path, content);
+            StatusText = $"已导出到 {path}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Export conversation failed.");
+            await _dialogs.ShowErrorAsync($"导出失败：{ex.Message}");
+        }
+    }
+
+    // ----- 2.4 知识引用溯源 -----
+
+    [RelayCommand]
+    private async Task OpenCitationAsync(ChatCitationViewModel citation)
+    {
+        if (citation is null) return;
+        await _navigation.RevealKnowledgeDocumentAsync(citation.DocumentId);
+    }
+
+    private async Task SetCitationsAsync(ChatBubbleViewModel bubble, Message message)
+    {
+        var ids = message.GetCitedDocumentIdList();
+        bubble.Citations.Clear();
+        if (ids.Count == 0) return;
+        foreach (var id in ids)
+        {
+            bubble.Citations.Add(new ChatCitationViewModel
+            {
+                DocumentId = id,
+                Title = await ResolveCitationTitleAsync(id)
+            });
+        }
+    }
+
+    private async Task<string> ResolveCitationTitleAsync(int documentId)
+    {
+        if (_citationTitles.TryGetValue(documentId, out var cached)) return cached;
+        try
+        {
+            var doc = await _knowledge.GetDocumentAsync(documentId);
+            var title = doc?.Title ?? string.Empty;
+            _citationTitles[documentId] = title;
+            return title;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private async Task<ChatBubbleViewModel> ToBubbleAsync(Message m)
     {
         // Group mode: resolve avatar/name per message via member map.
+        ChatBubbleViewModel bubble;
         if (IsGroupMode)
         {
             var gRole = m.Author == MessageAuthor.User ? null : _groupMembers.GetValueOrDefault(m.RoleId);
-            var bubble = new ChatBubbleViewModel
+            bubble = new ChatBubbleViewModel
             {
                 Id = m.Id,
                 Author = m.Author,
@@ -325,22 +604,23 @@ public partial class ChatViewModel : ViewModelBase
                 CreatedAt = m.CreatedAt,
                 IsStreaming = false
             };
-            bubble.SetAttachments(m.Attachments);
-            return bubble;
         }
-
-        var role = Role;
-        var privateBubble = new ChatBubbleViewModel
+        else
         {
-            Id = m.Id,
-            Author = m.Author,
-            Content = m.Content,
-            Avatar = m.Author == MessageAuthor.User ? "🧑" : (role?.Avatar ?? "🤖"),
-            RoleName = m.Author == MessageAuthor.User ? "我" : (role?.Name ?? "AI"),
-            CreatedAt = m.CreatedAt,
-            IsStreaming = false
-        };
-        privateBubble.SetAttachments(m.Attachments);
-        return privateBubble;
+            var role = Role;
+            bubble = new ChatBubbleViewModel
+            {
+                Id = m.Id,
+                Author = m.Author,
+                Content = m.Content,
+                Avatar = m.Author == MessageAuthor.User ? "🧑" : (role?.Avatar ?? "🤖"),
+                RoleName = m.Author == MessageAuthor.User ? "我" : (role?.Name ?? "AI"),
+                CreatedAt = m.CreatedAt,
+                IsStreaming = false
+            };
+        }
+        bubble.SetAttachments(m.Attachments);
+        await SetCitationsAsync(bubble, m);
+        return bubble;
     }
 }

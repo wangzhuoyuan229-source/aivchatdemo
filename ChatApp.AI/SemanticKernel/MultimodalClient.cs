@@ -23,12 +23,14 @@ public sealed class MultimodalClient : IMultimodalClient, IDisposable
         MultimodalImageRequest request,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(settings.VisionApiBaseUrl) ||
-            string.IsNullOrWhiteSpace(settings.VisionApiKey) ||
+        var visionBaseUrl = settings.ResolveVisionApiBaseUrl();
+        var visionApiKey = settings.ResolveVisionApiKey();
+        if (string.IsNullOrWhiteSpace(visionBaseUrl) ||
+            string.IsNullOrWhiteSpace(visionApiKey) ||
             string.IsNullOrWhiteSpace(settings.VisionModel))
             throw new InvalidOperationException("多模态 API 尚未完整配置。");
 
-        var endpoint = BuildEndpoint(settings.VisionApiBaseUrl, settings.VisionProtocol);
+        var endpoint = BuildEndpoint(visionBaseUrl, settings.VisionProtocol);
         var imageDataUrl = $"data:{request.MimeType};base64,{Convert.ToBase64String(request.ImageBytes.Span)}";
         var payload = settings.VisionProtocol == MultimodalApiProtocol.Responses
             ? BuildResponsesPayload(settings.VisionModel, request.Prompt, imageDataUrl)
@@ -41,7 +43,7 @@ public sealed class MultimodalClient : IMultimodalClient, IDisposable
         for (var attempt = 0; ; attempt++)
         {
             using var message = new HttpRequestMessage(HttpMethod.Post, endpoint);
-            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.VisionApiKey.Trim());
+            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", visionApiKey.Trim());
             message.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
             using var response = await _http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, timeout.Token);

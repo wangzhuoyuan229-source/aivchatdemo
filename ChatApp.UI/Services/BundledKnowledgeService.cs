@@ -353,15 +353,13 @@ public sealed class BundledKnowledgeService
             reason = "配置 Embedding 模型后，将自动索引内置资料。";
             return false;
         }
-        var key = string.IsNullOrWhiteSpace(settings.EmbeddingApiKey) ? settings.ApiKey : settings.EmbeddingApiKey;
+        var key = settings.ResolveEmbeddingApiKey();
         if (string.IsNullOrWhiteSpace(key))
         {
             reason = "配置 Embedding API Key 后，将自动索引内置资料。";
             return false;
         }
-        var endpoint = string.IsNullOrWhiteSpace(settings.EmbeddingApiBaseUrl)
-            ? settings.ApiBaseUrl
-            : settings.EmbeddingApiBaseUrl;
+        var endpoint = settings.ResolveEmbeddingApiBaseUrl();
         if (!RemoteApiEndpointPolicy.TryNormalize(endpoint, out _, out var error))
         {
             reason = $"Embedding 地址无效（{error}），修正后将自动索引内置资料。";

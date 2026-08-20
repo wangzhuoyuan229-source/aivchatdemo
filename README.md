@@ -2,7 +2,7 @@
 
 > .NET 8 + Avalonia 跨平台桌面应用 | Semantic Kernel AI 引擎 | EF Core + SQLite 持久化
 
-当前版本：**v1.1.0** · [更新日志](CHANGELOG.md)
+当前版本：**v1.3.0** · [更新日志](CHANGELOG.md)
 
 ## 项目概述
 
@@ -15,7 +15,11 @@ OpenAI 兼容的远程 HTTPS API；localhost、回环地址、私有网络地址
 会在界面、持久化与运行时三层被拒绝。仓库中的 LoRA 训练材料仅保留用于离线研究和
 评测，不再接入桌面应用；详情见 [training/README.md](training/README.md)。
 
-图片知识使用另一套完全独立的多模态 API 配置。内置阿里云百炼
+设置页提供“统一 API 模式”开关：开启后聊天、Embedding 与多模态识图共用同一个
+端点和 API Key（适合 SiliconFlow 等聚合平台，只需为各功能分别填写模型 ID）；
+关闭时保留三路独立端点与密钥的接入能力，两种模式可随时切换，独立配置会被保留。
+
+图片知识默认使用另一套完全独立的多模态 API 配置。内置阿里云百炼
 (`qwen3-vl-flash`)、智谱 (`glm-4.6v-flash`)、火山方舟 Responses API
 (`doubao-seed-2-0-lite-260215`) 和 SiliconFlow
 (`Qwen/Qwen3-VL-32B-Instruct`) 预设，也可填写自定义 Chat Completions 或
@@ -59,8 +63,12 @@ v1.1.0 的 SHA-256 应为：
 
 1. 启动 ChatApp，打开左侧“设置”。
 2. 填写兼容 OpenAI 协议的 API Base URL 和自己的 API Key。
-3. 选择或填写聊天模型与 Embedding 模型；如需图片知识，再配置独立多模态服务并点击“测试多模态连接”。停止编辑约 700ms 后设置会自动保存。
+3. 选择或填写聊天模型与 Embedding 模型；如需图片知识，再配置独立多模态服务并点击“测试多模态连接”。可点击“测试聊天连接”/“测试 Embedding 连接”验证端点与密钥是否可用。停止编辑约 700ms 后设置会自动保存。
 4. 看到“已自动保存”提示后，进入角色库开始对话。
+
+使用 SiliconFlow 等聚合平台时，可勾选“统一 API 模式”：聊天、Embedding 和多模态
+识图共用同一端点和 Key，只需分别为各功能填写模型 ID（模型 ID 需使用完整的
+`组织/模型名` 格式，如 `deepseek-ai/DeepSeek-V3`、`BAAI/bge-m3`）。
 
 使用 DeepSeek 聊天并启用知识库时，可在“Embedding 服务预设”选择
 “阿里云百炼（推荐 · text-embedding-v4）”。应用会自动填写
@@ -173,10 +181,17 @@ ChatApp.UI ──────────────► ChatApp.AI ────
 | 👥 **AI 群聊** | 多角色同台对话，支持混合导演(Hybrid)与轮询(RoundRobin)两种模式 |
 | 📚 **严格知识库 RAG** | 导入 txt/md/pdf 文档，按角色绑定的分组检索；无命中时不编造设定 |
 | 🖼️ **知识图片检索** | 导入 PNG/JPEG/WebP，独立多模态 API 生成中文描述与标签；私聊/群聊按角色检索并按需附带至多 3 张原图快照 |
-| 🧠 **长期记忆** | 按角色隔离的长期记忆，自动批量抽取+向量召回 |
-| ⚙️ **BYOK 设置** | 自定义 API 端点/密钥/模型，支持 OpenAI 兼容服务 |
+| 🧠 **长期记忆** | 按角色隔离的长期记忆，自动批量抽取+向量召回；可查看/新增/编辑/删除/清空单角色记忆（群聊仅显示当前发言者自己的记忆） |
+| 💬 **消息操作** | 复制消息内容、重新生成最后一条 AI 回复、编辑已发送消息后重发（发送后替换该消息及其后的回复） |
+| 📌 **会话整理** | 私聊/群聊支持重命名与置顶（置顶优先排序）；一键导出为 Markdown（含角色名、时间与附件快照）或结构化 JSON |
+| 📎 **知识引用溯源** | AI 回复下方展示所引用的知识文档标签，点击跳转到知识库对应文档 |
+| 🗜️ **长对话摘要压缩** | 上下文接近上限时用 LLM 生成“摘要 + 关键记忆点”替换早期消息，保留最近完整消息；失败时回退原有截断逻辑 |
+| 🌙 **深色主题与阅读设置** | 跟随系统/手动切换深浅主题（全局即时生效并持久化），聊天气泡字号可调 |
+| ⚙️ **BYOK 设置** | 自定义 API 端点/密钥/模型，支持 OpenAI 兼容服务；可切换统一 API 模式（单端点单 Key 驱动聊天/Embedding/视觉） |
 | 📁 **知识库目录与批处理** | 一次选择多个多层文件夹递归导入，保留完整相对目录树；可按分组/目录范围全选、移动、删除及批量重新识图 |
 | 📦 **内置知识库** | 根目录 `知识库/` 随应用发布，首次自动索引并支持断点续传，后续启动和覆盖安装直接复用本机向量 |
+| ⚡ **性能与稳定性** | 消息列表虚拟化渲染 + 120 条游标分页（可"加载更早消息"）；启动加载并行化；记忆/知识召回会话级缓存（60 秒 TTL，修改即失效）；设置页一键"测试聊天/Embedding 连接"（失败原因分级、不回显密钥） |
+| 📄 **本地日志** | 按日滚动写入用户数据目录 `logs/chatapp-YYYY-MM-DD.log`，保留 7 天；所有日志写盘前自动打码 API Key |
 
 ### Phase 2 规划
 
@@ -267,18 +282,21 @@ ChatApp.Infrastructure/
 | `Settings` | 键值对配置 |
 | `Vectors` | 向量数据（嵌入 BLOB） |
 
-**数据库迁移策略：** `InfrastructureModule.InitializeAsync` 在启动时执行幂等迁移（知识分组、群聊、角色知识绑定、图片知识与消息附件），支持从旧版本数据库重复升级而不丢失已有文档、消息和向量。
+**数据库迁移策略：** `InfrastructureModule.InitializeAsync` 在启动时执行幂等迁移（知识分组、群聊、角色知识绑定、图片知识与消息附件、计划 3 查询索引），支持从旧版本数据库重复升级而不丢失已有文档、消息和向量。
 
 ### ChatApp.AI — AI 引擎层
 
 ```
 ChatApp.AI/
-├── AiModule.cs                  # DI 注册（5 个 AI 服务单例）
+├── AiModule.cs                  # DI 注册（AI 服务单例）
+├── Caching/
+│   └── ScopedQueryCache.cs      # 会话级召回缓存（TTL + 容量上限 + 按作用域失效）
 ├── Plugins/
 │   ├── DocumentLoader.cs        # 文档加载（txt/md/pdf）
 │   └── TextChunker.cs           # 文本分块（按段落 + 重叠窗口）
 └── SemanticKernel/
-    ├── KernelFactory.cs         # Semantic Kernel 构建器（OpenAI 兼容端点）
+    ├── KernelFactory.cs         # Semantic Kernel 构建器（OpenAI 兼容端点，可传探测超时）
+    ├── ApiProbeService.cs       # 设置页 Chat/Embedding 最小请求连接探测
     ├── ChatOrchestrator.cs      # 1:1 聊天编排器
     ├── GroupChatOrchestrator.cs # 群聊编排器（导演模式核心）
     ├── MultimodalClient.cs      # 独立 Chat Completions / Responses 视觉协议适配
@@ -424,6 +442,8 @@ KnowledgeDocuments (M) ──< KnowledgeChunks (M)
 ### 关键索引
 
 - `Messages(ConversationId)` — 按会话查询消息
+- `Messages(ConversationId, Id)` — 消息窗口游标分页（`IX_Messages_ConversationId_Id`）
+- `Conversations(IsPinned, UpdatedAt)` — 置顶优先 + 时间排序的会话列表（`IX_Conversations_IsPinned_UpdatedAt`）
 - `Conversations(RoleId)` — 按角色查会话
 - `ConversationMembers(ConversationId)` + `ConversationMembers(RoleId)` — 群聊查询
 - `MemoryEntries(RoleId)` — 按角色查记忆
@@ -445,6 +465,7 @@ KnowledgeDocuments (M) ──< KnowledgeChunks (M)
 | `ApiBaseUrl` | `https://api.deepseek.com/v1` | 远程 HTTPS、OpenAI 兼容 API 端点 |
 | `ApiKey` | (空) | API 密钥 |
 | `ChatModel` | `deepseek-v4-flash` | 聊天模型名 |
+| `UseUnifiedApi` | `false` | 统一 API 模式：聊天/Embedding/视觉共用主端点与主 Key |
 | `EmbeddingModel` | (空) | 可选的远程嵌入模型名 |
 | `VisionProviderPreset` | `AlibabaModelStudio` | 独立多模态服务预设 |
 | `VisionProtocol` | `ChatCompletions` | `ChatCompletions` 或 `Responses` |
@@ -480,6 +501,7 @@ KnowledgeDocuments (M) ──< KnowledgeChunks (M)
 - 知识文件存储：`knowledge` 子目录
 - 知识原图存储：`knowledge/images` 子目录
 - 历史附件快照：`message-attachments` 子目录
+- 滚动日志：`logs` 子目录（按日 `chatapp-YYYY-MM-DD.log`，保留 7 天）
 - 可通过环境变量 `CHATAPP_DATA_DIR` 重定向
 
 ---
@@ -540,6 +562,7 @@ dotnet run --project ChatApp.UI
 - `IGroupChatService` → `GroupChatOrchestrator`
 - `IMemoryService` → `MemoryService`
 - `IKnowledgeService` → `KnowledgeService`
+- `IApiProbeService` → `ApiProbeService`
 
 **UI (App.xaml.cs)**:
 - `MainViewModel` (Singleton, also as `INavigation`)
@@ -585,4 +608,4 @@ dotnet run --project ChatApp.UI
 
 ---
 
-> 文档生成日期：2026-08-16 | 项目版本：v1.1.0
+> 文档生成日期：2026-08-20 | 项目版本：v1.3.0

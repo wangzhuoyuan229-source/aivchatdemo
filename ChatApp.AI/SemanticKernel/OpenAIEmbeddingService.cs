@@ -65,11 +65,8 @@ public class OpenAIEmbeddingService : IEmbeddingService
         CancellationToken ct)
     {
         var signature = string.Join('\n',
-            settings.ApiBaseUrl,
-            settings.ApiKey,
-            settings.ChatModel,
-            settings.EmbeddingApiBaseUrl,
-            settings.EmbeddingApiKey,
+            settings.ResolveEmbeddingApiBaseUrl(),
+            settings.ResolveEmbeddingApiKey(),
             settings.EmbeddingModel);
         await _runtimeGate.WaitAsync(ct);
         try
@@ -153,10 +150,7 @@ public class OpenAIEmbeddingService : IEmbeddingService
     {
         if (string.IsNullOrWhiteSpace(settings.EmbeddingModel))
             throw new InvalidOperationException("Embedding 模型未配置，长期记忆与知识库功能需要它。");
-        var effectiveKey = string.IsNullOrWhiteSpace(settings.EmbeddingApiKey)
-            ? settings.ApiKey
-            : settings.EmbeddingApiKey;
-        if (string.IsNullOrWhiteSpace(effectiveKey))
+        if (string.IsNullOrWhiteSpace(settings.ResolveEmbeddingApiKey()))
             throw new InvalidOperationException("Embedding API Key 未配置。");
     }
 }

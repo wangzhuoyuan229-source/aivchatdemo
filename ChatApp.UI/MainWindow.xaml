@@ -5,13 +5,13 @@
         Title="{Binding WindowTitle}" Height="760" Width="1180"
         MinHeight="600" MinWidth="960"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BgBrush}">
+        Background="{DynamicResource BgBrush}">
   <Window.Resources>
     <conv:InverseNullToVisibilityConverter x:Key="InverseNull2Vis"/>
     <conv:AccentIfEqualConverter x:Key="AccentIfEqual"/>
   </Window.Resources>
   <Grid ColumnDefinitions="64,340,*">
-    <Border Grid.Column="0" Background="#2E2E2E">
+    <Border Grid.Column="0" Background="{DynamicResource NavRailBrush}">
       <Grid RowDefinitions="Auto,*,Auto">
         <TextBlock Grid.Row="0" Text="AI" FontSize="22" FontWeight="Bold" Foreground="White"
                    HorizontalAlignment="Center" Margin="0,18,0,12"/>
@@ -23,12 +23,12 @@
           <Button Classes="nav" ToolTip.Tip="设置" Command="{Binding ShowSettingsCommand}"
                   Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=settings}" Content="⚙️"/>
         </StackPanel>
-        <TextBlock Grid.Row="2" Text="v1.1.0" Foreground="#888" FontSize="10"
+        <TextBlock Grid.Row="2" Text="v1.3.0" Foreground="{DynamicResource TimeBrush}" FontSize="10"
                    HorizontalAlignment="Center" Margin="0,0,0,12"/>
       </Grid>
     </Border>
 
-    <Border Grid.Column="1" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
+    <Border Grid.Column="1" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
       <ContentControl Content="{Binding MiddleView}"/>
     </Border>
 
@@ -37,7 +37,7 @@
       <Border IsVisible="{Binding RightView, Converter={StaticResource InverseNull2Vis}}">
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
           <TextBlock Text="🤖" FontSize="64" Opacity="0.4" HorizontalAlignment="Center"/>
-          <TextBlock Text="选择左侧的角色，开始聊天" FontSize="14" Foreground="{StaticResource TextSubBrush}" Margin="0,16,0,0"/>
+          <TextBlock Text="选择左侧的角色，开始聊天" FontSize="14" Foreground="{DynamicResource TextSubBrush}" Margin="0,16,0,0"/>
         </StackPanel>
       </Border>
     </Grid>

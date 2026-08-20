@@ -4,7 +4,7 @@
              xmlns:vm="using:ChatApp.UI.ViewModels"
              xmlns:cm="using:ChatApp.Core.Models"
              xmlns:conv="using:ChatApp.UI.Converters"
-             Background="{StaticResource BgBrush}">
+             Background="{DynamicResource BgBrush}">
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="Bool2Vis"/>
         <conv:BooleanToVisibilityInverseConverter x:Key="Bool2VisInverse"/>
@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
 
         <!-- 顶部工具栏 -->
-        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,14">
+        <Border Grid.Row="0" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,14">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -29,7 +29,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical">
                     <TextBlock Text="📚 知识库" FontSize="16" FontWeight="SemiBold"/>
-                    <TextBlock Text="支持多文件夹递归批量导入并保留原目录层级；图片会生成中文描述与标签并按角色分组检索。" FontSize="12" Foreground="{StaticResource TextSubBrush}" Margin="0,2,0,0"/>
+                    <TextBlock Text="支持多文件夹递归批量导入并保留原目录层级；图片会生成中文描述与标签并按角色分组检索。" FontSize="12" Foreground="{DynamicResource TextSubBrush}" Margin="0,2,0,0"/>
                 </StackPanel>
                 <Button Grid.Column="1" Classes="ghost" Content="↻ 刷新" Command="{Binding RefreshCommand}" Margin="0,0,8,0"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
@@ -42,15 +42,15 @@
         </Border>
 
         <!-- 导入进度条 -->
-        <Border Grid.Row="1" Background="#FFFBEA" Padding="20,8" IsVisible="{Binding IsImporting, Converter={StaticResource Bool2Vis}}">
+        <Border Grid.Row="1" Background="{DynamicResource WarnSoftBrush}" Padding="20,8" IsVisible="{Binding IsImporting, Converter={StaticResource Bool2Vis}}">
             <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" Text="{Binding ProgressText}" Foreground="#B8860B" FontSize="12" TextWrapping="Wrap"/>
+                <TextBlock Grid.Column="0" Text="{Binding ProgressText}" Foreground="{DynamicResource WarnBrush}" FontSize="12" TextWrapping="Wrap"/>
                 <Button Grid.Column="1" Classes="ghost" Content="取消导入" Command="{Binding CancelImportCommand}" Margin="12,0,0,0"/>
             </Grid>
         </Border>
 
         <!-- 批量操作工具栏（仅批量模式显示） -->
-        <Border Grid.Row="2" Background="#F0F7FF" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,10"
+        <Border Grid.Row="2" Background="{DynamicResource InfoSoftBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,10"
                 IsVisible="{Binding IsBatchMode, Converter={StaticResource Bool2Vis}}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -72,7 +72,7 @@
                 <Button Grid.Column="2" Classes="ghost" Content="取消选择" Command="{Binding DeselectAllCommand}" Margin="0,0,8,0"/>
 
                 <!-- 选中计数 -->
-                <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="13" Foreground="{StaticResource TextSubBrush}" Margin="8,0,0,0">
+                <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextSubBrush}" Margin="8,0,0,0">
                     <Run Text="已选 "/><Run Text="{Binding SelectedCount, Mode=OneWay}"/><Run Text=" 项"/>
                 </TextBlock>
 
@@ -80,7 +80,7 @@
                 <StackPanel Grid.Column="5" Orientation="Horizontal">
                     <Button Classes="ghost" Content="🖼 批量重新识图" Command="{Binding BatchRegenerateImagesCommand}" Margin="0,0,8,0"/>
                     <Button Classes="ghost" Content="📦 移动到分组" Command="{Binding BatchMoveCommand}" Margin="0,0,8,0"/>
-                    <Button Classes="ghost" Content="🗑 批量删除" Command="{Binding BatchDeleteCommand}" Foreground="#E53935"/>
+                    <Button Classes="ghost" Content="🗑 批量删除" Command="{Binding BatchDeleteCommand}" Foreground="{DynamicResource DangerBrush}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -93,7 +93,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- 左侧：分组列表 -->
-            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="分组 / 文件夹" FontWeight="SemiBold" FontSize="13" Margin="16,12,0,8"/>
                     <ListBox x:Name="GroupsList" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"
@@ -112,12 +112,12 @@
                                     <Border Grid.Column="0" Width="{Binding IndentWidth}"/>
                                     <TextBlock Grid.Column="1" Text="{Binding Icon}" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <TextBlock Grid.Column="2" Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Grid.Column="3" Text="{Binding DocumentCount}" Foreground="{StaticResource TextSubBrush}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding DocumentCount}" Foreground="{DynamicResource TextSubBrush}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
                                     <Button Grid.Column="4" Classes="ghost" Content="✎" Padding="4"
                                             IsVisible="{Binding SourceGroup, Converter={StaticResource Null2Vis}}"
                                             Command="{Binding DataContext.RenameGroupCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                             CommandParameter="{Binding}" ToolTip.Tip="重命名"/>
-                                    <Button Grid.Column="5" Classes="ghost" Content="×" Padding="4" Foreground="#E53935"
+                                    <Button Grid.Column="5" Classes="ghost" Content="×" Padding="4" Foreground="{DynamicResource DangerBrush}"
                                             IsVisible="{Binding SourceGroup, Converter={StaticResource Null2Vis}}"
                                             Command="{Binding DataContext.DeleteGroupCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                             CommandParameter="{Binding}" ToolTip.Tip="删除分组"/>
@@ -129,11 +129,13 @@
             </Border>
 
             <!-- 右侧：当前分组下的文档 -->
-            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="20,8">
-                <ItemsControl x:Name="DocsList" ItemsSource="{Binding Documents}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="White" CornerRadius="6" Padding="16,12" Margin="0,0,0,10"
+            <ListBox Grid.Column="1" x:Name="DocsList" ItemsSource="{Binding Documents}"
+                     Background="Transparent" BorderThickness="0"
+                     Padding="20,8"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                            <Border Background="{DynamicResource PanelBrush}" CornerRadius="6" Padding="16,12" Margin="0,0,0,10"
                                     BoxShadow="0 1 6 0 #26000000">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -147,10 +149,10 @@
                                     <!-- 复选框（仅批量模式显示） -->
                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
                                               VerticalAlignment="Center" Margin="0,0,12,0"
-                                              IsVisible="{Binding DataContext.IsBatchMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource Bool2Vis}}"/>
+                                              IsVisible="{Binding DataContext.IsBatchMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource Bool2Vis}}"/>
 
                                     <Grid Grid.Column="1" Width="76" Height="64" Margin="0,0,14,0">
-                                        <Border Background="#F2F2F2" CornerRadius="5"
+                                        <Border Background="{DynamicResource SubtleBrush}" CornerRadius="5"
                                                 IsVisible="{Binding IsImage, Converter={StaticResource Bool2Vis}}">
                                             <Image Source="{Binding PreviewPath, Converter={StaticResource ImagePath}}"
                                                    Stretch="UniformToFill"/>
@@ -161,52 +163,51 @@
                                     <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" FontSize="14"/>
                                         <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                            <TextBlock Text="{Binding RelativePath, Mode=OneWay}" FontSize="11" Foreground="{StaticResource TextSubBrush}" TextTrimming="CharacterEllipsis" MaxWidth="520"/>
-                                            <TextBlock Text=" · " FontSize="11" Foreground="{StaticResource TextSubBrush}"/>
-                                            <TextBlock FontSize="11" Foreground="{StaticResource TextSubBrush}" Text="{Binding ChunkCount, StringFormat={}{0} 个片段, Mode=OneWay}"/>
-                                            <TextBlock Text=" · " FontSize="11" Foreground="{StaticResource TextSubBrush}"/>
-                                            <TextBlock Text="{Binding ImportedAt, StringFormat=yyyy-MM-dd HH:mm, Mode=OneWay}" FontSize="11" Foreground="{StaticResource TextSubBrush}"/>
+                                            <TextBlock Text="{Binding RelativePath, Mode=OneWay}" FontSize="11" Foreground="{DynamicResource TextSubBrush}" TextTrimming="CharacterEllipsis" MaxWidth="520"/>
+                                            <TextBlock Text=" · " FontSize="11" Foreground="{DynamicResource TextSubBrush}"/>
+                                            <TextBlock FontSize="11" Foreground="{DynamicResource TextSubBrush}" Text="{Binding ChunkCount, StringFormat={}{0} 个片段, Mode=OneWay}"/>
+                                            <TextBlock Text=" · " FontSize="11" Foreground="{DynamicResource TextSubBrush}"/>
+                                            <TextBlock Text="{Binding ImportedAt, StringFormat=yyyy-MM-dd HH:mm, Mode=OneWay}" FontSize="11" Foreground="{DynamicResource TextSubBrush}"/>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Description}" FontSize="12" TextWrapping="Wrap" MaxLines="2" Margin="0,6,0,0"
                                                    IsVisible="{Binding IsImage, Converter={StaticResource Bool2Vis}}"/>
-                                        <TextBlock Text="{Binding Tags, StringFormat=标签：{0}}" FontSize="11" Foreground="{StaticResource TextSubBrush}"
+                                        <TextBlock Text="{Binding Tags, StringFormat=标签：{0}}" FontSize="11" Foreground="{DynamicResource TextSubBrush}"
                                                    TextWrapping="Wrap" IsVisible="{Binding IsImage, Converter={StaticResource Bool2Vis}}"/>
                                         <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
                                                     IsVisible="{Binding IsImage, Converter={StaticResource Bool2Vis}}">
-                                            <TextBlock Text="{Binding DescriptionSourceText}" FontSize="11" Foreground="{StaticResource AccentBrush}"/>
-                                            <TextBlock Text=" · " FontSize="11" Foreground="{StaticResource TextSubBrush}"/>
-                                            <TextBlock Text="{Binding ProviderModelText}" FontSize="11" Foreground="{StaticResource TextSubBrush}"/>
+                                            <TextBlock Text="{Binding DescriptionSourceText}" FontSize="11" Foreground="{DynamicResource AccentBrush}"/>
+                                            <TextBlock Text=" · " FontSize="11" Foreground="{DynamicResource TextSubBrush}"/>
+                                            <TextBlock Text="{Binding ProviderModelText}" FontSize="11" Foreground="{DynamicResource TextSubBrush}"/>
                                         </StackPanel>
                                     </StackPanel>
 
-                                    <StackPanel Grid.Column="3" Orientation="Horizontal"
-                                                IsVisible="{Binding DataContext.IsBatchMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource Bool2VisInverse}}">
+<StackPanel Grid.Column="3" Orientation="Horizontal"
+                                                IsVisible="{Binding DataContext.IsBatchMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource Bool2VisInverse}}">
                                         <Button Classes="ghost" Content="查看原图"
                                                 IsVisible="{Binding IsImage, Converter={StaticResource Bool2Vis}}"
-                                                Command="{Binding DataContext.OpenImageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                Command="{Binding DataContext.OpenImageCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                 CommandParameter="{Binding}"/>
                                         <Button Classes="ghost" Content="编辑描述"
                                                 IsVisible="{Binding IsImage, Converter={StaticResource Bool2Vis}}"
-                                                Command="{Binding DataContext.EditImageMetadataCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                Command="{Binding DataContext.EditImageMetadataCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                 CommandParameter="{Binding}"/>
                                         <Button Classes="ghost" Content="重新识图"
                                                 IsVisible="{Binding IsImage, Converter={StaticResource Bool2Vis}}"
-                                                Command="{Binding DataContext.RegenerateImageDescriptionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                Command="{Binding DataContext.RegenerateImageDescriptionCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                 CommandParameter="{Binding}"/>
                                         <Button Classes="ghost" Content="移动"
-                                                Command="{Binding DataContext.MoveDocumentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                Command="{Binding DataContext.MoveDocumentCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                 CommandParameter="{Binding}"/>
                                     </StackPanel>
-                                    <Button Grid.Column="4" Classes="ghost" Content="删除" Foreground="#E53935"
-                                            IsVisible="{Binding DataContext.IsBatchMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource Bool2VisInverse}}"
-                                            Command="{Binding DataContext.DeleteDocumentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    <Button Grid.Column="4" Classes="ghost" Content="删除" Foreground="{DynamicResource DangerBrush}"
+                                            IsVisible="{Binding DataContext.IsBatchMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource Bool2VisInverse}}"
+                                            Command="{Binding DataContext.DeleteDocumentCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                             CommandParameter="{Binding}"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                    </ListBox.ItemTemplate>
+                </ListBox>
         </Grid>
     </Grid>
 </UserControl>

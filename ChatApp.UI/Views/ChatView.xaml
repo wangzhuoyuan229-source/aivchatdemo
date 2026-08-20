@@ -4,7 +4,7 @@
              xmlns:vm="using:ChatApp.UI.ViewModels"
              xmlns:conv="using:ChatApp.UI.Converters"
              xmlns:controls="using:ChatApp.UI.Controls"
-             Background="{StaticResource BgBrush}">
+             Background="{DynamicResource BgBrush}">
     <UserControl.Resources>
         <conv:BoolToAlignmentConverter x:Key="Align"/>
         <conv:BoolToFlowDirectionConverter x:Key="FlowDir"/>
@@ -21,33 +21,59 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource DividerBrush}"
+        <Border Grid.Row="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource DividerBrush}"
                 BorderThickness="0,0,0,1" Padding="18,10">
-            <Grid ColumnDefinitions="Auto,*,Auto">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                 <Border Grid.Column="0" Width="38" Height="38" CornerRadius="9"
-                        Background="#E5F5EB" Margin="0,0,10,0" ClipToBounds="True">
+                        Background="{DynamicResource AvatarRingBrush}" Margin="0,0,10,0" ClipToBounds="True">
                     <controls:AvatarView Avatar="{Binding ConversationAvatar}" FontSize="21"/>
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextMainBrush}"/>
+                               Foreground="{DynamicResource TextMainBrush}"/>
                     <TextBlock Text="{Binding ConversationSubtitle}" FontSize="11"
-                               Foreground="{StaticResource TextSubBrush}"
+                               Foreground="{DynamicResource TextSubBrush}"
                                TextTrimming="CharacterEllipsis" MaxLines="1"/>
                 </StackPanel>
-                <Border Grid.Column="2" Background="#F1F8F3" CornerRadius="10" Padding="9,4"
-                        VerticalAlignment="Center"
+                <Border Grid.Column="2" Background="{DynamicResource AccentSoftBrush}" CornerRadius="10" Padding="9,4"
+                        VerticalAlignment="Center" Margin="0,0,8,0"
                         IsVisible="{Binding IsSending, Converter={StaticResource Bool2Vis}}">
-                    <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource AccentDarkBrush}"
+                    <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource AccentSoftTextBrush}"
                                FontSize="11"/>
                 </Border>
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Classes="ghost" Content="🧠 记忆" ToolTip.Tip="管理本会话角色的长期记忆"
+                            Command="{Binding OpenMemoryCommand}" Margin="0,0,4,0"/>
+                    <Button Classes="ghost" Content="✏️ 重命名" Command="{Binding RenameConversationCommand}"
+                            ToolTip.Tip="重命名会话" Margin="0,0,4,0"/>
+                    <Button Classes="ghost" Content="{Binding PinText}" Command="{Binding TogglePinCommand}"
+                            ToolTip.Tip="置顶 / 取消置顶" Margin="0,0,4,0"/>
+                    <Button Classes="ghost" Content="⬇ 导出" ToolTip.Tip="导出为 Markdown / JSON"
+                            Click="Export_Click"/>
+                </StackPanel>
             </Grid>
         </Border>
 
         <!-- Messages -->
-        <ScrollViewer x:Name="MessagesScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Background="{StaticResource BgBrush}">
-            <ItemsControl x:Name="MessagesList" ItemsSource="{Binding Messages}" Margin="12">
-                <ItemsControl.ItemTemplate>
+        <Grid Grid.Row="1" Background="{DynamicResource BgBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Button Grid.Row="0" Classes="ghost" Content="加载更早消息" Padding="10,4" FontSize="11"
+                    HorizontalAlignment="Center" Margin="0,6,0,0"
+                    Command="{Binding LoadEarlierCommand}"
+                    IsVisible="{Binding HasMoreMessages, Converter={StaticResource Bool2Vis}}"
+                    IsEnabled="{Binding !IsLoadingEarlier}"/>
+            <ScrollViewer Grid.Row="1" x:Name="MessagesScroll" VerticalScrollBarVisibility="Auto"
+                          Background="{DynamicResource BgBrush}">
+                <ItemsControl x:Name="MessagesList" ItemsSource="{Binding Messages}" Margin="12">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Grid Margin="0,6" HorizontalAlignment="{Binding IsUser, Converter={StaticResource Align}}"
                               FlowDirection="{Binding IsUser, Converter={StaticResource FlowDir}}">
@@ -55,18 +81,22 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="6" Background="#F2F2F2" VerticalAlignment="Top" Margin="0,0,8,0" ClipToBounds="True">
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="6"
+                                    Background="{DynamicResource SubtleBrush}" VerticalAlignment="Top" Margin="0,0,8,0" ClipToBounds="True">
                                 <controls:AvatarView Avatar="{Binding Avatar}" FontSize="22"/>
                             </Border>
                             <Border Grid.Column="1" MaxWidth="520" CornerRadius="8" Padding="12,8" VerticalAlignment="Top"
                                     Background="{Binding IsUser, Converter={StaticResource BubbleBrush}}">
                                 <StackPanel FlowDirection="LeftToRight">
-                                    <TextBlock Text="{Binding RoleName}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"
+                                    <TextBlock Text="{Binding RoleName}" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AccentBrush}"
                                                Margin="0,0,0,4" HorizontalAlignment="Left"
                                                IsVisible="{Binding IsGroupBubble, Converter={StaticResource Bool2Vis}}"/>
-                                    <TextBlock Text="{Binding TimeText}" FontSize="10" Foreground="#B0B0B0" Margin="0,0,0,4"
+                                    <TextBlock Text="{Binding TimeText}" FontSize="10"
+                                               Foreground="{DynamicResource TimeBrush}" Margin="0,0,0,4"
                                                HorizontalAlignment="{Binding IsUser, Converter={StaticResource Align}}"/>
-                                    <TextBlock Text="{Binding Content}" FontSize="14" TextWrapping="Wrap" FlowDirection="LeftToRight"/>
+                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FlowDirection="LeftToRight"
+                                               FontSize="{Binding $parent[ItemsControl].DataContext.ChatFontSize}"/>
                                     <ItemsControl ItemsSource="{Binding Attachments}" Margin="0,8,0,0">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
@@ -78,20 +108,58 @@
                                                 <Button Command="{Binding OpenCommand}" Padding="0" Margin="0,0,8,8"
                                                         ToolTip.Tip="{Binding Caption}">
                                                     <Grid Width="180" Height="130">
-                                                        <Border Background="#ECECEC" CornerRadius="5"/>
+                                                        <Border Background="{DynamicResource PlaceholderBrush}" CornerRadius="5"/>
                                                         <Image Source="{Binding Preview}"
                                                                Stretch="UniformToFill"
                                                                IsVisible="{Binding IsAvailable, Converter={StaticResource Bool2Vis}}"/>
                                                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                     IsVisible="{Binding IsAvailable, Converter={StaticResource Bool2VisInv}}">
                                                             <TextBlock Text="🖼️" FontSize="24" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="图片缺失或损坏" FontSize="10" Foreground="{StaticResource TextSubBrush}"/>
+                                                            <TextBlock Text="图片缺失或损坏" FontSize="10"
+                                                                       Foreground="{DynamicResource TextSubBrush}"/>
                                                         </StackPanel>
                                                     </Grid>
                                                 </Button>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
+
+                                    <!-- 知识引用溯源标签 -->
+                                    <ItemsControl ItemsSource="{Binding Citations}" Margin="0,6,0,0"
+                                                  IsVisible="{Binding HasCitations, Converter={StaticResource Bool2Vis}}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Classes="ghost" Padding="8,2" Margin="0,0,6,4" CornerRadius="8"
+                                                        Background="{DynamicResource AccentSoftBrush}"
+                                                        Command="{Binding $parent[ScrollViewer].DataContext.OpenCitationCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip.Tip="点击在知识库中查看该文档">
+                                                    <TextBlock Text="{Binding DisplayText}" FontSize="11"
+                                                               Foreground="{DynamicResource AccentSoftTextBrush}"
+                                                               TextTrimming="CharacterEllipsis" MaxWidth="180"/>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- 消息操作 -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0" Spacing="2">
+                                        <Button Classes="ghost" Content="复制" Padding="8,2" FontSize="11"
+                                                Command="{Binding $parent[ItemsControl].DataContext.CopyMessageCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Classes="ghost" Content="编辑" Padding="8,2" FontSize="11"
+                                                IsVisible="{Binding CanEdit, Converter={StaticResource Bool2Vis}}"
+                                                Command="{Binding $parent[ItemsControl].DataContext.StartEditMessageCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Classes="ghost" Content="重新生成" Padding="8,2" FontSize="11"
+                                                IsVisible="{Binding CanRegenerate, Converter={StaticResource Bool2Vis}}"
+                                                Command="{Binding $parent[ItemsControl].DataContext.RegenerateCommand}"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </Grid>
@@ -99,25 +167,43 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+        </Grid>
 
         <!-- Input -->
-        <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="12,10">
+        <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource DividerBrush}"
+                BorderThickness="0,1,0,0" Padding="12,10">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" x:Name="InputBox" Text="{Binding InputText}"
-                         AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                         MaxHeight="120" MinHeight="40" FontSize="14" Padding="10,8"
-                         KeyDown="InputBox_KeyDown"/>
-                <Button Grid.Column="1" Classes="ghost" Content="停止"
-                        Command="{Binding StopCommand}" Margin="6,0,0,0"
-                        IsVisible="{Binding IsSending, Converter={StaticResource Bool2Vis}}"/>
-                <Button Grid.Column="2" Classes="primary" Content="发送"
-                        Command="{Binding SendCommand}" Margin="6,0,0,0" Padding="22,10"
-                        FontSize="14"/>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" Background="{DynamicResource AccentSoftBrush}" CornerRadius="6"
+                        Padding="8,4" Margin="0,0,0,6"
+                        IsVisible="{Binding IsEditingMessage, Converter={StaticResource Bool2Vis}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="正在编辑已发送消息，发送后将替换该消息及其后的回复。" FontSize="11"
+                                   Foreground="{DynamicResource AccentSoftTextBrush}" VerticalAlignment="Center"/>
+                        <Button Classes="ghost" Content="取消编辑" Padding="8,2" FontSize="11" Margin="8,0,0,0"
+                                Command="{Binding CancelEditMessageCommand}"/>
+                    </StackPanel>
+                </Border>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" x:Name="InputBox" Text="{Binding InputText}"
+                             AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             MaxHeight="120" MinHeight="40" FontSize="14" Padding="10,8"
+                             KeyDown="InputBox_KeyDown"/>
+                    <Button Grid.Column="1" Classes="ghost" Content="停止"
+                            Command="{Binding StopCommand}" Margin="6,0,0,0"
+                            IsVisible="{Binding IsSending, Converter={StaticResource Bool2Vis}}"/>
+                    <Button Grid.Column="2" Classes="primary" Content="发送"
+                            Command="{Binding SendCommand}" Margin="6,0,0,0" Padding="22,10"
+                            FontSize="14"/>
+                </Grid>
             </Grid>
         </Border>
     </Grid>

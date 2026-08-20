@@ -4,11 +4,21 @@ using System.Collections.ObjectModel;
 
 namespace ChatApp.UI.ViewModels;
 
+/// <summary>A knowledge citation tag rendered under an assistant reply.</summary>
+public class ChatCitationViewModel
+{
+    public int DocumentId { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string DisplayText => $"📄 {(string.IsNullOrWhiteSpace(Title) ? $"文档 #{DocumentId}" : Title)}";
+}
+
 /// <summary>A single message bubble shown in the chat (display wrapper around a message).</summary>
 public partial class ChatBubbleViewModel : ViewModelBase
 {
     [ObservableProperty] private string _content = string.Empty;
     [ObservableProperty] private bool _isStreaming;
+    [ObservableProperty] private bool _canRegenerate;
+    [ObservableProperty] private bool _canEdit;
 
     public int Id { get; set; }
     public MessageAuthor Author { get; init; }
@@ -22,6 +32,16 @@ public partial class ChatBubbleViewModel : ViewModelBase
     public string TimeText => CreatedAt.ToLocalTime().ToString("HH:mm");
 
     public ObservableCollection<ChatAttachmentViewModel> Attachments { get; } = new();
+
+    public ObservableCollection<ChatCitationViewModel> Citations { get; } = new();
+
+    /// <summary>True when at least one citation tag exists (drives visibility in XAML).</summary>
+    public bool HasCitations => Citations.Count > 0;
+
+    public ChatBubbleViewModel()
+    {
+        Citations.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasCitations));
+    }
 
     public void SetAttachments(IEnumerable<MessageAttachment> attachments)
     {

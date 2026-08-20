@@ -12,4 +12,10 @@ public interface INavigation
     Task OpenNewGroupChatAsync(IReadOnlyList<Role> members, string title);
 
     void Navigate(string pageKey);
+
+    /// <summary>Navigates to the knowledge page and reveals the given document.</summary>
+    Task RevealKnowledgeDocumentAsync(int documentId);
+
+    /// <summary>Opens the memory-management window scoped to the current conversation.</summary>
+    Task OpenMemoryManagementAsync();
 }

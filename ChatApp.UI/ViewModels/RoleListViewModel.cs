@@ -107,6 +107,24 @@ public partial class RoleListViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task RenameGroupChatAsync(ConversationItemViewModel item)
+    {
+        if (item is null) return;
+        var (confirmed, text) = await _dialogs.PromptAsync("请输入新的会话名称：", item.Title, "重命名会话");
+        if (!confirmed || string.IsNullOrWhiteSpace(text)) return;
+        await _history.RenameConversationAsync(item.Conversation.Id, text);
+        await LoadGroupChatsAsync();
+    }
+
+    [RelayCommand]
+    private async Task ToggleGroupChatPinAsync(ConversationItemViewModel item)
+    {
+        if (item is null) return;
+        await _history.SetConversationPinnedAsync(item.Conversation.Id, !item.Conversation.IsPinned);
+        await LoadGroupChatsAsync();
+    }
+
+    [RelayCommand]
     private async Task DeleteAsync(Role role)
     {
         // 弹出确认对话框，避免误删；预设角色给出更强警告

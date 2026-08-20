@@ -205,6 +205,34 @@ public partial class KnowledgeViewModel : ViewModelBase
         if (!_suppressGroupRefresh) _ = RefreshDocumentsAsync();
     }
 
+    /// <summary>切换到文档所在分组并选中该文档（供聊天引用溯源跳转）。</summary>
+    public async Task RevealDocumentAsync(int documentId)
+    {
+        try
+        {
+            var doc = await _knowledge.GetDocumentAsync(documentId);
+            if (doc is null) return;
+            await LoadAsync();
+            if (doc.GroupId is int groupId)
+            {
+                var node = Groups.FirstOrDefault(g => g.GroupId == groupId && !g.IsFolder);
+                if (node is not null && !ReferenceEquals(SelectedGroup, node))
+                {
+                    _suppressGroupRefresh = true;
+                    SelectedGroup = node;
+                    _suppressGroupRefresh = false;
+                    await RefreshDocumentsAsync();
+                }
+            }
+            var target = Documents.FirstOrDefault(d => d.Id == documentId);
+            if (target is not null) target.IsSelected = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Reveal document {Id} failed.", documentId);
+        }
+    }
+
     [RelayCommand]
     private async Task RefreshAsync() => await LoadAsync();
 

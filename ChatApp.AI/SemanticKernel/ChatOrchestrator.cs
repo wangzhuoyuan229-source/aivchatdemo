@@ -1,4 +1,5 @@
 using System.Text;
+using ChatApp.AI.Caching;
 using ChatApp.Core.Models;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
@@ -24,6 +25,9 @@ public class ChatOrchestrator : IChatService
     private readonly IKnowledgeService _knowledge;
     private readonly IServiceProvider _services;
     private readonly ILogger<ChatOrchestrator> _logger;
+
+    /// <summary>Per-conversation knowledge recall dedup so repeated questions skip vector search (3.3).</summary>
+    private readonly ScopedQueryCache<KnowledgeRetrievalResult> _knowledgeCache = new();
 
     public ChatOrchestrator(
         IConfigurationService config,
@@ -52,6 +56,42 @@ public class ChatOrchestrator : IChatService
         if (string.IsNullOrWhiteSpace(settings.ApiKey) || string.IsNullOrWhiteSpace(settings.ChatModel))
             throw new InvalidOperationException("尚未配置 API Key 或聊天模型，请先打开设置。");
 
+        var (role, _, _) = await ResolvePrivateConversationAsync(conversationId, ct);
+
+        // 1. Persist user message.
+        var userMsg = await _history.AddMessageAsync(new Message
+        {
+            ConversationId = conversationId,
+            RoleId = role.Id,
+            Author = MessageAuthor.User,
+            Content = userText,
+            TokenEstimate = EstimateTokens(userText, settings)
+        }, ct);
+
+        return await GenerateReplyAsync(conversationId, role, settings, streamingProgress, ct);
+    }
+
+    public async Task<Message> RegenerateAsync(int conversationId, IProgress<string>? streamingProgress = null, CancellationToken ct = default)
+    {
+        var settings = await _config.LoadAsync(ct);
+        if (string.IsNullOrWhiteSpace(settings.ApiKey) || string.IsNullOrWhiteSpace(settings.ChatModel))
+            throw new InvalidOperationException("尚未配置 API Key 或聊天模型，请先打开设置。");
+
+        var (role, _, _) = await ResolvePrivateConversationAsync(conversationId, ct);
+
+        // Drop the previous assistant reply (if any) so the regenerated answer
+        // replaces it in history and in future context windows.
+        var messages = await _history.GetMessagesAsync(conversationId, int.MaxValue, ct);
+        var last = messages.LastOrDefault();
+        if (last is not null && last.Author == MessageAuthor.Assistant)
+            await _history.DeleteMessageAsync(last.Id, ct);
+
+        return await GenerateReplyAsync(conversationId, role, settings, streamingProgress, ct);
+    }
+
+    private async Task<(Role Role, Conversation Conversation, AiSettings Settings)> ResolvePrivateConversationAsync(
+        int conversationId, CancellationToken ct)
+    {
         var conv = await _history.GetConversationAsync(conversationId, ct)
             ?? throw new InvalidOperationException("会话不存在。");
         if (conv.Type != ConversationType.Private || conv.RoleId is null)
@@ -59,17 +99,18 @@ public class ChatOrchestrator : IChatService
         var roleId = conv.RoleId.Value;
         var role = await _roles.GetAsync(roleId, ct)
             ?? throw new InvalidOperationException("角色不存在。");
+        var settings = await _config.LoadAsync(ct);
+        return (role, conv, settings);
+    }
 
-        // 1. Persist user message.
-        var userMsg = await _history.AddMessageAsync(new Message
-        {
-            ConversationId = conversationId,
-            RoleId = roleId,
-            Author = MessageAuthor.User,
-            Content = userText,
-            TokenEstimate = EstimateTokens(userText, settings)
-        }, ct);
-
+    /// <summary>Shared reply pipeline: context assembly → retrieval → streaming → persist.</summary>
+    private async Task<Message> GenerateReplyAsync(
+        int conversationId,
+        Role role,
+        AiSettings settings,
+        IProgress<string>? streamingProgress,
+        CancellationToken ct)
+    {
         // 2. Short-term context and a context-aware retrieval query. The current
         // user message is already present in this window.
         var all = await _history.GetMessagesAsync(conversationId, settings.ContextWindowSize, ct);
@@ -103,8 +144,8 @@ public class ChatOrchestrator : IChatService
             try
             {
                 var groupIds = await _roles.GetKnowledgeGroupIdsAsync(role.Id, ct);
-                knowledgeResult = await _knowledge.RetrieveAsync(
-                    BuildKnowledgeRequest(settings, retrievalQuery, groupIds), ct);
+                knowledgeResult = await RetrieveKnowledgeCachedAsync(
+                    conversationId, role.Id, retrievalQuery, groupIds, settings, ct);
             }
             catch (Exception ex)
             {
@@ -117,20 +158,14 @@ public class ChatOrchestrator : IChatService
             "Role {RoleId} knowledge status {Status}; context chunks {Count}, image candidates {ImageCount}.",
             role.Id, knowledgeResult.Status, knowledgeResult.Hits.Count, knowledgeResult.ImageHits.Count);
 
-        // 5. Assemble ChatHistory.
-        var systemPrompt = BuildSystemPrompt(role, memoryHits, knowledgeResult, knowledgeResult.ImageHits);
-        var skHistory = new ChatHistory(systemPrompt);
-        foreach (var m in window)
-        {
-            if (m.Author == MessageAuthor.System) continue;
-            skHistory.AddMessage(
-                m.Author == MessageAuthor.User ? AuthorRole.User : AuthorRole.Assistant,
-                FormatMessageForContext(m));
-        }
-
-        // 6. Stream completion.
+        // 5. Assemble ChatHistory (optional rolling summary replaces dropped history).
         var kernel = KernelFactory.Build(settings);
         var chat = kernel.GetRequiredService<IChatCompletionService>();
+        var systemPrompt = BuildSystemPrompt(role, memoryHits, knowledgeResult, knowledgeResult.ImageHits);
+        var skHistory = await BuildContextHistoryAsync(
+            conversationId, role, settings, systemPrompt, chat, kernel, ct);
+
+        // 6. Stream completion.
         var execSettings = new OpenAIPromptExecutionSettings
         {
             Temperature = Math.Clamp(settings.ChatTemperature, 0, 2),
@@ -157,13 +192,18 @@ public class ChatOrchestrator : IChatService
 
         var attachments = await _knowledge.CreateMessageAttachmentSnapshotsAsync(selection.DocumentIds, ct);
 
-        // 7. Persist assistant reply.
+        // 7. Persist assistant reply with citation metadata for strict grounded replies.
+        var citedIds = knowledgeResult.Status == KnowledgeRetrievalStatus.Found
+            ? knowledgeResult.Hits.Select(h => h.DocumentId).Distinct().ToList()
+            : new List<int>();
+
         var assistantMsg = await _history.AddMessageAsync(new Message
         {
             ConversationId = conversationId,
-            RoleId = roleId,
+            RoleId = role.Id,
             Author = MessageAuthor.Assistant,
             Content = reply,
+            CitedDocumentIds = MessageCitations.Format(citedIds),
             TokenEstimate = EstimateTokens(reply, settings),
             Attachments = attachments.ToList()
         }, ct);
@@ -175,7 +215,11 @@ public class ChatOrchestrator : IChatService
             {
                 var affinity = _services.GetService<IAffinityService>();
                 if (affinity is not null)
-                    await affinity.UpdateAsync(role.Id, userText, reply, ct);
+                {
+                    var latestUser = skHistory.Where(m => m.Role == AuthorRole.User)
+                        .LastOrDefault()?.Content ?? string.Empty;
+                    await affinity.UpdateAsync(role.Id, latestUser, reply, ct);
+                }
             }
             catch (Exception ex)
             {
@@ -184,6 +228,153 @@ public class ChatOrchestrator : IChatService
         }
 
         return assistantMsg;
+    }
+
+    /// <summary>
+    /// Rolling LLM summary of messages that fell out of the short-term window.
+    /// Kept in memory per conversation; failures make the caller fall back to truncation.
+    /// </summary>
+    private sealed record ContextSummaryState(int UpToMessageId, string Summary);
+
+    private readonly Dictionary<int, ContextSummaryState> _contextSummaries = new();
+
+    /// <summary>
+    /// Builds the ChatHistory sent to the model: system prompt, optional rolling
+    /// summary of older messages, then the most recent verbatim messages.
+    /// </summary>
+    private async Task<ChatHistory> BuildContextHistoryAsync(
+        int conversationId,
+        Role role,
+        AiSettings settings,
+        string systemPrompt,
+        IChatCompletionService chat,
+        Kernel kernel,
+        CancellationToken ct)
+    {
+        var window = await _history.GetMessagesAsync(conversationId, settings.ContextWindowSize, ct);
+        var recent = window.Where(m => m.Author != MessageAuthor.System).ToList();
+
+        if (settings.EnableContextSummarization && window.Count >= settings.ContextWindowSize)
+        {
+            try
+            {
+                var keepRecent = Math.Clamp(settings.ContextSummaryKeepRecent, 2, settings.ContextWindowSize - 1);
+                var older = window.Take(window.Count - keepRecent).ToList();
+                var summary = await GetOrCreateSummaryAsync(conversationId, role, older, settings, chat, kernel, ct);
+                if (!string.IsNullOrWhiteSpace(summary))
+                {
+                    var summarized = window.Skip(window.Count - keepRecent).ToList();
+                    return BuildSkHistory(systemPrompt, summary, summarized);
+                }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Acceptance fallback: summary failure must degrade to plain truncation.
+                _logger.LogWarning(ex, "Context summarization failed; falling back to truncation.");
+            }
+        }
+
+        var history = new ChatHistory(systemPrompt);
+        foreach (var m in recent)
+            history.AddMessage(
+                m.Author == MessageAuthor.User ? AuthorRole.User : AuthorRole.Assistant,
+                FormatMessageForContext(m));
+        return history;
+    }
+
+    private static ChatHistory BuildSkHistory(string systemPrompt, string summary, IReadOnlyList<Message> recent)
+    {
+        var history = new ChatHistory(systemPrompt);
+        history.AddSystemMessage(
+            "[早期对话摘要——仅供连贯性参考，不是客观设定依据]\n" + summary.Trim());
+        foreach (var m in recent)
+        {
+            history.AddMessage(
+                m.Author == MessageAuthor.User ? AuthorRole.User : AuthorRole.Assistant,
+                FormatMessageForContext(m));
+        }
+        return history;
+    }
+
+    private async Task<string> GetOrCreateSummaryAsync(
+        int conversationId,
+        Role role,
+        IReadOnlyList<Message> older,
+        AiSettings settings,
+        IChatCompletionService chat,
+        Kernel kernel,
+        CancellationToken ct)
+    {
+        if (older.Count == 0)
+            return _contextSummaries.TryGetValue(conversationId, out var emptyState) ? emptyState.Summary : string.Empty;
+
+        var cached = _contextSummaries.TryGetValue(conversationId, out var state) ? state : null;
+        var pending = cached is null ? older : older.Where(m => m.Id > cached.UpToMessageId).ToList();
+        if (cached is not null && pending.Count == 0)
+            return cached.Summary;
+
+        var transcript = FormatSummaryTranscript(pending);
+        var prompt = BuildSummaryPrompt(cached?.Summary, transcript);
+        var summaryHistory = new ChatHistory(
+            "你是对话摘要助手。输出一段紧凑的中文叙述摘要，不列清单、不加标题。");
+        summaryHistory.AddUserMessage(prompt);
+        var reply = await chat.GetChatMessageContentAsync(
+            summaryHistory,
+            new OpenAIPromptExecutionSettings { Temperature = 0.2, MaxTokens = 700 },
+            kernel,
+            ct);
+        var summary = reply.Content?.Trim();
+        if (string.IsNullOrWhiteSpace(summary))
+            throw new InvalidOperationException("摘要为空。");
+
+        _contextSummaries[conversationId] = new ContextSummaryState(pending[^1].Id, summary);
+
+        // Best effort: keep the first summary for this conversation as a long-term memory.
+        if (cached is null && settings.EnableLongTermMemory)
+        {
+            try
+            {
+                await _memory.RememberAsync(role.Id, conversationId, $"对话摘要：{summary}", ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Persisting context summary to memory skipped.");
+            }
+        }
+
+        return summary;
+    }
+
+    internal static string FormatSummaryTranscript(IReadOnlyList<Message> messages)
+    {
+        var sb = new StringBuilder();
+        foreach (var m in messages)
+        {
+            if (m.Author == MessageAuthor.System) continue;
+            var content = m.Content.Trim();
+            if (content.Length == 0) continue;
+            if (content.Length > 500) content = content[..500];
+            sb.Append(m.Author == MessageAuthor.User ? "用户：" : "角色：").AppendLine(content);
+        }
+        return sb.ToString();
+    }
+
+    internal static string BuildSummaryPrompt(string? existingSummary, string transcript)
+    {
+        var sb = new StringBuilder();
+        sb.Append("请把以下角色扮演对话压缩为不超过 400 字的摘要，重点保留：关键事件与时间线、");
+        sb.Append("人物关系变化、双方的承诺与约定、重要的情绪转折，以及尚未解决的悬念。");
+        sb.Append("不要加入对话中没有出现的新信息。\n\n");
+        if (!string.IsNullOrWhiteSpace(existingSummary))
+            sb.Append("已有摘要（请把新内容融合进去，输出融合后的完整摘要）：\n")
+              .Append(existingSummary.Trim())
+              .Append("\n\n");
+        sb.Append("新增对话：\n").Append(transcript);
+        return sb.ToString();
     }
 
     public async Task<Message> GreetAsync(int conversationId, CancellationToken ct = default)
@@ -382,6 +573,30 @@ public class ChatOrchestrator : IChatService
         ImageTopK = settings.KnowledgeImageTopK,
         ImageMinScore = settings.KnowledgeImageMinScore
     };
+
+    /// <summary>
+    /// Retrieves knowledge through the per-conversation cache; the key covers the
+    /// normalized query and the role's bound group ids so scope changes stay fresh.
+    /// </summary>
+    private async Task<KnowledgeRetrievalResult> RetrieveKnowledgeCachedAsync(
+        int conversationId,
+        int roleId,
+        string retrievalQuery,
+        IReadOnlyCollection<int> groupIds,
+        AiSettings settings,
+        CancellationToken ct)
+    {
+        var scope = $"conv:{conversationId}:{roleId}";
+        var key = $"{NormalizeQueryKey(retrievalQuery)}|{string.Join(",", groupIds.OrderBy(g => g))}";
+        if (_knowledgeCache.TryGet(scope, key, out var cached)) return cached;
+        var result = await _knowledge.RetrieveAsync(
+            BuildKnowledgeRequest(settings, retrievalQuery, groupIds), ct);
+        _knowledgeCache.Set(scope, key, result);
+        return result;
+    }
+
+    private static string NormalizeQueryKey(string query) =>
+        string.Join(" ", query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
 
     internal static string FormatMessageForContext(Message message)
     {

@@ -79,20 +79,32 @@ public sealed class BoolToFlowDirectionConverter : ConverterBase
 public sealed class BubbleBrushConverter : ConverterBase
 {
     public static readonly BubbleBrushConverter Instance = new();
-    private static readonly IBrush User = new SolidColorBrush(Color.Parse("#95EC69"));
+    private static readonly IBrush LightUser = new SolidColorBrush(Color.Parse("#95EC69"));
+
+    /// <summary>Resolves the active theme's bubble brushes so dark mode restyles bubbles live.</summary>
     public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is true ? User : Brushes.White;
+    {
+        var key = value is true ? "UserBubbleBrush" : "AssistantBubbleBrush";
+        if (Application.Current?.Resources[key] is IBrush themed)
+            return themed;
+        return value is true ? LightUser : Brushes.White;
+    }
 }
 
 public sealed class FilePathToBitmapConverter : ConverterBase
 {
+    private static readonly ConcurrentDictionary<string, Bitmap> Cache = new(StringComparer.Ordinal);
+
     public override object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not string path || string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
         try
         {
-            using var stream = File.OpenRead(path);
-            return Bitmap.DecodeToWidth(stream, 360, BitmapInterpolationMode.MediumQuality);
+            return Cache.GetOrAdd(path, static source =>
+            {
+                using var stream = File.OpenRead(source);
+                return Bitmap.DecodeToWidth(stream, 360, BitmapInterpolationMode.MediumQuality);
+            });
         }
         catch { return null; }
     }

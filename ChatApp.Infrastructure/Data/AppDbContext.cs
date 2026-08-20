@@ -54,7 +54,9 @@ public class AppDbContext : DbContext
         b.Entity<Message>(e =>
         {
             e.HasIndex(x => x.ConversationId);
+            e.HasIndex(x => new { x.ConversationId, x.Id });
             e.Property(x => x.Content).IsRequired();
+            e.Property(x => x.CitedDocumentIds).HasDefaultValue("");
             e.HasMany(x => x.Attachments)
                 .WithOne(x => x.Message)
                 .HasForeignKey(x => x.MessageId)
@@ -74,7 +76,9 @@ public class AppDbContext : DbContext
         b.Entity<Conversation>(e =>
         {
             e.HasIndex(x => x.RoleId);
+            e.HasIndex(x => new { x.IsPinned, x.UpdatedAt });
             e.Property(x => x.Title).HasDefaultValue("");
+            e.Property(x => x.IsPinned).HasDefaultValue(false);
         });
 
         b.Entity<ConversationMember>(e =>

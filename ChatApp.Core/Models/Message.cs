@@ -21,12 +21,40 @@ public class Message
 
     public string Content { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Comma-separated knowledge-document ids whose content grounded this reply
+    /// (citation tracing). Empty when the reply used no knowledge hits.
+    /// </summary>
+    public string CitedDocumentIds { get; set; } = string.Empty;
+
     /// <summary>Token/character count for the message (for context-window accounting).</summary>
     public int TokenEstimate { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public List<MessageAttachment> Attachments { get; set; } = new();
+
+    /// <summary>Parses <see cref="CitedDocumentIds"/> into a distinct, ordered id list.</summary>
+    public IReadOnlyList<int> GetCitedDocumentIdList() => MessageCitations.Parse(CitedDocumentIds);
+}
+
+/// <summary>Helpers for the comma-separated citation column on <see cref="Message"/>.</summary>
+public static class MessageCitations
+{
+    public static IReadOnlyList<int> Parse(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return Array.Empty<int>();
+        var result = new List<int>();
+        foreach (var part in value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (int.TryParse(part, out var id) && id > 0 && !result.Contains(id))
+                result.Add(id);
+        }
+        return result;
+    }
+
+    public static string Format(IEnumerable<int> documentIds) =>
+        string.Join(",", documentIds.Distinct());
 }
 
 public enum MessageAttachmentKind
@@ -74,6 +102,9 @@ public class Conversation
     public ConversationType Type { get; set; } = ConversationType.Private;
 
     public string Title { get; set; } = string.Empty;
+
+    /// <summary>Pinned conversations sort above unpinned ones regardless of recency.</summary>
+    public bool IsPinned { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

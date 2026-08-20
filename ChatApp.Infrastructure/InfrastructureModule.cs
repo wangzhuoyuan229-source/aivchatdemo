@@ -19,6 +19,7 @@ public static class InfrastructureModule
         services.AddSingleton<IRoleService, RoleService>();
         services.AddSingleton<IChatHistoryService, ChatHistoryService>();
         services.AddSingleton<IConfigurationService, ConfigurationService>();
+        services.AddSingleton<IUiSettingsService, UiSettingsService>();
 
         return services;
     }
@@ -38,6 +39,10 @@ public static class InfrastructureModule
         await MigrateGroundedDialogueAsync(db, ct);
         // 图片知识项、独立消息附件与历史快照。
         await MigrateKnowledgeImagesAsync(db, ct);
+        // 会话置顶 + 知识引用溯源列。
+        await MigrateConversationExtrasAsync(db, ct);
+        // 计划 3：消息/会话查询索引（幂等）。
+        await MigratePlan3IndexesAsync(db, ct);
 
         // Preset roles seeding disabled — new databases start with an empty role library.
         // var roleService = services.GetRequiredService<IRoleService>();
@@ -305,6 +310,62 @@ public static class InfrastructureModule
                     await ixRole.ExecuteNonQueryAsync(ct);
                 }
             }
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
+    }
+
+    /// <summary>Adds conversation pinning and message citation columns. Idempotent.</summary>
+    internal static async Task MigrateConversationExtrasAsync(AppDbContext db, CancellationToken ct)
+    {
+        var conn = db.Database.GetDbConnection() as SqliteConnection;
+        if (conn is null) return;
+
+        await conn.OpenAsync(ct);
+        try
+        {
+            var conversationColumns = await ReadColumnsAsync(conn, "Conversations", ct);
+            if (!conversationColumns.ContainsKey("IsPinned"))
+            {
+                using var addPinned = new SqliteCommand(
+                    "ALTER TABLE \"Conversations\" ADD COLUMN \"IsPinned\" INTEGER NOT NULL DEFAULT 0;", conn);
+                await addPinned.ExecuteNonQueryAsync(ct);
+            }
+
+            var messageColumns = await ReadColumnsAsync(conn, "Messages", ct);
+            if (messageColumns.Count > 0 && !messageColumns.ContainsKey("CitedDocumentIds"))
+            {
+                using var addCitations = new SqliteCommand(
+                    "ALTER TABLE \"Messages\" ADD COLUMN \"CitedDocumentIds\" TEXT NOT NULL DEFAULT '';", conn);
+                await addCitations.ExecuteNonQueryAsync(ct);
+            }
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
+    }
+
+    /// <summary>Adds plan-3 query indexes (message window + pinned sort). Idempotent.</summary>
+    internal static async Task MigratePlan3IndexesAsync(AppDbContext db, CancellationToken ct)
+    {
+        var conn = db.Database.GetDbConnection() as SqliteConnection;
+        if (conn is null) return;
+
+        await conn.OpenAsync(ct);
+        try
+        {
+            await using var messageIndex = new SqliteCommand(
+                "CREATE INDEX IF NOT EXISTS \"IX_Messages_ConversationId_Id\" " +
+                "ON \"Messages\" (\"ConversationId\", \"Id\");", conn);
+            await messageIndex.ExecuteNonQueryAsync(ct);
+
+            await using var conversationIndex = new SqliteCommand(
+                "CREATE INDEX IF NOT EXISTS \"IX_Conversations_IsPinned_UpdatedAt\" " +
+                "ON \"Conversations\" (\"IsPinned\", \"UpdatedAt\");", conn);
+            await conversationIndex.ExecuteNonQueryAsync(ct);
         }
         finally
         {

@@ -14,7 +14,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="{Binding PromptText}" FontWeight="SemiBold" TextWrapping="Wrap"
-                   Foreground="{StaticResource TextMainBrush}"/>
+                   Foreground="{DynamicResource TextMainBrush}"/>
         <TextBox Grid.Row="2" x:Name="InputBox" Text="{Binding InputText}"
                  Padding="6,4" FontSize="14" KeyDown="InputBox_KeyDown"/>
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">

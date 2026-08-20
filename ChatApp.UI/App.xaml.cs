@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using ChatApp.AI;
+using ChatApp.Core.Services;
 using ChatApp.Infrastructure;
 using ChatApp.UI.Services;
 using ChatApp.UI.ViewModels;
@@ -26,6 +27,7 @@ public partial class App : Application
             {
                 logging.SetMinimumLevel(LogLevel.Information);
                 logging.AddDebug();
+                logging.AddProvider(new RollingFileLoggerProvider(ChatApp.Infrastructure.Data.AppPaths.LogDir));
             })
             .ConfigureServices((_, services) =>
             {
@@ -41,6 +43,7 @@ public partial class App : Application
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<CreateRoleViewModel>();
                 services.AddSingleton<CreateGroupChatViewModel>();
+                services.AddSingleton<MemoryManagementViewModel>();
                 services.AddSingleton<MainWindow>();
             })
             .Build();
@@ -56,8 +59,12 @@ public partial class App : Application
             try
             {
                 await InfrastructureModule.InitializeAsync(_host.Services);
+                // Apply persisted theme + reading preferences before first paint where possible.
+                var uiSettings = await _host.Services.GetRequiredService<IUiSettingsService>().LoadAsync();
+                ThemeService.Apply(uiSettings.Theme);
                 var mainViewModel = (MainViewModel)window.DataContext;
                 await mainViewModel.InitializeAsync();
+                mainViewModel.Chat.ApplyUiSettings(uiSettings);
                 _ = mainViewModel.Knowledge.ImportBundledKnowledgeAsync();
             }
             catch (Exception ex)

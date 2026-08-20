@@ -1,4 +1,5 @@
 using System.Text;
+using ChatApp.AI.Caching;
 using ChatApp.Core.Models;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
@@ -18,6 +19,9 @@ public class MemoryService : IMemoryService
     private readonly IChatHistoryService _history;
     private readonly IConfigurationService _config;
     private readonly ILogger<MemoryService> _logger;
+
+    /// <summary>Per-role recall dedup so repeated similar questions skip embedding + search (3.3).</summary>
+    private readonly ScopedQueryCache<IReadOnlyList<VectorSearchHit>> _recallCache = new();
 
     public MemoryService(
         IDbContextFactory<AppDbContext> factory,
@@ -114,21 +118,60 @@ public class MemoryService : IMemoryService
     public async Task<IReadOnlyList<VectorSearchHit>> RecallAsync(int roleId, string query, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query)) return Array.Empty<VectorSearchHit>();
+        var scope = $"{ScopePrefix}{roleId}";
+        var key = NormalizeQuery(query);
+        if (_recallCache.TryGet(scope, key, out var cached)) return cached;
+
         var settings = await _config.LoadAsync(ct);
         var qv = await _embedding.EmbedAsync(query, ct);
-        return await _vectors.SearchAsync(
+        var hits = await _vectors.SearchAsync(
             qv,
-            $"{ScopePrefix}{roleId}",
+            scope,
             settings.MemoryTopK,
             minScore: 0,
             allowedIds: null,
             ct: ct);
+        _recallCache.Set(scope, key, hits);
+        return hits;
     }
+
+    /// <summary>Lowercases and collapses whitespace so similar phrasings share a cache key.</summary>
+    private static string NormalizeQuery(string query) =>
+        string.Join(" ", query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
 
     public async Task<IReadOnlyList<MemoryEntry>> ListAsync(int roleId, CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
         return await db.MemoryEntries.AsNoTracking().Where(m => m.RoleId == roleId).OrderByDescending(m => m.Id).ToListAsync(ct);
+    }
+
+    public async Task UpdateAsync(int memoryId, string content, CancellationToken ct = default)
+    {
+        var normalized = content.Trim();
+        if (normalized.Length == 0) throw new InvalidOperationException("记忆内容不能为空。");
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        var entry = await db.MemoryEntries.FirstOrDefaultAsync(m => m.Id == memoryId, ct)
+            ?? throw new InvalidOperationException("记忆条目不存在。");
+        entry.Content = normalized;
+        await db.SaveChangesAsync(ct);
+
+        // Re-embed under the same vector key so recall reflects the edit immediately.
+        try
+        {
+            var vector = await _embedding.EmbedAsync(normalized, ct);
+            await _vectors.UpsertAsync(new VectorRecord
+            {
+                Id = entry.ExternalId,
+                Scope = $"{ScopePrefix}{entry.RoleId}",
+                Content = normalized,
+                Embedding = vector
+            }, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Re-embedding edited memory {Id} failed; content update kept.", memoryId);
+        }
+        _recallCache.InvalidateScope($"{ScopePrefix}{entry.RoleId}");
     }
 
     public async Task ForgetAsync(int memoryId, CancellationToken ct = default)
@@ -140,6 +183,7 @@ public class MemoryService : IMemoryService
             await _vectors.DeleteAsync(entry.ExternalId, ct);
         db.MemoryEntries.Remove(entry);
         await db.SaveChangesAsync(ct);
+        _recallCache.InvalidateScope($"{ScopePrefix}{entry.RoleId}");
     }
 
     public async Task ClearForRoleAsync(int roleId, CancellationToken ct = default)
@@ -148,6 +192,7 @@ public class MemoryService : IMemoryService
         await using var db = await _factory.CreateDbContextAsync(ct);
         db.MemoryEntries.RemoveRange(db.MemoryEntries.Where(m => m.RoleId == roleId));
         await db.SaveChangesAsync(ct);
+        _recallCache.InvalidateScope($"{ScopePrefix}{roleId}");
     }
 
     private async Task<int> ReadProgressAsync(string key, CancellationToken ct)

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using ChatApp.AI.Caching;
 using ChatApp.Core.Models;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
@@ -25,6 +26,9 @@ public class GroupChatOrchestrator : IGroupChatService
     private readonly IMemoryService _memory;
     private readonly IKnowledgeService _knowledge;
     private readonly ILogger<GroupChatOrchestrator> _logger;
+
+    /// <summary>Per-conversation+role knowledge recall dedup (3.3).</summary>
+    private readonly ScopedQueryCache<KnowledgeRetrievalResult> _knowledgeCache = new();
 
     public GroupChatOrchestrator(
         IConfigurationService config,
@@ -139,8 +143,14 @@ public class GroupChatOrchestrator : IGroupChatService
                 try
                 {
                     var groupIds = await _roles.GetKnowledgeGroupIdsAsync(role.Id, ct);
-                    knowledgeResult = await _knowledge.RetrieveAsync(
-                        ChatOrchestrator.BuildKnowledgeRequest(settings, retrievalQuery, groupIds), ct);
+                    var scope = $"conv:{conversationId}:{role.Id}";
+                    var key = $"{string.Join(" ", retrievalQuery.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant()}|{string.Join(",", groupIds.OrderBy(g => g))}";
+                    if (!_knowledgeCache.TryGet(scope, key, out knowledgeResult))
+                    {
+                        knowledgeResult = await _knowledge.RetrieveAsync(
+                            ChatOrchestrator.BuildKnowledgeRequest(settings, retrievalQuery, groupIds), ct);
+                        _knowledgeCache.Set(scope, key, knowledgeResult);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -180,12 +190,17 @@ public class GroupChatOrchestrator : IGroupChatService
 
             var attachments = await _knowledge.CreateMessageAttachmentSnapshotsAsync(selection.DocumentIds, ct);
 
+            var citedIds = knowledgeResult.Status == KnowledgeRetrievalStatus.Found
+                ? knowledgeResult.Hits.Select(h => h.DocumentId).Distinct().ToList()
+                : new List<int>();
+
             var msg = await _history.AddMessageAsync(new Message
             {
                 ConversationId = conversationId,
                 RoleId = role.Id,
                 Author = MessageAuthor.Assistant,
                 Content = reply,
+                CitedDocumentIds = MessageCitations.Format(citedIds),
                 TokenEstimate = EstimateTokens(reply, settings),
                 Attachments = attachments.ToList()
             }, ct);
