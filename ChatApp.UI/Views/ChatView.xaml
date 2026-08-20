@@ -195,6 +195,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBox Grid.Column="0" x:Name="InputBox" Text="{Binding InputText}"
                              AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             Watermark="输入消息，回车发送 · Shift+回车换行"
                              MaxHeight="120" MinHeight="40" FontSize="14" Padding="10,8"
                              KeyDown="InputBox_KeyDown"/>
                     <Button Grid.Column="1" Classes="ghost" Content="停止"

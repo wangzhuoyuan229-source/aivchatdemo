@@ -61,13 +61,21 @@ public partial class KnowledgeViewModel : ViewModelBase
         try
         {
             var previousSelectionKey = SelectedGroup?.SelectionKey;
+            // Preserve expansion states across reloads (e.g. after import/refresh).
+            var previousExpansions = Groups.ToDictionary(g => g.SelectionKey, g => g.IsExpanded);
             var groups = await _knowledge.ListGroupsAsync();
             var allDocs = await _knowledge.ListDocumentsAsync();
 
             _suppressGroupRefresh = true;
             Groups.Clear();
             foreach (var node in KnowledgeFolderTree.Build(groups, allDocs))
+            {
+                if (previousExpansions.TryGetValue(node.SelectionKey, out var wasExpanded))
+                    node.IsExpanded = wasExpanded;
                 Groups.Add(node);
+            }
+            ComputeGroupHasChildren();
+            UpdateGroupVisibility();
             SelectedGroup = Groups.FirstOrDefault(node => node.SelectionKey == previousSelectionKey) ?? Groups.FirstOrDefault();
             _suppressGroupRefresh = false;
 
@@ -78,6 +86,92 @@ public partial class KnowledgeViewModel : ViewModelBase
             _suppressGroupRefresh = false;
             _logger.LogError(ex, "Failed to load knowledge view.");
         }
+    }
+
+    private void ComputeGroupHasChildren()
+    {
+        foreach (var node in Groups)
+        {
+            if (node.GroupId == -1)
+            {
+                node.HasChildren = false;
+                continue;
+            }
+            if (string.IsNullOrEmpty(node.FolderPath))
+            {
+                // Group root: has children if any folder with same GroupId exists.
+                node.HasChildren = Groups.Any(other => other.GroupId == node.GroupId && !string.IsNullOrEmpty(other.FolderPath));
+            }
+            else
+            {
+                var prefix = node.FolderPath + "/";
+                node.HasChildren = Groups.Any(other =>
+                    other.GroupId == node.GroupId &&
+                    !string.IsNullOrEmpty(other.FolderPath) &&
+                    other.FolderPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+    }
+
+    private void UpdateGroupVisibility()
+    {
+        foreach (var node in Groups)
+        {
+            if (node.GroupId == -1 || string.IsNullOrEmpty(node.FolderPath))
+            {
+                node.IsVisible = true;
+                continue;
+            }
+            var visible = true;
+            var current = node.FolderPath;
+            while (true)
+            {
+                var parentPath = GetParentFolderPath(current);
+                GroupNode? parent;
+                if (string.IsNullOrEmpty(parentPath))
+                    parent = Groups.FirstOrDefault(g => g.GroupId == node.GroupId && g.FolderPath == string.Empty);
+                else
+                    parent = Groups.FirstOrDefault(g => g.GroupId == node.GroupId && string.Equals(g.FolderPath, parentPath, StringComparison.OrdinalIgnoreCase));
+                if (parent is null) break;
+                if (!parent.IsExpanded)
+                {
+                    visible = false;
+                    break;
+                }
+                if (string.IsNullOrEmpty(parent.FolderPath)) break;
+                current = parent.FolderPath;
+            }
+            node.IsVisible = visible;
+        }
+    }
+
+    private static string GetParentFolderPath(string folderPath)
+    {
+        if (string.IsNullOrEmpty(folderPath)) return string.Empty;
+        var idx = folderPath.LastIndexOf('/');
+        return idx <= 0 ? string.Empty : folderPath[..idx];
+    }
+
+    [RelayCommand]
+    private void ToggleGroupExpansion(GroupNode? node)
+    {
+        if (node is null || !node.HasChildren) return;
+        node.IsExpanded = !node.IsExpanded;
+        UpdateGroupVisibility();
+    }
+
+    [RelayCommand]
+    private void ExpandAllGroups()
+    {
+        foreach (var node in Groups) if (node.HasChildren) node.IsExpanded = true;
+        UpdateGroupVisibility();
+    }
+
+    [RelayCommand]
+    private void CollapseAllGroups()
+    {
+        foreach (var node in Groups) if (node.HasChildren) node.IsExpanded = false;
+        UpdateGroupVisibility();
     }
 
     /// <summary>

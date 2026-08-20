@@ -2,6 +2,20 @@
 
 项目遵循语义化版本号。版本日期按 Asia/Shanghai 记录。
 
+## [1.3.1] - 2026-08-21
+
+### 改进
+
+- 修复知识库/设置页左侧 340px 空白占位：`MainWindow` 中间栏改为 `Auto` + `IsVisible="{Binding MiddleView}"` 折叠，`RightView` 占满剩余宽度；左下角版本标识升至 `v1.3.1`。
+- 知识库“分组 / 文件夹”支持折叠：`GroupNode` 新增 `IsExpanded/HasChildren/IsVisible`，`KnowledgeFolderTree` 按 `FolderPath` 前缀判定父子，`KnowledgeView` 左栏新增“全部展开/全部折叠”与每行 `▾/▸` 按钮，子文件夹随祖先联动隐藏，折叠状态在刷新/导入后保留。
+- 删除“外观与阅读”设置：移除设置页深色主题切换与聊天气泡字号调节，启动时不再读取 `UiSettings` 并固定 Light 主题与 14 号字，相关 `ThemeMode/ChatFontSize` 文案与校验逻辑一并清理。
+- 设置页为 34 项设置添加“?”通俗帮助：每项标签旁 `16×16 圆形 ?`，`ToolTip Placement=Right/ShowDelay=0` 悬停即显、移开隐藏，同时 `Flyout` 点击可常驻；修复初版 `Border Top/200ms` 悬停不显示问题，文案面向非专业用户解释作用与可选值（如统一 API、Embedding 预设、协议、Top-K、温度等）。
+- 聊天输入框支持回车发送：`ChatView` 的 `InputBox_KeyDown` 兼容 `Key.Enter/Return`，`Enter` 发送、`Shift+Enter` 换行，增加 `Watermark="输入消息，回车发送 · Shift+回车换行"` 提示。
+
+### 质量保障
+
+- `dotnet build` 0 警告/0 错误，`dotnet test` 117 项通过，发布脚本 `BundledKnowledge` 拷贝校验仍通过。
+
 ## [1.3.0] - 2026-08-20
 
 ### 新增

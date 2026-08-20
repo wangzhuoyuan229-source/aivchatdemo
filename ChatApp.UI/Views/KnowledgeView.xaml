@@ -95,13 +95,22 @@
             <!-- 左侧：分组列表 -->
             <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="分组 / 文件夹" FontWeight="SemiBold" FontSize="13" Margin="16,12,0,8"/>
+                    <DockPanel DockPanel.Dock="Top" Margin="16,12,8,8">
+                        <TextBlock Text="分组 / 文件夹" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
+                            <Button Classes="ghost" Content="▸ 全部折叠" Padding="6,2" FontSize="11"
+                                    Command="{Binding CollapseAllGroupsCommand}" ToolTip.Tip="折叠所有分组/文件夹"/>
+                            <Button Classes="ghost" Content="▾ 全部展开" Padding="6,2" FontSize="11"
+                                    Command="{Binding ExpandAllGroupsCommand}" ToolTip.Tip="展开所有分组/文件夹"/>
+                        </StackPanel>
+                    </DockPanel>
                     <ListBox x:Name="GroupsList" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"
                              Background="Transparent" BorderThickness="0" Padding="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Grid Margin="8,6">
+                                <Grid Margin="8,6" IsVisible="{Binding IsVisible}">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
@@ -110,14 +119,20 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Width="{Binding IndentWidth}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding Icon}" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Grid.Column="3" Text="{Binding DocumentCount}" Foreground="{DynamicResource TextSubBrush}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                                    <Button Grid.Column="4" Classes="ghost" Content="✎" Padding="4"
+                                    <Button Grid.Column="1" Content="{Binding ExpandGlyph}" FontSize="10" Width="16" Height="16" Padding="0" Margin="0,0,2,0"
+                                            VerticalAlignment="Center" HorizontalAlignment="Center"
+                                            IsVisible="{Binding HasChildren}"
+                                            Command="{Binding DataContext.ToggleGroupExpansionCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            CommandParameter="{Binding}" Background="Transparent" BorderThickness="0"
+                                            ToolTip.Tip="展开/折叠"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Icon}" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding DocumentCount}" Foreground="{DynamicResource TextSubBrush}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                    <Button Grid.Column="5" Classes="ghost" Content="✎" Padding="4"
                                             IsVisible="{Binding SourceGroup, Converter={StaticResource Null2Vis}}"
                                             Command="{Binding DataContext.RenameGroupCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                             CommandParameter="{Binding}" ToolTip.Tip="重命名"/>
-                                    <Button Grid.Column="5" Classes="ghost" Content="×" Padding="4" Foreground="{DynamicResource DangerBrush}"
+                                    <Button Grid.Column="6" Classes="ghost" Content="×" Padding="4" Foreground="{DynamicResource DangerBrush}"
                                             IsVisible="{Binding SourceGroup, Converter={StaticResource Null2Vis}}"
                                             Command="{Binding DataContext.DeleteGroupCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                             CommandParameter="{Binding}" ToolTip.Tip="删除分组"/>

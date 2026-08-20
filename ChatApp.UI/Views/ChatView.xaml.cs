@@ -44,12 +44,14 @@ public partial class ChatView : UserControl
 
     private void InputBox_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None &&
+        var isEnter = e.Key == Key.Enter || e.Key == Key.Return;
+        if (isEnter && e.KeyModifiers == KeyModifiers.None &&
             DataContext is ChatViewModel vm && vm.SendCommand.CanExecute(null))
         {
             vm.SendCommand.Execute(null);
             e.Handled = true;
         }
+        // Shift+Enter 保持换行（AcceptsReturn=true 时默认行为），此处不拦截
     }
 
     private async void Export_Click(object? sender, RoutedEventArgs e)

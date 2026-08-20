@@ -27,7 +27,6 @@ public partial class SettingsViewModel : ViewModelBase
     private AiSettings _settings = new();
     private bool _isApplyingEmbeddingPreset;
     private bool _isApplyingVisionPreset;
-    private bool _isLoadingUiSettings;
 
     private static readonly HashSet<string> PersistedPropertyNames = new()
     {
@@ -86,50 +85,9 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private bool _isTestingEmbedding;
     [ObservableProperty] private string _embeddingTestStatus = string.Empty;
 
-    // ----- 2.5 长对话摘要压缩 / 2.6 外观 -----
+    // ----- 2.5 长对话摘要压缩 -----
     [ObservableProperty] private bool _enableContextSummarization;
     [ObservableProperty] private int _contextSummaryKeepRecent = 10;
-    [ObservableProperty] private ThemeMode _themeMode = ThemeMode.Light;
-    [ObservableProperty] private double _chatFontSize = 14;
-
-    public ObservableCollection<ThemeMode> ThemeModeOptions { get; } = new()
-    {
-        ThemeMode.Light,
-        ThemeMode.Dark,
-        ThemeMode.FollowSystem
-    };
-
-    public ThemeMode[] ThemeModes => new[] { ThemeMode.Light, ThemeMode.Dark, ThemeMode.FollowSystem };
-
-    /// <summary>Applies theme immediately when the dropdown changes.</summary>
-    partial void OnThemeModeChanged(ThemeMode value)
-    {
-        if (_isLoadingUiSettings) return;
-        ThemeService.Apply(value);
-        _ = SaveUiSettingsAsync();
-    }
-
-    partial void OnChatFontSizeChanged(double value)
-    {
-        if (_isLoadingUiSettings) return;
-        _ = SaveUiSettingsAsync();
-    }
-
-    private async Task SaveUiSettingsAsync()
-    {
-        try
-        {
-            await _uiConfig.SaveAsync(new UiSettings
-            {
-                Theme = ThemeMode,
-                ChatFontSize = ChatFontSize
-            });
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"外观设置保存失败：{ex.Message}";
-        }
-    }
 
     private static class VisionPresetNames
     {
@@ -481,18 +439,6 @@ public partial class SettingsViewModel : ViewModelBase
         finally
         {
             _isLoading = false;
-        }
-
-        _isLoadingUiSettings = true;
-        try
-        {
-            var ui = await _uiConfig.LoadAsync();
-            ThemeMode = ui.Theme;
-            ChatFontSize = ui.ChatFontSize;
-        }
-        finally
-        {
-            _isLoadingUiSettings = false;
         }
     }
 

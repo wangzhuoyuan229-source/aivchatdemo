@@ -59,12 +59,8 @@ public partial class App : Application
             try
             {
                 await InfrastructureModule.InitializeAsync(_host.Services);
-                // Apply persisted theme + reading preferences before first paint where possible.
-                var uiSettings = await _host.Services.GetRequiredService<IUiSettingsService>().LoadAsync();
-                ThemeService.Apply(uiSettings.Theme);
                 var mainViewModel = (MainViewModel)window.DataContext;
                 await mainViewModel.InitializeAsync();
-                mainViewModel.Chat.ApplyUiSettings(uiSettings);
                 _ = mainViewModel.Knowledge.ImportBundledKnowledgeAsync();
             }
             catch (Exception ex)

@@ -7,10 +7,11 @@
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BgBrush}">
   <Window.Resources>
+    <conv:NullToVisibilityConverter x:Key="Null2Vis"/>
     <conv:InverseNullToVisibilityConverter x:Key="InverseNull2Vis"/>
     <conv:AccentIfEqualConverter x:Key="AccentIfEqual"/>
   </Window.Resources>
-  <Grid ColumnDefinitions="64,340,*">
+  <Grid ColumnDefinitions="64,Auto,*">
     <Border Grid.Column="0" Background="{DynamicResource NavRailBrush}">
       <Grid RowDefinitions="Auto,*,Auto">
         <TextBlock Grid.Row="0" Text="AI" FontSize="22" FontWeight="Bold" Foreground="White"
@@ -23,12 +24,13 @@
           <Button Classes="nav" ToolTip.Tip="设置" Command="{Binding ShowSettingsCommand}"
                   Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=settings}" Content="⚙️"/>
         </StackPanel>
-        <TextBlock Grid.Row="2" Text="v1.3.0" Foreground="{DynamicResource TimeBrush}" FontSize="10"
+        <TextBlock Grid.Row="2" Text="v1.3.1" Foreground="{DynamicResource TimeBrush}" FontSize="10"
                    HorizontalAlignment="Center" Margin="0,0,0,12"/>
       </Grid>
     </Border>
 
-    <Border Grid.Column="1" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
+    <Border Grid.Column="1" Width="340" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0"
+            IsVisible="{Binding MiddleView, Converter={StaticResource Null2Vis}}">
       <ContentControl Content="{Binding MiddleView}"/>
     </Border>
 
