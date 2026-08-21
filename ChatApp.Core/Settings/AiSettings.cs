@@ -5,7 +5,9 @@ public class AiSettings
 {
     public const string DefaultApiBaseUrl = RemoteApiEndpointPolicy.DefaultBaseUrl;
 
-    public const string DefaultChatModel = "deepseek-ai/DeepSeek-V3.1";
+    public const string DefaultChatModel = "deepseek-ai/DeepSeek-V4-Flash";
+
+    public const string DeepSeekOfficialChatModel = "deepseek-v4-flash";
 
     public const string DefaultEmbeddingModel = "BAAI/bge-m3";
 
@@ -172,16 +174,9 @@ public class AiSettings
 
         if (Uri.TryCreate(ApiBaseUrl, UriKind.Absolute, out var chatUri) &&
             chatUri.Host.EndsWith("deepseek.com", StringComparison.OrdinalIgnoreCase) &&
-            ChatModel is "deepseek-chat" or "deepseek-reasoner" or "deepseek-v4-flash" or "default_model")
+            ChatModel is "deepseek-chat" or "deepseek-reasoner" or "default_model")
         {
-            ChatModel = DefaultChatModel;
-            changed = true;
-        }
-
-        // Scheme-A rollover: legacy single-model deepseek-v4-flash on an invalid/empty endpoint adopts SiliconFlow defaults
-        if (ChatModel is "deepseek-v4-flash" && string.IsNullOrWhiteSpace(EmbeddingModel))
-        {
-            EmbeddingModel = DefaultEmbeddingModel;
+            ChatModel = DeepSeekOfficialChatModel;
             changed = true;
         }
         // Robust scheme-A vision migration: any Alibaba-derived visual model while

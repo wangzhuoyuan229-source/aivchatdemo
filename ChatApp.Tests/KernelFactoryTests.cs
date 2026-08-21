@@ -11,8 +11,33 @@ public class KernelFactoryTests
         var settings = new AiSettings();
 
         Assert.Equal("https://api.siliconflow.cn/v1", settings.ApiBaseUrl);
-        Assert.Equal("deepseek-ai/DeepSeek-V3.1", settings.ChatModel);
+        Assert.Equal("deepseek-ai/DeepSeek-V4-Flash", settings.ChatModel);
         Assert.Equal("BAAI/bge-m3", settings.EmbeddingModel);
+    }
+
+    [Fact]
+    public void SiliconFlowDeepSeekV4FlashUsesThinkHigh()
+    {
+        var settings = new AiSettings();
+
+        var executionSettings = KernelFactory.CreateChatExecutionSettings(settings, 0.65);
+
+        Assert.NotNull(executionSettings.ExtensionData);
+        Assert.True(Assert.IsType<bool>(executionSettings.ExtensionData["enable_thinking"]));
+        Assert.Equal("high", executionSettings.ReasoningEffort);
+    }
+
+    [Theory]
+    [InlineData("https://api.deepseek.com/v1", "deepseek-v4-flash")]
+    [InlineData("https://api.siliconflow.cn/v1", "Qwen/Qwen3-32B")]
+    public void ProviderSpecificThinkingFlagIsNotSentToOtherModels(string endpoint, string model)
+    {
+        var settings = new AiSettings { ApiBaseUrl = endpoint, ChatModel = model };
+
+        var executionSettings = KernelFactory.CreateChatExecutionSettings(settings, 0.65);
+
+        Assert.True(executionSettings.ExtensionData is null ||
+                    !executionSettings.ExtensionData.ContainsKey("enable_thinking"));
     }
 
     [Fact]
@@ -103,6 +128,21 @@ public class KernelFactoryTests
         };
 
         Assert.True(settings.MigrateToRemoteApiOnly());
-        Assert.Equal("deepseek-ai/DeepSeek-V3.1", settings.ChatModel);
+        Assert.Equal("deepseek-v4-flash", settings.ChatModel);
+    }
+
+    [Fact]
+    public void ExistingDeepSeekV4FlashSelectionIsNotOverwritten()
+    {
+        var settings = new AiSettings
+        {
+            ApiBaseUrl = "https://api.deepseek.com/v1",
+            ChatModel = "deepseek-v4-flash",
+            EmbeddingModel = string.Empty
+        };
+
+        Assert.False(settings.MigrateToRemoteApiOnly());
+        Assert.Equal("deepseek-v4-flash", settings.ChatModel);
+        Assert.Empty(settings.EmbeddingModel);
     }
 }

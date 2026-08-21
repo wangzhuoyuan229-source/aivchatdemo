@@ -13,6 +13,9 @@ public sealed class KnowledgeRetrievalRequest
 {
     public string Query { get; init; } = string.Empty;
 
+    /// <summary>True when the current topic asks about the role's visible appearance.</summary>
+    public bool AppearanceFocused { get; init; }
+
     public IReadOnlyCollection<int> AllowedGroupIds { get; init; } = Array.Empty<int>();
 
     public int TopK { get; init; } = 5;

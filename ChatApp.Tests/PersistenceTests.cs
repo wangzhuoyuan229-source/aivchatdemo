@@ -129,9 +129,26 @@ public class PersistenceTests
                     new KnowledgeGroup { Name = "组二" });
                 await db.SaveChangesAsync();
                 roleId = role.Id;
+                db.MemoryEntries.Add(new MemoryEntry
+                {
+                    RoleId = roleId,
+                    Content = "来源角色即将删除",
+                    ExternalId = "mem:role-delete"
+                });
+                await db.SaveChangesAsync();
             }
 
-            var service = new RoleService(factory, NullLogger<RoleService>.Instance);
+            var vectors = new SqliteVectorStore(
+                NullLogger<SqliteVectorStore>.Instance,
+                $"Data Source={path};Pooling=False");
+            await vectors.UpsertAsync(new VectorRecord
+            {
+                Id = "mem:role-delete",
+                Scope = "memory:shared",
+                Content = "来源角色即将删除",
+                Embedding = new[] { 1f, 0f }
+            });
+            var service = new RoleService(factory, NullLogger<RoleService>.Instance, vectors);
             await service.SetKnowledgeGroupIdsAsync(roleId, new[] { 1, 2, 2 });
             Assert.Equal(new[] { 1, 2 }, await service.GetKnowledgeGroupIdsAsync(roleId));
 
@@ -140,6 +157,7 @@ public class PersistenceTests
 
             await service.DeleteAsync(roleId);
             Assert.Empty(await service.GetKnowledgeGroupIdsAsync(roleId));
+            Assert.Empty(await vectors.SearchAsync(new[] { 1f, 0f }, "memory:shared", 5));
         }
         finally
         {

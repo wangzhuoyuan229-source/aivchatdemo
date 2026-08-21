@@ -37,6 +37,10 @@ public static class InfrastructureModule
         await MigrateGroupChatAsync(db, ct);
         // 严格知识约束：角色示范对话 + 角色到知识分组的显式绑定
         await MigrateGroundedDialogueAsync(db, ct);
+        // v1.3.7：新建角色使用不可变角色扮演启动模板；旧角色保持原提示行为。
+        await MigrateRolePromptTemplateAsync(db, ct);
+        // 共享记忆：保留来源角色，但将既有角色向量命名空间合并为全局共享池。
+        await MigrateSharedMemoryAsync(db, ct);
         // 图片知识项、独立消息附件与历史快照。
         await MigrateKnowledgeImagesAsync(db, ct);
         // 会话置顶 + 知识引用溯源列。
@@ -96,6 +100,61 @@ public static class InfrastructureModule
             {
                 await groupIndex.ExecuteNonQueryAsync(ct);
             }
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
+    }
+
+    /// <summary>Adds the role prompt-template version marker. Existing roles remain on legacy version 0.</summary>
+    internal static async Task MigrateRolePromptTemplateAsync(AppDbContext db, CancellationToken ct)
+    {
+        var conn = db.Database.GetDbConnection() as SqliteConnection;
+        if (conn is null) return;
+
+        await conn.OpenAsync(ct);
+        try
+        {
+            var roleColumns = await ReadColumnsAsync(conn, "Roles", ct);
+            if (roleColumns.Count == 0 || roleColumns.ContainsKey("PromptTemplateVersion")) return;
+
+            using var addVersion = new SqliteCommand(
+                "ALTER TABLE \"Roles\" ADD COLUMN \"PromptTemplateVersion\" INTEGER NOT NULL DEFAULT 0;", conn);
+            await addVersion.ExecuteNonQueryAsync(ct);
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
+    }
+
+    /// <summary>Merges legacy per-role memory vector scopes into one shared scope. Idempotent.</summary>
+    internal static async Task MigrateSharedMemoryAsync(AppDbContext db, CancellationToken ct)
+    {
+        var conn = db.Database.GetDbConnection() as SqliteConnection;
+        if (conn is null) return;
+
+        await conn.OpenAsync(ct);
+        try
+        {
+            using (var createVectors = new SqliteCommand(
+                "CREATE TABLE IF NOT EXISTS \"Vectors\" (" +
+                "\"Id\" TEXT NOT NULL CONSTRAINT \"PK_Vectors\" PRIMARY KEY, " +
+                "\"Scope\" TEXT NOT NULL, \"Content\" TEXT NOT NULL, " +
+                "\"Embedding\" BLOB NOT NULL, \"Metadata\" TEXT NOT NULL DEFAULT '{}');", conn))
+            {
+                await createVectors.ExecuteNonQueryAsync(ct);
+            }
+            using (var index = new SqliteCommand(
+                "CREATE INDEX IF NOT EXISTS \"IX_Vectors_Scope\" ON \"Vectors\" (\"Scope\");", conn))
+            {
+                await index.ExecuteNonQueryAsync(ct);
+            }
+            using var mergeScopes = new SqliteCommand(
+                "UPDATE \"Vectors\" SET \"Scope\" = 'memory:shared' " +
+                "WHERE \"Scope\" LIKE 'memory:%' AND \"Scope\" <> 'memory:shared';", conn);
+            await mergeScopes.ExecuteNonQueryAsync(ct);
         }
         finally
         {

@@ -104,6 +104,68 @@ public class ConversationManagementPersistenceTests
     }
 
     [Fact]
+    public async Task DeletingGroupConversationRemovesMembersMessagesAttachmentsAndDerivedMemories()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            var factory = new TestDbContextFactory(path);
+            await using (var db = await factory.CreateDbContextAsync())
+            {
+                await db.Database.EnsureCreatedAsync();
+                db.Roles.AddRange(new Role { Name = "角色一" }, new Role { Name = "角色二" });
+                await db.SaveChangesAsync();
+            }
+
+            var vectors = new RecordingDeleteVectorStore();
+            var history = new ChatHistoryService(factory, NullLogger<ChatHistoryService>.Instance, vectors);
+            var group = await history.CreateGroupConversationAsync("待删除群聊", [1, 2]);
+            await history.AddMessageAsync(new Message
+            {
+                ConversationId = group.Id,
+                RoleId = 1,
+                Author = MessageAuthor.Assistant,
+                Content = "群聊消息",
+                Attachments = [new MessageAttachment { FileName = "快照.png" }]
+            });
+            await using (var db = await factory.CreateDbContextAsync())
+            {
+                db.MemoryEntries.Add(new MemoryEntry
+                {
+                    RoleId = 1,
+                    ConversationId = group.Id,
+                    Content = "群聊记忆",
+                    ExternalId = "mem:group-delete"
+                });
+                await db.SaveChangesAsync();
+            }
+
+            await history.DeleteConversationAsync(group.Id);
+            await history.DeleteConversationAsync(group.Id);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => history.AddMessageAsync(new Message
+            {
+                ConversationId = group.Id,
+                RoleId = 1,
+                Author = MessageAuthor.Assistant,
+                Content = "迟到回复"
+            }));
+
+            await using var verify = await factory.CreateDbContextAsync();
+            Assert.Null(await verify.Conversations.FindAsync(group.Id));
+            Assert.Empty(await verify.ConversationMembers.Where(member => member.ConversationId == group.Id).ToListAsync());
+            Assert.Empty(await verify.Messages.Where(message => message.ConversationId == group.Id).ToListAsync());
+            Assert.Empty(await verify.MessageAttachments.ToListAsync());
+            Assert.Empty(await verify.MemoryEntries.Where(memory => memory.ConversationId == group.Id).ToListAsync());
+            Assert.Equal(2, await verify.Roles.CountAsync());
+            Assert.Equal(new[] { "mem:group-delete" }, vectors.DeletedIds);
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
+    [Fact]
     public async Task DeleteMessagesFromAsyncRemovesTailAndKeepsEarlierMessages()
     {
         var path = NewDatabasePath();
@@ -258,13 +320,118 @@ public class ConversationManagementPersistenceTests
 
             await memory.UpdateAsync(entry.Id, " 新记忆 ");
 
-            var list = await memory.ListAsync(1);
+            var list = await memory.ListAllAsync();
             Assert.Single(list);
             Assert.Equal("新记忆", list[0].Content);
             Assert.Equal("mem:1:a", list[0].ExternalId);
             // The vector was re-embedded under the same key with the new content.
             Assert.Equal(1, embedding.CallCount);
             Assert.Contains("新记忆", embedding.EmbeddedTexts);
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
+    [Fact]
+    public async Task SharedMemoryRecallIncludesMemoriesFromEverySourceRole()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            var factory = new TestDbContextFactory(path);
+            await using (var db = await factory.CreateDbContextAsync())
+            {
+                await db.Database.EnsureCreatedAsync();
+                db.Roles.AddRange(new Role { Name = "阿澄" }, new Role { Name = "林溪" });
+                await db.SaveChangesAsync();
+            }
+
+            var embedding = new RecordingEmbeddingService();
+            var vectors = new SqliteVectorStore(NullLogger<SqliteVectorStore>.Instance,
+                $"Data Source={path};Pooling=False");
+            var history = new ChatHistoryService(factory, NullLogger<ChatHistoryService>.Instance);
+            var memory = new MemoryService(
+                factory,
+                embedding,
+                vectors,
+                history,
+                new FixedConfigurationService(new AiSettings { MemoryTopK = 5 }),
+                NullLogger<MemoryService>.Instance);
+
+            await memory.RememberAsync(1, null, "阿澄触发的事件");
+            await memory.RememberAsync(2, null, "林溪触发的事件");
+
+            var hits = await memory.RecallSharedAsync("共同经历");
+
+            Assert.Equal(2, hits.Count);
+            Assert.Equal(new[] { "阿澄", "林溪" },
+                hits.Select(hit => hit.Record.Metadata["sourceRoleName"]).OrderBy(name => name));
+            Assert.Equal(2, (await memory.ListAllAsync()).Count);
+
+            await memory.ClearAllAsync();
+            Assert.Empty(await memory.ListAllAsync());
+            Assert.Empty(await memory.RecallSharedAsync("共同经历"));
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
+    [Fact]
+    public async Task GroupConversationExtractsSharedMemoriesWithEachSpeakerAsSource()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            var factory = new TestDbContextFactory(path);
+            await using (var db = await factory.CreateDbContextAsync())
+            {
+                await db.Database.EnsureCreatedAsync();
+                db.Roles.AddRange(new Role { Name = "角色一" }, new Role { Name = "角色二" });
+                await db.SaveChangesAsync();
+            }
+
+            var history = new ChatHistoryService(factory, NullLogger<ChatHistoryService>.Instance);
+            var conversation = await history.CreateGroupConversationAsync("共享事件", [1, 2]);
+            await history.AddMessageAsync(new Message
+            {
+                ConversationId = conversation.Id,
+                RoleId = 0,
+                Author = MessageAuthor.User,
+                Content = "大家记住今天的约定"
+            });
+            await history.AddMessageAsync(new Message
+            {
+                ConversationId = conversation.Id,
+                RoleId = 1,
+                Author = MessageAuthor.Assistant,
+                Content = "角色一答应了"
+            });
+            await history.AddMessageAsync(new Message
+            {
+                ConversationId = conversation.Id,
+                RoleId = 2,
+                Author = MessageAuthor.Assistant,
+                Content = "角色二也答应了"
+            });
+
+            var memory = new MemoryService(
+                factory,
+                new RecordingEmbeddingService(),
+                new SqliteVectorStore(NullLogger<SqliteVectorStore>.Instance, $"Data Source={path};Pooling=False"),
+                history,
+                new FixedConfigurationService(new AiSettings { MemoryBatchSize = 3 }),
+                NullLogger<MemoryService>.Instance);
+
+            await memory.ProcessConversationAsync(conversation.Id);
+
+            var entries = await memory.ListAllAsync();
+            Assert.Equal(2, entries.Count);
+            Assert.Equal(new[] { 1, 2 }, entries.Select(entry => entry.RoleId).OrderBy(id => id));
+            Assert.All(entries, entry => Assert.Equal(conversation.Id, entry.ConversationId));
         }
         finally
         {
@@ -297,6 +464,30 @@ public class ConversationManagementPersistenceTests
         public Task<AiSettings> LoadAsync(CancellationToken ct = default) => Task.FromResult(settings);
         public Task SaveAsync(AiSettings value, CancellationToken ct = default) => Task.CompletedTask;
         public Task<bool> IsConfiguredAsync(CancellationToken ct = default) => Task.FromResult(true);
+    }
+
+    private sealed class RecordingDeleteVectorStore : IVectorStore
+    {
+        public List<string> DeletedIds { get; } = new();
+
+        public Task UpsertAsync(VectorRecord record, CancellationToken ct = default) => Task.CompletedTask;
+        public Task UpsertBatchAsync(IEnumerable<VectorRecord> records, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<VectorSearchHit>> SearchAsync(
+            float[] queryVector,
+            string scope,
+            int topK,
+            double minScore = 0,
+            IReadOnlySet<string>? allowedIds = null,
+            CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<VectorSearchHit>>(Array.Empty<VectorSearchHit>());
+
+        public Task DeleteAsync(string id, CancellationToken ct = default)
+        {
+            DeletedIds.Add(id);
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteByScopeAsync(string scope, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private static string NewDatabasePath() =>

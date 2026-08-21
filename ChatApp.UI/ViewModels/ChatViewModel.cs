@@ -92,6 +92,7 @@ public partial class ChatViewModel : ViewModelBase
 
     public async Task LoadAsync(int conversationId)
     {
+        CancelActiveRequest();
         var conv = await _history.GetConversationAsync(conversationId);
         if (conv is null) return;
         Conversation = conv;
@@ -138,6 +139,7 @@ public partial class ChatViewModel : ViewModelBase
     }
     public async Task LoadGroupAsync(int conversationId)
     {
+        CancelActiveRequest();
         var conv = await _history.GetConversationAsync(conversationId);
         if (conv is null) return;
         Conversation = conv;
@@ -173,6 +175,7 @@ public partial class ChatViewModel : ViewModelBase
     /// <summary>清空当前对话状态（删除当前会话或退出对话时调用）。</summary>
     public void ClearConversation()
     {
+        CancelActiveRequest();
         Conversation = null;
         Role = null;
         IsGroupMode = false;
@@ -213,6 +216,7 @@ public partial class ChatViewModel : ViewModelBase
 
     public async Task StartForRoleAsync(Role role)
     {
+        CancelActiveRequest();
         var conv = await _history.CreateConversationAsync(role.Id, $"与{role.Name}的对话");
         Conversation = conv;
         Role = role;
@@ -230,7 +234,7 @@ public partial class ChatViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Greeting failed.");
-            Messages.Add(new ChatBubbleViewModel { Author = MessageAuthor.Assistant, Content = $"（无法生成问候语：{ex.Message}）", Avatar = role.Avatar, RoleName = role.Name });
+            Messages.Add(new ChatBubbleViewModel { Author = MessageAuthor.Assistant, Content = $"（无法生成问候语：{SafeError(ex)}）", Avatar = role.Avatar, RoleName = role.Name });
         }
         UpdateMessageOperationFlags();
     }
@@ -297,7 +301,7 @@ public partial class ChatViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            assistantBubble.Content = $"⚠️ {ex.Message}";
+            assistantBubble.Content = $"⚠️ {SafeError(ex)}";
             _logger.LogError(ex, "Send failed.");
         }
         finally
@@ -338,7 +342,7 @@ public partial class ChatViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Messages.Add(new ChatBubbleViewModel { Author = MessageAuthor.Assistant, Content = $"⚠️ {ex.Message}", Avatar = "⚠️", RoleName = "错误" });
+            Messages.Add(new ChatBubbleViewModel { Author = MessageAuthor.Assistant, Content = $"⚠️ {SafeError(ex)}", Avatar = "⚠️", RoleName = "错误" });
             _logger.LogError(ex, "Group send failed.");
         }
         finally
@@ -538,7 +542,7 @@ public partial class ChatViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            streamingBubble.Content = $"⚠️ {ex.Message}";
+            streamingBubble.Content = $"⚠️ {SafeError(ex)}";
             _logger.LogError(ex, "Regenerate failed.");
         }
         finally
@@ -592,7 +596,7 @@ public partial class ChatViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Recall failed for {MessageId}", bubble.Id);
-            StatusText = $"撤回失败：{ex.Message}";
+            StatusText = $"撤回失败：{SafeError(ex)}";
         }
     }
 
@@ -661,7 +665,7 @@ public partial class ChatViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Export conversation failed.");
-            await _dialogs.ShowErrorAsync($"导出失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"导出失败：{SafeError(ex)}");
         }
     }
 
@@ -703,6 +707,12 @@ public partial class ChatViewModel : ViewModelBase
         {
             return string.Empty;
         }
+    }
+
+    private void CancelActiveRequest()
+    {
+        if (_cts is { IsCancellationRequested: false })
+            _cts.Cancel();
     }
 
     private async Task<ChatBubbleViewModel> ToBubbleAsync(Message m)

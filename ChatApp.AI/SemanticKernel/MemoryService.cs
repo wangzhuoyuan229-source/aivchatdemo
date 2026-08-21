@@ -12,7 +12,9 @@ namespace ChatApp.AI.SemanticKernel;
 /// <summary>Long-term memory: batches conversation history, embeds fragments and recalls them (F4).</summary>
 public class MemoryService : IMemoryService
 {
-    private const string ScopePrefix = "memory:";
+    private const string SharedScope = "memory:shared";
+    private const string SourceRoleIdKey = "sourceRoleId";
+    private const string SourceRoleNameKey = "sourceRoleName";
     private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly IEmbeddingService _embedding;
     private readonly IVectorStore _vectors;
@@ -20,7 +22,7 @@ public class MemoryService : IMemoryService
     private readonly IConfigurationService _config;
     private readonly ILogger<MemoryService> _logger;
 
-    /// <summary>Per-role recall dedup so repeated similar questions skip embedding + search (3.3).</summary>
+    /// <summary>Shared recall dedup so repeated similar questions skip embedding + search (3.3).</summary>
     private readonly ScopedQueryCache<IReadOnlyList<VectorSearchHit>> _recallCache = new();
 
     public MemoryService(
@@ -39,28 +41,30 @@ public class MemoryService : IMemoryService
         _logger = logger;
     }
 
-    public async Task RememberAsync(int roleId, int? conversationId, string content, CancellationToken ct = default)
+    public async Task RememberAsync(int sourceRoleId, int? conversationId, string content, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(content)) return;
         var vector = await _embedding.EmbedAsync(content, ct);
-        var externalId = $"mem:{roleId}:{Guid.NewGuid():N}";
+        var externalId = $"mem:{sourceRoleId}:{Guid.NewGuid():N}";
         await _vectors.UpsertAsync(new VectorRecord
         {
             Id = externalId,
-            Scope = $"{ScopePrefix}{roleId}",
+            Scope = SharedScope,
             Content = content,
-            Embedding = vector
+            Embedding = vector,
+            Metadata = new Dictionary<string, string> { [SourceRoleIdKey] = sourceRoleId.ToString() }
         }, ct);
 
         await using var db = await _factory.CreateDbContextAsync(ct);
         db.MemoryEntries.Add(new MemoryEntry
         {
-            RoleId = roleId,
+            RoleId = sourceRoleId,
             ConversationId = conversationId,
             Content = content,
             ExternalId = externalId
         });
         await db.SaveChangesAsync(ct);
+        _recallCache.InvalidateScope(SharedScope);
     }
 
     public async Task ProcessConversationAsync(int conversationId, CancellationToken ct = default)
@@ -69,12 +73,7 @@ public class MemoryService : IMemoryService
         var conv = await _history.GetConversationAsync(conversationId, ct);
         if (conv is null) return;
 
-        // Phase 1: group-chat write-side memory is skipped (members each have their own
-        // scope; ProcessConversationAsync attributes memory to a single role). Private
-        // chats only — group chats rely on RecallAsync reading each member's existing memory.
-        if (conv.Type != ConversationType.Private || conv.RoleId is null) return;
-
-        var roleId = conv.RoleId.Value;
+        if (conv.Type == ConversationType.Private && conv.RoleId is null) return;
         var progressKey = $"memconv:{conversationId}";
         var lastId = await ReadProgressAsync(progressKey, ct);
 
@@ -84,65 +83,117 @@ public class MemoryService : IMemoryService
 
         // Take exactly one batch.
         var batch = pending.Take(settings.MemoryBatchSize).ToList();
-        var text = FormatBatch(batch);
-        var fragments = ChunkForEmbedding(text);
-        if (fragments.Count == 0) return;
+        var sourceBatches = conv.Type == ConversationType.Private
+            ? new[] { (RoleId: conv.RoleId!.Value, Messages: (IReadOnlyList<Message>)batch) }
+            : batch
+                .Where(message => message.Author == MessageAuthor.Assistant && message.RoleId > 0)
+                .Select(message => message.RoleId)
+                .Distinct()
+                .Select(roleId => (
+                    RoleId: roleId,
+                    Messages: (IReadOnlyList<Message>)batch
+                        .Where(message => message.Author == MessageAuthor.User || message.RoleId == roleId)
+                        .ToList()))
+                .ToArray();
 
-        var vectors = await _embedding.EmbedBatchAsync(fragments, ct);
-        for (int i = 0; i < fragments.Count; i++)
+        var storedCount = 0;
+        foreach (var sourceBatch in sourceBatches)
         {
-            var externalId = $"mem:{roleId}:{conversationId}:{batch[0].Id}:{i}";
-            await _vectors.UpsertAsync(new VectorRecord
+            var fragments = ChunkForEmbedding(FormatBatch(sourceBatch.Messages));
+            if (fragments.Count == 0) continue;
+            var vectors = await _embedding.EmbedBatchAsync(fragments, ct);
+            for (int i = 0; i < fragments.Count; i++)
             {
-                Id = externalId,
-                Scope = $"{ScopePrefix}{roleId}",
-                Content = fragments[i],
-                Embedding = vectors[i]
-            }, ct);
+                var externalId = $"mem:{sourceBatch.RoleId}:{conversationId}:{batch[0].Id}:{i}";
+                await _vectors.UpsertAsync(new VectorRecord
+                {
+                    Id = externalId,
+                    Scope = SharedScope,
+                    Content = fragments[i],
+                    Embedding = vectors[i],
+                    Metadata = new Dictionary<string, string>
+                    {
+                        [SourceRoleIdKey] = sourceBatch.RoleId.ToString()
+                    }
+                }, ct);
 
-            await using var db = await _factory.CreateDbContextAsync(ct);
-            db.MemoryEntries.Add(new MemoryEntry
-            {
-                RoleId = roleId,
-                ConversationId = conversationId,
-                Content = fragments[i],
-                ExternalId = externalId
-            });
-            await db.SaveChangesAsync(ct);
+                await using var db = await _factory.CreateDbContextAsync(ct);
+                db.MemoryEntries.Add(new MemoryEntry
+                {
+                    RoleId = sourceBatch.RoleId,
+                    ConversationId = conversationId,
+                    Content = fragments[i],
+                    ExternalId = externalId
+                });
+                await db.SaveChangesAsync(ct);
+                storedCount++;
+            }
         }
 
+        if (storedCount == 0) return;
+
         await WriteProgressAsync(progressKey, batch[^1].Id, ct);
-        _logger.LogInformation("Embedded {Count} memory fragments for conversation {Id}.", fragments.Count, conversationId);
+        _recallCache.InvalidateScope(SharedScope);
+        _logger.LogInformation("Embedded {Count} shared memory fragments for conversation {Id}.", storedCount, conversationId);
     }
 
-    public async Task<IReadOnlyList<VectorSearchHit>> RecallAsync(int roleId, string query, CancellationToken ct = default)
+    public async Task<IReadOnlyList<VectorSearchHit>> RecallSharedAsync(string query, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query)) return Array.Empty<VectorSearchHit>();
-        var scope = $"{ScopePrefix}{roleId}";
         var key = NormalizeQuery(query);
-        if (_recallCache.TryGet(scope, key, out var cached)) return cached;
+        if (_recallCache.TryGet(SharedScope, key, out var cached))
+            return await AddSourceRoleMetadataAsync(cached, ct);
 
         var settings = await _config.LoadAsync(ct);
         var qv = await _embedding.EmbedAsync(query, ct);
         var hits = await _vectors.SearchAsync(
             qv,
-            scope,
+            SharedScope,
             settings.MemoryTopK,
             minScore: 0,
             allowedIds: null,
             ct: ct);
-        _recallCache.Set(scope, key, hits);
-        return hits;
+        var enrichedHits = await AddSourceRoleMetadataAsync(hits, ct);
+        _recallCache.Set(SharedScope, key, enrichedHits);
+        return enrichedHits;
+    }
+
+    private async Task<IReadOnlyList<VectorSearchHit>> AddSourceRoleMetadataAsync(
+        IReadOnlyList<VectorSearchHit> hits,
+        CancellationToken ct)
+    {
+        var externalIds = hits.Select(hit => hit.Record.Id).Distinct(StringComparer.Ordinal).ToList();
+        if (externalIds.Count == 0) return Array.Empty<VectorSearchHit>();
+
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        var entries = await db.MemoryEntries.AsNoTracking()
+            .Where(entry => externalIds.Contains(entry.ExternalId))
+            .ToListAsync(ct);
+        var roleIds = entries.Select(entry => entry.RoleId).Distinct().ToList();
+        var roleNames = await db.Roles.AsNoTracking()
+            .Where(role => roleIds.Contains(role.Id))
+            .ToDictionaryAsync(role => role.Id, role => role.Name, ct);
+        var entriesByExternalId = entries.ToDictionary(entry => entry.ExternalId, StringComparer.Ordinal);
+
+        var result = new List<VectorSearchHit>(hits.Count);
+        foreach (var hit in hits)
+        {
+            if (!entriesByExternalId.TryGetValue(hit.Record.Id, out var entry)) continue;
+            hit.Record.Metadata[SourceRoleIdKey] = entry.RoleId.ToString();
+            hit.Record.Metadata[SourceRoleNameKey] = roleNames.GetValueOrDefault(entry.RoleId, $"角色 #{entry.RoleId}");
+            result.Add(hit);
+        }
+        return result;
     }
 
     /// <summary>Lowercases and collapses whitespace so similar phrasings share a cache key.</summary>
     private static string NormalizeQuery(string query) =>
         string.Join(" ", query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
 
-    public async Task<IReadOnlyList<MemoryEntry>> ListAsync(int roleId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MemoryEntry>> ListAllAsync(CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
-        return await db.MemoryEntries.AsNoTracking().Where(m => m.RoleId == roleId).OrderByDescending(m => m.Id).ToListAsync(ct);
+        return await db.MemoryEntries.AsNoTracking().OrderByDescending(m => m.Id).ToListAsync(ct);
     }
 
     public async Task UpdateAsync(int memoryId, string content, CancellationToken ct = default)
@@ -162,16 +213,17 @@ public class MemoryService : IMemoryService
             await _vectors.UpsertAsync(new VectorRecord
             {
                 Id = entry.ExternalId,
-                Scope = $"{ScopePrefix}{entry.RoleId}",
+                Scope = SharedScope,
                 Content = normalized,
-                Embedding = vector
+                Embedding = vector,
+                Metadata = new Dictionary<string, string> { [SourceRoleIdKey] = entry.RoleId.ToString() }
             }, ct);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Re-embedding edited memory {Id} failed; content update kept.", memoryId);
         }
-        _recallCache.InvalidateScope($"{ScopePrefix}{entry.RoleId}");
+        _recallCache.InvalidateScope(SharedScope);
     }
 
     public async Task ForgetAsync(int memoryId, CancellationToken ct = default)
@@ -183,16 +235,16 @@ public class MemoryService : IMemoryService
             await _vectors.DeleteAsync(entry.ExternalId, ct);
         db.MemoryEntries.Remove(entry);
         await db.SaveChangesAsync(ct);
-        _recallCache.InvalidateScope($"{ScopePrefix}{entry.RoleId}");
+        _recallCache.InvalidateScope(SharedScope);
     }
 
-    public async Task ClearForRoleAsync(int roleId, CancellationToken ct = default)
+    public async Task ClearAllAsync(CancellationToken ct = default)
     {
-        await _vectors.DeleteByScopeAsync($"{ScopePrefix}{roleId}", ct);
+        await _vectors.DeleteByScopeAsync(SharedScope, ct);
         await using var db = await _factory.CreateDbContextAsync(ct);
-        db.MemoryEntries.RemoveRange(db.MemoryEntries.Where(m => m.RoleId == roleId));
+        db.MemoryEntries.RemoveRange(db.MemoryEntries);
         await db.SaveChangesAsync(ct);
-        _recallCache.InvalidateScope($"{ScopePrefix}{roleId}");
+        _recallCache.InvalidateScope(SharedScope);
     }
 
     private async Task<int> ReadProgressAsync(string key, CancellationToken ct)

@@ -10,11 +10,16 @@ public class ChatHistoryService : IChatHistoryService
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly ILogger<ChatHistoryService> _logger;
+    private readonly IVectorStore? _vectors;
 
-    public ChatHistoryService(IDbContextFactory<AppDbContext> factory, ILogger<ChatHistoryService> logger)
+    public ChatHistoryService(
+        IDbContextFactory<AppDbContext> factory,
+        ILogger<ChatHistoryService> logger,
+        IVectorStore? vectors = null)
     {
         _factory = factory;
         _logger = logger;
+        _vectors = vectors;
     }
 
     public async Task<IReadOnlyList<Conversation>> GetConversationsAsync(int? roleId = null, CancellationToken ct = default)
@@ -117,9 +122,11 @@ public class ChatHistoryService : IChatHistoryService
         try
         {
             await using var db = await _factory.CreateDbContextAsync(ct);
-            db.Messages.Add(message);
             var conv = await db.Conversations.FirstOrDefaultAsync(c => c.Id == message.ConversationId, ct);
-            if (conv is not null) conv.UpdatedAt = DateTime.UtcNow;
+            if (conv is null)
+                throw new InvalidOperationException("会话不存在，消息未保存。");
+            db.Messages.Add(message);
+            conv.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
             return message;
         }
@@ -187,11 +194,33 @@ public class ChatHistoryService : IChatHistoryService
         var messageIds = await db.Messages.Where(m => m.ConversationId == conversationId).Select(m => m.Id).ToListAsync(ct);
         var attachments = await db.MessageAttachments.Where(a => messageIds.Contains(a.MessageId)).ToListAsync(ct);
         var storageKeys = attachments.Select(a => a.StorageKey).ToList();
+        var memories = await db.MemoryEntries.Where(m => m.ConversationId == conversationId).ToListAsync(ct);
+        var memoryVectorIds = memories.Select(m => m.ExternalId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
         db.MessageAttachments.RemoveRange(attachments);
         db.Messages.RemoveRange(db.Messages.Where(m => m.ConversationId == conversationId));
+        db.ConversationMembers.RemoveRange(db.ConversationMembers.Where(m => m.ConversationId == conversationId));
+        db.MemoryEntries.RemoveRange(memories);
         db.Conversations.Remove(conv);
         await db.SaveChangesAsync(ct);
         DeleteAttachmentFiles(storageKeys);
+        if (_vectors is not null)
+        {
+            foreach (var vectorId in memoryVectorIds)
+            {
+                try
+                {
+                    await _vectors.DeleteAsync(vectorId, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete memory vector {VectorId} after deleting conversation {ConversationId}.",
+                        vectorId, conversationId);
+                }
+            }
+        }
     }
 
     public async Task<IReadOnlyList<Message>> SearchAsync(string keyword, int? conversationId = null, CancellationToken ct = default)

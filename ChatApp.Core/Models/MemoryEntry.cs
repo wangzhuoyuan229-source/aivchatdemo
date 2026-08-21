@@ -8,13 +8,14 @@ public class MemoryEntry
 {
     public int Id { get; set; }
 
+    /// <summary>The role whose conversation triggered this shared memory.</summary>
     public int RoleId { get; set; }
 
     public int? ConversationId { get; set; }
 
     public string Content { get; set; } = string.Empty;
 
-    /// <summary>Identifier used as the vector-store key, e.g. "mem:{roleId}:{entryId}".</summary>
+    /// <summary>Identifier used as the vector-store key.</summary>
     public string ExternalId { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -25,7 +26,7 @@ public class VectorRecord
 {
     public string Id { get; set; } = string.Empty;
 
-    /// <summary>Namespace, e.g. "memory:3" or "knowledge:5".</summary>
+    /// <summary>Namespace, e.g. "memory:shared" or "knowledge:5".</summary>
     public string Scope { get; set; } = string.Empty;
 
     public string Content { get; set; } = string.Empty;

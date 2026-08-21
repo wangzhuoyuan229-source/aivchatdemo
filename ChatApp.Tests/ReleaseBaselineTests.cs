@@ -2,12 +2,13 @@ using System.Xml.Linq;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
 using ChatApp.UI.ViewModels;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ChatApp.Tests;
 
 public class ReleaseBaselineTests
 {
-    private const string ExpectedVersion = "1.3.6";
+    private const string ExpectedVersion = "1.3.7";
 
     [Fact]
     public void ProductVersionIsConsistentAcrossReleaseFiles()
@@ -27,7 +28,7 @@ public class ReleaseBaselineTests
             File.ReadAllText(Path.Combine(root, "ChatApp.UI", "MainWindow.xaml")));
         Assert.Contains($"当前版本：**v{ExpectedVersion}**",
             File.ReadAllText(Path.Combine(root, "README.md")));
-        Assert.Contains($"## [{ExpectedVersion}] - 2026-08-21",
+        Assert.Contains($"## [{ExpectedVersion}] - 2026-08-22",
             File.ReadAllText(Path.Combine(root, "CHANGELOG.md")));
     }
 
@@ -59,6 +60,74 @@ public class ReleaseBaselineTests
 
         Assert.DoesNotContain("启用语音交互", settingsView);
         Assert.DoesNotContain("启用角色好感度系统", settingsView);
+    }
+
+    [Fact]
+    public void RecentGroupChatsExposeDeleteCommand()
+    {
+        var root = FindRepositoryRoot();
+        var roleListView = File.ReadAllText(
+            Path.Combine(root, "ChatApp.UI", "Views", "RoleListView.xaml"));
+
+        Assert.Contains("DeleteGroupChatCommand", roleListView);
+        Assert.Contains("Content=\"删除\"", roleListView);
+    }
+
+    [Fact]
+    public void RoleLibrarySwitchesBetweenIndependentRoleAndGroupSections()
+    {
+        var viewModel = new RoleListViewModel(
+            null!, null!, null!, NullLogger<RoleListViewModel>.Instance, null!);
+
+        Assert.True(viewModel.IsRolesSection);
+        Assert.False(viewModel.IsGroupChatsSection);
+
+        viewModel.ShowGroupChatsSectionCommand.Execute(null);
+        Assert.False(viewModel.IsRolesSection);
+        Assert.True(viewModel.IsGroupChatsSection);
+
+        viewModel.ShowRolesSectionCommand.Execute(null);
+        Assert.True(viewModel.IsRolesSection);
+        Assert.False(viewModel.IsGroupChatsSection);
+
+        var root = FindRepositoryRoot();
+        var roleListView = File.ReadAllText(
+            Path.Combine(root, "ChatApp.UI", "Views", "RoleListView.xaml"));
+        Assert.Contains("ShowRolesSectionCommand", roleListView);
+        Assert.Contains("ShowGroupChatsSectionCommand", roleListView);
+        Assert.Contains("IsVisible=\"{Binding IsRolesSection}\"", roleListView);
+        Assert.Contains("IsVisible=\"{Binding IsGroupChatsSection}\"", roleListView);
+    }
+
+    [Fact]
+    public void ChatInputLetsImeCommitBeforeConvertingInsertedLineBreakToSend()
+    {
+        var root = FindRepositoryRoot();
+        var chatView = File.ReadAllText(
+            Path.Combine(root, "ChatApp.UI", "Views", "ChatView.xaml"));
+        var chatViewCode = File.ReadAllText(
+            Path.Combine(root, "ChatApp.UI", "Views", "ChatView.xaml.cs"));
+
+        Assert.Contains("KeyDown=\"InputBox_KeyDown\"", chatView);
+        Assert.Contains("InputElement.KeyUpEvent", chatViewCode);
+        Assert.Contains("RoutingStrategies.Bubble", chatViewCode);
+        Assert.Contains("handledEventsToo: true", chatViewCode);
+        Assert.Contains("PreeditText", chatViewCode);
+        Assert.Contains("_deferCurrentEnterToIme", chatViewCode);
+        Assert.Contains("TryRemoveLineBreakBeforeCaret", chatViewCode);
+    }
+
+    [Fact]
+    public void SharedMemoryManagementExposesSourceRoleAndEditing()
+    {
+        var root = FindRepositoryRoot();
+        var memoryWindow = File.ReadAllText(
+            Path.Combine(root, "ChatApp.UI", "Views", "MemoryManagementWindow.xaml"));
+
+        Assert.Contains("SourceRoleText", memoryWindow);
+        Assert.Contains("EditCommand", memoryWindow);
+        Assert.Contains("SaveEditCommand", memoryWindow);
+        Assert.Contains("清空共享记忆", memoryWindow);
     }
 
     private static string FindRepositoryRoot()

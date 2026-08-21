@@ -49,11 +49,11 @@
                     <StackPanel IsVisible="{Binding UseUnifiedApi}" Margin="0,0,0,12">
                         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,2">
                             <TextBlock Text="统一 API 预设" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                            <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="统一模式下无需单独选模型，选一个预设即可一键填好对话/向量/视觉三模型。&#10;• SiliconFlow（推荐）：deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL&#10;• 阿里云百炼：qwen-plus + text-embedding-v4 + qwen3-vl-flash&#10;• OpenAI：gpt-4o-mini + text-embedding-3-small&#10;选自定义可单独手填模型。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                            <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="统一模式下无需单独选模型，选一个预设即可一键填好对话/向量/视觉三模型。&#10;• SiliconFlow（推荐）：DeepSeek-V4-Flash + BAAI/bge-m3 + Qwen3-VL&#10;• 阿里云百炼：qwen-plus + text-embedding-v4 + qwen3-vl-flash&#10;• OpenAI：gpt-4o-mini + text-embedding-3-small&#10;选自定义可单独手填模型。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
-                                        <TextBlock Text="统一模式下无需单独选模型，选一个预设即可一键填好对话/向量/视觉三模型。&#10;• SiliconFlow（推荐）：deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL&#10;• 阿里云百炼：qwen-plus + text-embedding-v4 + qwen3-vl-flash&#10;• OpenAI：gpt-4o-mini + text-embedding-3-small&#10;选自定义可单独手填模型。" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
+                                        <TextBlock Text="统一模式下无需单独选模型，选一个预设即可一键填好对话/向量/视觉三模型。&#10;• SiliconFlow（推荐）：DeepSeek-V4-Flash + BAAI/bge-m3 + Qwen3-VL&#10;• 阿里云百炼：qwen-plus + text-embedding-v4 + qwen3-vl-flash&#10;• OpenAI：gpt-4o-mini + text-embedding-3-small&#10;选自定义可单独手填模型。" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
                                     </Flyout>
                                 </Button.Flyout>
                             </Button>
@@ -100,11 +100,11 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="聊天模型" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="决定陪你聊天的 AI 有多聪明。&#10;不确定就用推荐的 deepseek-v4-flash（又快又便宜）。&#10;也可以下拉选 gpt-4o-mini、qwen-plus 等，选了就能直接用。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="决定陪你聊天的 AI 有多聪明。&#10;不确定就用推荐的 DeepSeek-V4-Flash（又快又便宜，模型 ID 会按服务商区分）。&#10;也可以下拉选 gpt-4o-mini、qwen-plus 等，选了就能直接用。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
-                                        <TextBlock Text="决定陪你聊天的 AI 有多聪明。&#10;不确定就用推荐的 deepseek-v4-flash（又快又便宜）。&#10;也可以下拉选 gpt-4o-mini、qwen-plus 等，选了就能直接用。" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
+                                        <TextBlock Text="决定陪你聊天的 AI 有多聪明。&#10;不确定就用推荐的 DeepSeek-V4-Flash（又快又便宜，模型 ID 会按服务商区分）。&#10;也可以下拉选 gpt-4o-mini、qwen-plus 等，选了就能直接用。" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
                                     </Flyout>
                                 </Button.Flyout>
                             </Button>
@@ -336,12 +336,12 @@
                     <TextBlock Text="记忆与知识库" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,10"/>
 
                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
-                        <CheckBox Content="启用长期记忆（RAG 召回历史）" IsChecked="{Binding EnableLongTermMemory}" VerticalAlignment="Center"/>
-                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="打开后，AI 会记住你和角色的过往对话，下次还能回忆起来。&#10;比如你说‘我叫小明’，以后它还能叫出你名字。&#10;关闭则每次都是全新开始，更省钱但没记忆。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <CheckBox Content="启用共享长期记忆（RAG 召回历史）" IsChecked="{Binding EnableLongTermMemory}" VerticalAlignment="Center"/>
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="打开后，所有角色共享相关的过往记忆，每条记忆会标明来源角色。&#10;比如你告诉林溪‘我叫小明’，其他角色也可能在相关话题中回忆起来。&#10;关闭则不召回长期记忆。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
-                                        <TextBlock Text="打开后，AI 会记住你和角色的过往对话，下次还能回忆起来。&#10;比如你说‘我叫小明’，以后它还能叫出你名字。&#10;关闭则每次都是全新开始，更省钱但没记忆。" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
+                                        <TextBlock Text="打开后，所有角色共享相关的过往记忆，每条记忆会标明来源角色。&#10;比如你告诉林溪‘我叫小明’，其他角色也可能在相关话题中回忆起来。&#10;关闭则不召回长期记忆。" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
                                     </Flyout>
                                 </Button.Flyout>
                             </Button>

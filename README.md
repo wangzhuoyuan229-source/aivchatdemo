@@ -2,7 +2,7 @@
 
 > .NET 8 + Avalonia 跨平台桌面应用 | Semantic Kernel AI 引擎 | EF Core + SQLite 持久化
 
-当前版本：**v1.3.6** · [更新日志](CHANGELOG.md)
+当前版本：**v1.3.7** · [更新日志](CHANGELOG.md)
 
 ## 项目概述
 
@@ -10,14 +10,14 @@ ChatApp 是一款支持 macOS 与 Windows 的桌面 AI 角色扮演聊天应用�
 
 ## 模型接入策略
 
-默认服务为 SiliconFlow 统一API，默认聊天模型为 `deepseek-ai/DeepSeek-V3.1`（`BAAI/bge-m3` + `Qwen/Qwen3-VL-32B-Instruct`）。设置页仍允许接入其他
+默认服务为 SiliconFlow 统一API，默认聊天模型为 `deepseek-ai/DeepSeek-V4-Flash`（`BAAI/bge-m3` + `Qwen/Qwen3-VL-32B-Instruct`）。设置页仍允许接入其他
 OpenAI 兼容的远程 HTTPS API；localhost、回环地址、私有网络地址和普通 HTTP 地址
 会在界面、持久化与运行时三层被拒绝。仓库中的 LoRA 训练材料仅保留用于离线研究和
 评测，不再接入桌面应用；详情见 [training/README.md](training/README.md)。
 
 设置页提供“统一 API 模式”开关：开启后聊天、Embedding 与多模态识图共用同一个
 端点和 API Key（适合 SiliconFlow 等聚合平台），通过“统一 API 预设”一键选择三模型
-（SiliconFlow 推荐 `deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL`，阿里百炼 `qwen-plus + text-embedding-v4 + qwen3-vl-flash`，OpenAI `gpt-4o-mini`）；
+（SiliconFlow 推荐 `deepseek-ai/DeepSeek-V4-Flash + BAAI/bge-m3 + Qwen3-VL`，阿里百炼 `qwen-plus + text-embedding-v4 + qwen3-vl-flash`，OpenAI `gpt-4o-mini`）；
 预设内单独模型选择自动禁用，`自定义` 预设除外；关闭时保留三路独立端点与密钥，两种模式可随时切换。
 
 图片知识默认使用另一套完全独立的多模态 API 配置。内置阿里云百炼
@@ -29,11 +29,11 @@ Responses 兼容服务。多模态 API 只在导入图片和“重新识图”�
 
 ## macOS Release 使用说明
 
-当前正式版为 [v1.3.6](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.3.6)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
+当前正式版为 [v1.3.7](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.3.7)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
 
 ### 下载与安装
 
-1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.3.6/ChatApp-macOS-arm64.zip)。
+1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.3.7/ChatApp-macOS-arm64.zip)。
 2. 双击 ZIP 文件解压，得到 `ChatApp.app`。
 3. 将 `ChatApp.app` 拖入“应用程序（Applications）”文件夹。
 4. 首次启动时，在 Finder 中右键 `ChatApp.app`，选择“打开”，然后在系统提示中再次选择“打开”。后续可正常双击启动。
@@ -54,10 +54,10 @@ open /Applications/ChatApp.app
 shasum -a 256 ~/Downloads/ChatApp-macOS-arm64.zip
 ```
 
-v1.3.6 的 SHA-256：
+v1.3.7 的 SHA-256：
 
 ```text
-f39066ad487f4e850caf889c7b73df505d1317112205aa926762846bc2a99d22
+aab298e5b57d878bb94fede149a718deb3c1c7f987f69a9a1299179ef0d6da7b
 ```
 
 ### 首次配置
@@ -175,14 +175,14 @@ ChatApp.UI ──────────────► ChatApp.AI ────
 
 | 功能 | 描述 |
 |------|------|
-| 🤖 **AI 角色管理** | 创建/编辑/删除角色，支持头像、人设、背景、用户所扮演身份、性格、说话风格与示范对话 |
+| 🤖 **AI 角色管理** | 创建/编辑/删除角色，支持头像、人设、背景、用户所扮演身份、性格、说话风格与示范对话；新建角色在首次 AI 问候前执行由菜单字段填充的固定角色扮演启动指令 |
 | 🧑‍🎨 **知识图片头像** | 新建角色时先查找名称匹配的图片目录/文件（内置图片尚未生成向量时也可使用），再回退语义检索；独立多模态模型定位主要人物面部，本地放大裁剪为 256×256 头像快照，无命中时保留 emoji |
 | 📦 **预设角色库** | 6 个内置角色（林溪、诸葛亮、福尔摩斯、Emma、苏念、李白） |
 | 💬 **1:1 私聊** | 单角色对话，流式输出，支持上下文窗口管理 |
-| 👥 **AI 群聊** | 多角色同台对话，支持混合导演(Hybrid)与轮询(RoundRobin)两种模式；群头像可自定义，未设置时自动使用成员头像拼图 |
+| 👥 **AI 群聊** | 多角色同台对话，支持混合导演(Hybrid)与轮询(RoundRobin)两种模式；群头像可自定义，未设置时自动使用成员头像拼图；角色库内可独立切换群聊分块，最近群聊支持置顶、重命名和确认删除 |
 | 📚 **严格知识库 RAG** | 导入 txt/md/pdf 文档，按角色绑定的分组检索；无命中时不编造设定 |
 | 🖼️ **知识图片检索** | 导入 PNG/JPEG/WebP，独立多模态 API 生成中文描述与标签；私聊/群聊按角色检索并按需附带至多 3 张原图快照 |
-| 🧠 **长期记忆** | 按角色隔离的长期记忆，自动批量抽取+向量召回；可查看/新增/编辑/删除/清空单角色记忆（群聊仅显示当前发言者自己的记忆） |
+| 🧠 **共享长期记忆** | 自动批量抽取并由所有角色共享向量召回；每条记忆标注来源角色，可在统一窗口查看、新增、编辑、删除或清空 |
 | 💬 **消息操作** | 复制消息内容、重新生成最后一条 AI 回复、编辑已发送消息后重发（发送后替换该消息及其后的回复） |
 | 📌 **会话整理** | 私聊/群聊支持重命名与置顶（置顶优先排序）；一键导出为 Markdown（含角色名、时间与附件快照）或结构化 JSON |
 | 📎 **知识引用溯源** | AI 回复下方展示所引用的知识文档标签，点击跳转到知识库对应文档 |
@@ -192,7 +192,7 @@ ChatApp.UI ──────────────► ChatApp.AI ────
 | ⌨️ **快捷发送** | 聊天输入框 `回车` 发送、`Shift+回车` 换行 |
 | 📁 **知识库目录与批处理** | 一次选择多个多层文件夹递归导入，保留完整相对目录树；可按分组/目录范围全选、移动、删除及批量重新识图 |
 | 📦 **内置知识库** | 根目录 `知识库/` 随应用发布，首次自动索引并支持断点续传，后续启动和覆盖安装直接复用本机向量 |
-| ⚡ **性能与稳定性** | 消息列表虚拟化渲染 + 120 条游标分页（可"加载更早消息"）；启动加载并行化；记忆/知识召回会话级缓存（60 秒 TTL，修改即失效）；设置页一键"测试聊天/Embedding 连接"（失败原因分级、不回显密钥） |
+| ⚡ **性能与稳定性** | 消息列表虚拟化渲染 + 120 条游标分页（可"加载更早消息"）；启动加载并行化；记忆/知识召回会话级缓存（60 秒 TTL，修改即失效）；切换会话取消旧请求；设置页一键"测试聊天/Embedding 连接"（失败原因分级、不回显密钥） |
 | 📄 **本地日志** | 按日滚动写入用户数据目录 `logs/chatapp-YYYY-MM-DD.log`，保留 7 天；所有日志写盘前自动打码 API Key |
 
 ### Phase 2 规划
@@ -466,7 +466,7 @@ KnowledgeDocuments (M) ──< KnowledgeChunks (M)
 |--------|--------|------|
 | `ApiBaseUrl` | `https://api.deepseek.com/v1` | 远程 HTTPS、OpenAI 兼容 API 端点 |
 | `ApiKey` | (空) | API 密钥 |
-| `ChatModel` | `deepseek-v4-flash` | 聊天模型名 |
+| `ChatModel` | `deepseek-ai/DeepSeek-V4-Flash` | 默认 SiliconFlow 聊天模型名；DeepSeek 官方端点使用 `deepseek-v4-flash` |
 | `UseUnifiedApi` | `false` | 统一 API 模式：聊天/Embedding/视觉共用主端点与主 Key |
 | `EmbeddingModel` | (空) | 可选的远程嵌入模型名 |
 | `VisionProviderPreset` | `AlibabaModelStudio` | 独立多模态服务预设 |
@@ -610,4 +610,4 @@ dotnet run --project ChatApp.UI
 
 ---
 
-> 文档更新日期：2026-08-21 | 项目版本：v1.3.6
+> 文档更新日期：2026-08-22 | 项目版本：v1.3.7

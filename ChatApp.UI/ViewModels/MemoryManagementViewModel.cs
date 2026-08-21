@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using ChatApp.Core.Models;
 using ChatApp.Core.Services;
+using ChatApp.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -11,8 +12,13 @@ namespace ChatApp.UI.ViewModels;
 public partial class MemoryItemViewModel : ViewModelBase
 {
     public MemoryEntry Entry { get; }
+    public string SourceRoleText { get; }
 
-    public MemoryItemViewModel(MemoryEntry entry) => Entry = entry;
+    public MemoryItemViewModel(MemoryEntry entry, string sourceRoleName)
+    {
+        Entry = entry;
+        SourceRoleText = $"来源角色 · {sourceRoleName}";
+    }
 
     public int Id => Entry.Id;
     public string Content => Entry.Content;
@@ -29,22 +35,23 @@ public partial class MemoryItemViewModel : ViewModelBase
 }
 
 /// <summary>
-/// Role-scoped long-term memory panel: list / add / edit / delete / clear.
-/// In group chats the member selector switches which role's memory is shown;
-/// only that role's memory is ever visible (isolation constraint).
+/// Shared long-term memory panel: list / add / edit / delete / clear.
+/// Every memory records the role whose conversation triggered it.
 /// </summary>
 public partial class MemoryManagementViewModel : ViewModelBase
 {
     private readonly IMemoryService _memory;
+    private readonly IRoleService _roles;
+    private readonly IDialogService _dialogs;
     private readonly ILogger<MemoryManagementViewModel> _logger;
 
     public ObservableCollection<MemoryItemViewModel> Items { get; } = new();
 
-    /// <summary>Selectable roles (group mode); empty in private mode.</summary>
+    /// <summary>Selectable source roles for manually added memories.</summary>
     public ObservableCollection<Role> SelectableRoles { get; } = new();
 
     [ObservableProperty] private Role? _selectedRole;
-    [ObservableProperty] private string _headerText = string.Empty;
+    [ObservableProperty] private string _headerText = "共享长期记忆";
     [ObservableProperty] private string _newMemoryText = string.Empty;
     [ObservableProperty] private string _statusText = string.Empty;
     [ObservableProperty] private bool _isBusy;
@@ -52,30 +59,35 @@ public partial class MemoryManagementViewModel : ViewModelBase
     public bool HasSelectableRoles => SelectableRoles.Count > 1;
     public bool CanAdd => SelectedRole is not null;
 
-    public MemoryManagementViewModel(IMemoryService memory, ILogger<MemoryManagementViewModel> logger)
+    public MemoryManagementViewModel(
+        IMemoryService memory,
+        IRoleService roles,
+        IDialogService dialogs,
+        ILogger<MemoryManagementViewModel> logger)
     {
         _memory = memory;
+        _roles = roles;
+        _dialogs = dialogs;
         _logger = logger;
     }
 
     partial void OnSelectedRoleChanged(Role? value)
     {
-        HeaderText = value is null ? string.Empty : $"「{value.Name}」的长期记忆";
         AddCommand.NotifyCanExecuteChanged();
         ClearCommand.NotifyCanExecuteChanged();
-        _ = LoadAsync();
     }
 
-    /// <summary>Private-chat mode: the panel shows the single bound role.</summary>
-    public Task InitializeAsync(Role role)
+    /// <summary>Private-chat mode: manual memories default to the current role as their source.</summary>
+    public async Task InitializeAsync(Role role)
     {
         SelectableRoles.Clear();
         SelectableRoles.Add(role);
         SelectedRole = role;
-        return Task.CompletedTask;
+        OnPropertyChanged(nameof(HasSelectableRoles));
+        await LoadAsync();
     }
 
-    /// <summary>Group-chat mode: members are selectable so each speaker's memory stays isolated.</summary>
+    /// <summary>Group-chat mode: the selected member is recorded as the source of a manual memory.</summary>
     public async Task InitializeGroupAsync(IReadOnlyList<Role> members)
     {
         SelectableRoles.Clear();
@@ -83,25 +95,30 @@ public partial class MemoryManagementViewModel : ViewModelBase
             SelectableRoles.Add(member);
         OnPropertyChanged(nameof(HasSelectableRoles));
         SelectedRole = SelectableRoles.FirstOrDefault();
-        await Task.CompletedTask;
+        await LoadAsync();
     }
 
     public async Task LoadAsync()
     {
-        var role = SelectedRole;
-        if (role is null) return;
         IsBusy = true;
         try
         {
-            var entries = await _memory.ListAsync(role.Id);
+            var entries = await _memory.ListAllAsync();
+            var roleNames = (await _roles.GetAllAsync()).ToDictionary(role => role.Id, role => role.Name);
             Items.Clear();
-            foreach (var entry in entries) Items.Add(new MemoryItemViewModel(entry));
-            StatusText = Items.Count == 0 ? "暂无记忆。对话中的自动抽取会出现在这里。" : $"共 {Items.Count} 条记忆";
+            foreach (var entry in entries)
+            {
+                var sourceRoleName = roleNames.GetValueOrDefault(entry.RoleId, $"角色 #{entry.RoleId}");
+                Items.Add(new MemoryItemViewModel(entry, sourceRoleName));
+            }
+            StatusText = Items.Count == 0
+                ? "暂无共享记忆。任一角色对话中的自动抽取都会出现在这里。"
+                : $"共 {Items.Count} 条共享记忆，所有角色均可召回";
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Load memories failed for role {Id}.", role.Id);
-            StatusText = $"加载失败：{ex.Message}";
+            _logger.LogWarning(ex, "Load shared memories failed.");
+            StatusText = $"加载失败：{SafeError(ex)}";
         }
         finally
         {
@@ -124,7 +141,7 @@ public partial class MemoryManagementViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusText = $"新增失败：{ex.Message}";
+            StatusText = $"新增失败：{SafeError(ex)}";
         }
         finally
         {
@@ -150,7 +167,7 @@ public partial class MemoryManagementViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusText = $"保存失败：{ex.Message}";
+            StatusText = $"保存失败：{SafeError(ex)}";
         }
         finally
         {
@@ -181,7 +198,7 @@ public partial class MemoryManagementViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusText = $"删除失败：{ex.Message}";
+            StatusText = $"删除失败：{SafeError(ex)}";
         }
         finally
         {
@@ -192,17 +209,19 @@ public partial class MemoryManagementViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanAdd))]
     private async Task ClearAsync()
     {
-        var role = SelectedRole;
-        if (role is null) return;
+        if (!await _dialogs.ConfirmAsync(
+                "确定要清空全部共享记忆吗？\n\n所有角色都将无法再召回这些记忆，该操作不可撤销。",
+                "清空共享记忆"))
+            return;
         IsBusy = true;
         try
         {
-            await _memory.ClearForRoleAsync(role.Id);
+            await _memory.ClearAllAsync();
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            StatusText = $"清空失败：{ex.Message}";
+            StatusText = $"清空失败：{SafeError(ex)}";
         }
         finally
         {

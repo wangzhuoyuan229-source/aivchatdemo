@@ -1,9 +1,11 @@
 using System.Collections.Specialized;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using ChatApp.UI.ViewModels;
 
 namespace ChatApp.UI.Views;
@@ -11,10 +13,17 @@ namespace ChatApp.UI.Views;
 public partial class ChatView : UserControl
 {
     private INotifyCollectionChanged? _currentSource;
+    private bool _deferCurrentEnterToIme;
 
     public ChatView()
     {
         AvaloniaXamlLoader.Load(this);
+        var inputBox = this.FindControl<TextBox>("InputBox");
+        inputBox?.AddHandler(
+            InputElement.KeyUpEvent,
+            InputBox_KeyUp,
+            RoutingStrategies.Bubble,
+            handledEventsToo: true);
         DataContextChanged += OnDataContextChanged;
         Loaded += ChatView_Loaded;
     }
@@ -64,6 +73,21 @@ public partial class ChatView : UserControl
 
     private void InputBox_KeyDown(object? sender, KeyEventArgs e)
     {
+        if (ChatInputKeyPolicy.IsPlainEnter(e.Key, e.KeyModifiers))
+        {
+            _deferCurrentEnterToIme = sender is TextBox inputBox && HasActiveImePreedit(inputBox);
+            if (_deferCurrentEnterToIme)
+            {
+                // The IME owns this Enter: it confirms the highlighted candidate.
+                // Do not select an @ mention or turn the resulting edit into Send.
+                return;
+            }
+        }
+        else
+        {
+            _deferCurrentEnterToIme = false;
+        }
+
         if (DataContext is ChatViewModel vm && vm.IsMentionPopupOpen)
         {
             if (e.Key == Key.Down)
@@ -103,16 +127,45 @@ public partial class ChatView : UserControl
                 }
             }
         }
-        var isEnter = e.Key == Key.Enter || e.Key == Key.Return;
-        if (isEnter && e.KeyModifiers == KeyModifiers.None &&
-            DataContext is ChatViewModel vm2 && vm2.SendCommand.CanExecute(null))
-        {
-            // If mention popup is open, Enter should have been handled above
-            vm2.SendCommand.Execute(null);
-            e.Handled = true;
-        }
-        // Shift+Enter 保持换行（AcceptsReturn=true 时默认行为），此处不拦截
     }
+
+    private void InputBox_KeyUp(object? sender, KeyEventArgs e)
+    {
+        if (!ChatInputKeyPolicy.IsPlainEnter(e.Key, e.KeyModifiers))
+            return;
+
+        var deferredToIme = _deferCurrentEnterToIme;
+        _deferCurrentEnterToIme = false;
+        if (deferredToIme ||
+            sender is not TextBox inputBox || DataContext is not ChatViewModel vm)
+            return;
+
+        // KeyUp runs after TextBox and the platform IME. A committed Chinese
+        // candidate leaves a Chinese character before the caret; a normal Enter
+        // leaves a line break, which is the only case converted into Send.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!ReferenceEquals(DataContext, vm)) return;
+            if (HasActiveImePreedit(inputBox)) return;
+            var currentText = inputBox.Text ?? string.Empty;
+            if (!ChatInputKeyPolicy.TryRemoveLineBreakBeforeCaret(
+                    currentText,
+                    inputBox.CaretIndex,
+                    out var textToSend,
+                    out var caretIndex))
+                return;
+
+            inputBox.Text = textToSend;
+            inputBox.CaretIndex = caretIndex;
+            vm.InputText = textToSend;
+            if (vm.SendCommand.CanExecute(null)) vm.SendCommand.Execute(null);
+        }, DispatcherPriority.Background);
+    }
+
+    private static bool HasActiveImePreedit(TextBox inputBox) =>
+        inputBox.GetVisualDescendants()
+            .OfType<TextPresenter>()
+            .Any(presenter => !string.IsNullOrEmpty(presenter.PreeditText));
 
     private async void Export_Click(object? sender, RoutedEventArgs e)
     {

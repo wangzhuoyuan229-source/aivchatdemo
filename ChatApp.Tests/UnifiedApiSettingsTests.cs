@@ -290,6 +290,26 @@ public class UnifiedApiSettingsTests
         Assert.Contains("Embedding", viewModel.StatusText);
     }
 
+    [Fact]
+    public async Task ExistingUnifiedCustomModelIsPreservedAndShownAsCustomPreset()
+    {
+        var config = new RecordingConfigurationService(new AiSettings
+        {
+            UseUnifiedApi = true,
+            UnifiedPreset = UnifiedApiPreset.SiliconFlow,
+            ApiBaseUrl = "https://api.siliconflow.cn/v1",
+            ChatModel = "deepseek-ai/DeepSeek-V3.1",
+            EmbeddingModel = "BAAI/bge-m3"
+        });
+        var viewModel = new SettingsViewModel(config, new MemoryUiSettingsService());
+
+        await viewModel.LoadAsync();
+
+        Assert.Equal("自定义", viewModel.UnifiedPresetName);
+        Assert.Equal("deepseek-ai/DeepSeek-V3.1", viewModel.ChatModel);
+        Assert.True(viewModel.AreIndividualModelsEnabled);
+    }
+
     private static MultimodalImageRequest VisionRequest() => new()
     {
         ImageBytes = new byte[] { 1, 2, 3 },

@@ -302,6 +302,8 @@ public partial class CreateRoleViewModel : ViewModelBase
             role.DialogueExamples = DialogueExamples.Trim();
             role.Greeting = Greeting.Trim();
             role.SystemPrompt = SupplementaryPrompt.Trim();
+            if (isNew)
+                role.PromptTemplateVersion = Role.CurrentPromptTemplateVersion;
 
             if (isNew)
             {
@@ -325,7 +327,7 @@ public partial class CreateRoleViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ErrorText = ex.Message;
+            ErrorText = SafeError(ex);
             _logger.LogError(ex, "Save role failed.");
         }
         finally

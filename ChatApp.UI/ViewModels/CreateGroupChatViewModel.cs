@@ -102,7 +102,7 @@ public partial class CreateGroupChatViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ErrorText = ex.Message;
+            ErrorText = SafeError(ex);
             _logger.LogError(ex, "Create group chat failed.");
         }
     }

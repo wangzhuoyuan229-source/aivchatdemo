@@ -5,6 +5,8 @@ namespace ChatApp.Core.Models;
 /// </summary>
 public class Role
 {
+    public const int CurrentPromptTemplateVersion = 1;
+
     public int Id { get; set; }
 
     public string Name { get; set; } = string.Empty;
@@ -38,6 +40,12 @@ public class Role
 
     /// <summary>Greeting message sent when a conversation starts.</summary>
     public string Greeting { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Version of the immutable role-play startup template used for this role.
+    /// Zero preserves the legacy prompt behavior for roles created before v1.3.7.
+    /// </summary>
+    public int PromptTemplateVersion { get; set; }
 
     /// <summary>P2: affinity score (0-100), default 50.</summary>
     public int Affinity { get; set; } = 50;

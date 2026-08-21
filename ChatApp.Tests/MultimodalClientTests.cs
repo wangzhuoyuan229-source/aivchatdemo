@@ -53,13 +53,18 @@ public class MultimodalClientTests
     [Fact]
     public async Task AuthenticationFailureDoesNotRetry()
     {
-        var handler = new RecordingHandler(_ => JsonResponse("{}", HttpStatusCode.Unauthorized));
+        const string leakedKey = "sk-abcdefghijklmnopqrstuvwxyz123456";
+        var handler = new RecordingHandler(_ => JsonResponse(
+            $"{{\"error\":{{\"message\":\"invalid {leakedKey}\"}}}}",
+            HttpStatusCode.Unauthorized));
         var client = new MultimodalClient(new HttpClient(handler));
 
         var error = await Assert.ThrowsAsync<HttpRequestException>(() =>
             client.CompleteImageAsync(Settings(MultimodalApiProtocol.ChatCompletions), Request()));
         Assert.Equal(HttpStatusCode.Unauthorized, error.StatusCode);
         Assert.Equal(1, handler.CallCount);
+        Assert.DoesNotContain(leakedKey, error.Message);
+        Assert.Contains("[REDACTED]", error.Message);
     }
 
     [Fact]

@@ -11,6 +11,31 @@ namespace ChatApp.Tests;
 public class RollingFileLoggerTests
 {
     [Fact]
+    public void UnknownApiKeyAndBearerTokenPatternsAreRedacted()
+    {
+        const string apiKey = "sk-abcdefghijklmnopqrstuvwxyz123456";
+        const string bearer = "abcdefghijklmnopqrstuvwxyz.ABCDEFGHIJKLMNOP";
+
+        var redacted = SecretRedaction.Redact($"key={apiKey}; Authorization: Bearer {bearer}");
+
+        Assert.DoesNotContain(apiKey, redacted);
+        Assert.DoesNotContain(bearer, redacted);
+        Assert.Equal(2, redacted.Split("[REDACTED]", StringSplitOptions.None).Length - 1);
+    }
+
+    [Fact]
+    public void UserFacingErrorsClassifyHttpFailuresAndRedactGenericMessages()
+    {
+        Assert.Contains("鉴权失败", UserFacingError.FromException(
+            new HttpRequestException("provider payload", null, System.Net.HttpStatusCode.Unauthorized)));
+
+        const string secret = "sk-abcdefghijklmnopqrstuvwxyz123456";
+        var message = UserFacingError.FromException(new InvalidOperationException($"bad key {secret}"));
+        Assert.DoesNotContain(secret, message);
+        Assert.Contains("[REDACTED]", message);
+    }
+
+    [Fact]
     public void LogLinesAreRedactedBeforeReachingDisk()
     {
         var secret = $"sk-{Guid.NewGuid():N}";

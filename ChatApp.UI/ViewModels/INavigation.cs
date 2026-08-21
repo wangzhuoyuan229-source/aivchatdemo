@@ -8,6 +8,9 @@ public interface INavigation
 
     Task OpenConversationAsync(int conversationId);
 
+    /// <summary>Clears the chat surface when the specified conversation was deleted.</summary>
+    void CloseConversationIfOpen(int conversationId);
+
     /// <summary>Creates a new group chat with the given members and opens it.</summary>
     Task OpenNewGroupChatAsync(IReadOnlyList<Role> members, string title, string? avatar = null);
 

@@ -223,7 +223,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ProgressText = $"内置知识库索引失败：{ex.Message}；下次启动会自动重试。";
+            ProgressText = $"内置知识库索引失败：{SafeError(ex)}；下次启动会自动重试。";
             _logger.LogError(ex, "Built-in knowledge import failed.");
         }
         finally
@@ -391,7 +391,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ProgressText = $"失败：{ex.Message}";
+            ProgressText = $"失败：{SafeError(ex)}";
             _logger.LogError(ex, "Import failed.");
         }
         finally
@@ -444,7 +444,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ProgressText = $"失败：{ex.Message}";
+            ProgressText = $"失败：{SafeError(ex)}";
             _logger.LogError(ex, "Import folder failed.");
         }
         finally
@@ -478,7 +478,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync($"更新图片语义失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"更新图片语义失败：{SafeError(ex)}");
         }
     }
 
@@ -495,8 +495,8 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync($"重新识图失败：{ex.Message}");
-            ProgressText = $"重新识图失败：{ex.Message}";
+            await _dialogs.ShowErrorAsync($"重新识图失败：{SafeError(ex)}");
+            ProgressText = $"重新识图失败：{SafeError(ex)}";
         }
     }
 
@@ -514,7 +514,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync($"无法打开图片：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"无法打开图片：{SafeError(ex)}");
         }
     }
 
@@ -583,7 +583,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Delete document failed.");
-            await _dialogs.ShowErrorAsync($"删除失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"删除失败：{SafeError(ex)}");
         }
     }
 
@@ -606,7 +606,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Show SelectionDialog failed.");
-            await _dialogs.ShowErrorAsync($"打开对话框失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"打开对话框失败：{SafeError(ex)}");
             return;
         }
         if (!ok) return;
@@ -618,7 +618,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync($"移动文档失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"移动文档失败：{SafeError(ex)}");
             _logger.LogWarning(ex, "Move document failed.");
         }
     }
@@ -663,8 +663,8 @@ public partial class KnowledgeViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Batch image recognition failed.");
-            ProgressText = $"批量识图失败：{ex.Message}";
-            await _dialogs.ShowErrorAsync($"批量识图失败：{ex.Message}");
+            ProgressText = $"批量识图失败：{SafeError(ex)}";
+            await _dialogs.ShowErrorAsync($"批量识图失败：{SafeError(ex)}");
         }
         finally
         {
@@ -694,7 +694,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Batch delete failed.");
-            await _dialogs.ShowErrorAsync($"批量删除失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"批量删除失败：{SafeError(ex)}");
         }
     }
 
@@ -719,7 +719,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Show SelectionDialog failed.");
-            await _dialogs.ShowErrorAsync($"打开对话框失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"打开对话框失败：{SafeError(ex)}");
             return;
         }
         if (!ok) return;
@@ -732,7 +732,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync($"批量移动失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"批量移动失败：{SafeError(ex)}");
             _logger.LogWarning(ex, "Batch move failed.");
         }
     }
@@ -754,7 +754,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync($"创建分组失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"创建分组失败：{SafeError(ex)}");
             _logger.LogWarning(ex, "Create group failed.");
         }
     }
@@ -773,7 +773,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync($"重命名失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"重命名失败：{SafeError(ex)}");
             _logger.LogWarning(ex, "Rename group failed.");
         }
     }
@@ -799,7 +799,7 @@ public partial class KnowledgeViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync($"删除分组失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"删除分组失败：{SafeError(ex)}");
             _logger.LogWarning(ex, "Delete group failed.");
         }
     }

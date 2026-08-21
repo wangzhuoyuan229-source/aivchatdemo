@@ -1,4 +1,5 @@
 using ChatApp.Core.Models;
+using ChatApp.Core.Settings;
 using ChatApp.Infrastructure;
 using ChatApp.Infrastructure.Data;
 using ChatApp.Infrastructure.Repositories;
@@ -14,6 +15,149 @@ namespace ChatApp.Tests;
 /// </summary>
 public class Plan3PersistenceTests
 {
+    [Fact]
+    public async Task SharedMemoryMigrationMergesLegacyVectorScopesAndIsIdempotent()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            await using (var connection = new SqliteConnection($"Data Source={path}"))
+            {
+                await connection.OpenAsync();
+                await using var createVectors = new SqliteCommand(
+                    "CREATE TABLE \"Vectors\" (\"Id\" TEXT PRIMARY KEY, \"Scope\" TEXT NOT NULL, " +
+                    "\"Content\" TEXT NOT NULL, \"Embedding\" BLOB NOT NULL, \"Metadata\" TEXT NOT NULL DEFAULT '{}');",
+                    connection);
+                await createVectors.ExecuteNonQueryAsync();
+                await using var insertVectors = new SqliteCommand(
+                    "INSERT INTO \"Vectors\" (\"Id\", \"Scope\", \"Content\", \"Embedding\") VALUES " +
+                    "('m1', 'memory:1', '一', X'00000000'), " +
+                    "('m2', 'memory:2', '二', X'00000000'), " +
+                    "('k1', 'knowledge:1', '资料', X'00000000');",
+                    connection);
+                await insertVectors.ExecuteNonQueryAsync();
+            }
+
+            var factory = new TestDbContextFactory(path);
+            for (var i = 0; i < 2; i++)
+            {
+                await using var db = await factory.CreateDbContextAsync();
+                await InfrastructureModule.MigrateSharedMemoryAsync(db, CancellationToken.None);
+            }
+
+            await using var verify = new SqliteConnection($"Data Source={path}");
+            await verify.OpenAsync();
+            await using var command = new SqliteCommand(
+                "SELECT \"Id\", \"Scope\" FROM \"Vectors\" ORDER BY \"Id\";", verify);
+            await using var reader = await command.ExecuteReaderAsync();
+            var scopes = new Dictionary<string, string>();
+            while (await reader.ReadAsync()) scopes[reader.GetString(0)] = reader.GetString(1);
+
+            Assert.Equal("memory:shared", scopes["m1"]);
+            Assert.Equal("memory:shared", scopes["m2"]);
+            Assert.Equal("knowledge:1", scopes["k1"]);
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
+    [Fact]
+    public async Task RolePromptTemplateMigrationPreservesLegacyRolesAndIsIdempotent()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            await using (var connection = new SqliteConnection($"Data Source={path}"))
+            {
+                await connection.OpenAsync();
+                await using var createRoles = new SqliteCommand(
+                    "CREATE TABLE \"Roles\" (\"Id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, " +
+                    "\"Name\" TEXT NOT NULL, \"CreatedAt\" TEXT NOT NULL);", connection);
+                await createRoles.ExecuteNonQueryAsync();
+                await using var insertRole = new SqliteCommand(
+                    "INSERT INTO \"Roles\" (\"Name\", \"CreatedAt\") VALUES ('旧角色', CURRENT_TIMESTAMP);", connection);
+                await insertRole.ExecuteNonQueryAsync();
+            }
+
+            var factory = new TestDbContextFactory(path);
+            for (var i = 0; i < 2; i++)
+            {
+                await using var db = await factory.CreateDbContextAsync();
+                await InfrastructureModule.MigrateRolePromptTemplateAsync(db, CancellationToken.None);
+            }
+
+            await using var verify = new SqliteConnection($"Data Source={path}");
+            await verify.OpenAsync();
+            await using var command = new SqliteCommand(
+                "SELECT \"Name\", \"PromptTemplateVersion\" FROM \"Roles\" WHERE \"Id\" = 1;", verify);
+            await using var reader = await command.ExecuteReaderAsync();
+            Assert.True(await reader.ReadAsync());
+            Assert.Equal("旧角色", reader.GetString(0));
+            Assert.Equal(0, reader.GetInt32(1));
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
+    [Fact]
+    public async Task FreshDatabasePersistsCurrentRolePromptTemplateVersion()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            var factory = new TestDbContextFactory(path);
+            await using (var db = await factory.CreateDbContextAsync())
+            {
+                await db.Database.EnsureCreatedAsync();
+                db.Roles.Add(new Role
+                {
+                    Name = "新角色",
+                    PromptTemplateVersion = Role.CurrentPromptTemplateVersion
+                });
+                await db.SaveChangesAsync();
+            }
+
+            await using var verify = await factory.CreateDbContextAsync();
+            Assert.Equal(
+                Role.CurrentPromptTemplateVersion,
+                await verify.Roles.Select(role => role.PromptTemplateVersion).SingleAsync());
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
+    [Fact]
+    public async Task CorruptSettingsJsonFallsBackToUsableCurrentDefaults()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            var factory = new TestDbContextFactory(path);
+            await using (var db = await factory.CreateDbContextAsync())
+            {
+                await db.Database.EnsureCreatedAsync();
+                db.Settings.Add(new Setting { Key = "ai", Value = "{not-json" });
+                await db.SaveChangesAsync();
+            }
+
+            var settings = await new ConfigurationService(factory).LoadAsync();
+
+            Assert.True(settings.UseUnifiedApi);
+            Assert.Equal(AiSettings.DefaultApiBaseUrl, settings.ApiBaseUrl);
+            Assert.Equal(AiSettings.DefaultChatModel, settings.ChatModel);
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
     [Fact]
     public async Task Plan3IndexesExistOnFreshDatabases()
     {

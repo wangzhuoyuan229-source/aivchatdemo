@@ -14,7 +14,7 @@ namespace ChatApp.AI.SemanticKernel;
 /// <summary>
 /// Director for group chats. Persists the user message, picks speakers (round-robin
 /// or hybrid director-LLM selection), assembles each speaker's context (its own
-/// persona + private long-term memory + role-scoped knowledge + a group transcript),
+/// persona + shared long-term memory + role-scoped knowledge + a group transcript),
 /// streams its reply, persists it, and appends it to the transcript so later
 /// speakers can react to it.
 /// </summary>
@@ -146,45 +146,23 @@ public class GroupChatOrchestrator : IGroupChatService
         var results = new List<Message>();
         var kernel = KernelFactory.Build(settings);
         var chat = kernel.GetRequiredService<IChatCompletionService>();
-        var execSettings = new OpenAIPromptExecutionSettings
-        {
-            Temperature = Math.Clamp(settings.ChatTemperature, 0, 2),
-            TopP = 1.0
-        };
+        var execSettings = KernelFactory.CreateChatExecutionSettings(
+            settings,
+            settings.ChatTemperature,
+            topP: 1.0);
 
         foreach (var roleId in speakerIds)
         {
             if (!rolesById.TryGetValue(roleId, out var role)) continue;
             ct.ThrowIfCancellationRequested();
 
-            // Best-effort private memory plus strict knowledge scoped to this role.
-            IReadOnlyList<VectorSearchHit> memoryHits = Array.Empty<VectorSearchHit>();
-            if (settings.EnableLongTermMemory)
-            {
-                try { memoryHits = await _memory.RecallAsync(role.Id, retrievalQuery, ct); }
-                catch (Exception ex) { _logger.LogWarning(ex, "Memory recall failed for role {Id}.", role.Id); }
-            }
-            var knowledgeResult = KnowledgeRetrievalResult.Disabled("知识库功能已关闭");
-            if (settings.EnableKnowledgeBase)
-            {
-                try
-                {
-                    var groupIds = await _roles.GetKnowledgeGroupIdsAsync(role.Id, ct);
-                    var scope = $"conv:{conversationId}:{role.Id}";
-                    var key = $"{string.Join(" ", retrievalQuery.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant()}|{string.Join(",", groupIds.OrderBy(g => g))}";
-                    if (!_knowledgeCache.TryGet(scope, key, out knowledgeResult))
-                    {
-                        knowledgeResult = await _knowledge.RetrieveAsync(
-                            ChatOrchestrator.BuildKnowledgeRequest(settings, retrievalQuery, groupIds), ct);
-                        _knowledgeCache.Set(scope, key, knowledgeResult);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Knowledge retrieval failed for group-chat role {RoleId}.", role.Id);
-                    knowledgeResult = KnowledgeRetrievalResult.Unavailable("知识检索暂时不可用");
-                }
-            }
+            // Memory and role-scoped knowledge are independent retrievals.
+            var memoryTask = RecallMemoryBestEffortAsync(role.Id, retrievalQuery, settings, ct);
+            var knowledgeTask = RetrieveKnowledgeBestEffortAsync(
+                conversationId, role.Id, retrievalQuery, settings, ct);
+            await Task.WhenAll(memoryTask, knowledgeTask);
+            var memoryHits = await memoryTask;
+            var knowledgeResult = await knowledgeTask;
 
             _logger.LogInformation(
                 "Group-chat role {RoleId} knowledge status {Status}; context chunks {Count}, image candidates {ImageCount}.",
@@ -239,8 +217,76 @@ public class GroupChatOrchestrator : IGroupChatService
             transcript += $"\n[{role.Name}] {ChatOrchestrator.FormatMessageForContext(msg)}";
         }
 
+        if (settings.EnableLongTermMemory)
+        {
+            try { await _memory.ProcessConversationAsync(conversationId, ct); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Shared memory extraction failed for group conversation {Id}.", conversationId); }
+        }
+
         progress?.Report(new TurnFinished());
         return results;
+    }
+
+    private async Task<IReadOnlyList<VectorSearchHit>> RecallMemoryBestEffortAsync(
+        int roleId,
+        string retrievalQuery,
+        AiSettings settings,
+        CancellationToken ct)
+    {
+        if (!settings.EnableLongTermMemory)
+            return Array.Empty<VectorSearchHit>();
+
+        try
+        {
+            return await _memory.RecallSharedAsync(retrievalQuery, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Memory recall failed for role {Id}.", roleId);
+            return Array.Empty<VectorSearchHit>();
+        }
+    }
+
+    private async Task<KnowledgeRetrievalResult> RetrieveKnowledgeBestEffortAsync(
+        int conversationId,
+        int roleId,
+        string retrievalQuery,
+        AiSettings settings,
+        CancellationToken ct)
+    {
+        if (!settings.EnableKnowledgeBase)
+            return KnowledgeRetrievalResult.Disabled("知识库功能已关闭");
+
+        try
+        {
+            var groupIds = await _roles.GetKnowledgeGroupIdsAsync(roleId, ct);
+            var scope = $"conv:{conversationId}:{roleId}";
+            var normalizedQuery = string.Join(
+                " ",
+                retrievalQuery.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                .ToLowerInvariant();
+            var key = $"{normalizedQuery}|{string.Join(",", groupIds.OrderBy(g => g))}";
+            if (_knowledgeCache.TryGet(scope, key, out var cached))
+                return cached;
+
+            var result = await _knowledge.RetrieveAsync(
+                ChatOrchestrator.BuildKnowledgeRequest(settings, retrievalQuery, groupIds), ct);
+            _knowledgeCache.Set(scope, key, result);
+            return result;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Knowledge retrieval failed for group-chat role {RoleId}.", roleId);
+            return KnowledgeRetrievalResult.Unavailable("知识检索暂时不可用");
+        }
     }
 
     /// <summary>
@@ -276,7 +322,7 @@ public class GroupChatOrchestrator : IGroupChatService
             var chat = kernel.GetRequiredService<IChatCompletionService>();
             var result = await chat.GetChatMessageContentAsync(
                 directorHistory,
-                new OpenAIPromptExecutionSettings { Temperature = 0.2 },
+                KernelFactory.CreateChatExecutionSettings(settings, temperature: 0.2),
                 kernel, ct);
 
             var picked = ParseDirectorNames(result.Content ?? string.Empty, rolesById);

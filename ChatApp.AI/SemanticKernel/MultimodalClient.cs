@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using ChatApp.Core.Security;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
 
@@ -202,6 +203,7 @@ public sealed class MultimodalClient : IMultimodalClient, IDisposable
     private static string Truncate(string? value)
     {
         var text = (value ?? "未知错误").Replace('\r', ' ').Replace('\n', ' ').Trim();
+        text = SecretRedaction.Redact(text);
         return text.Length <= 300 ? text : text[..300];
     }
 

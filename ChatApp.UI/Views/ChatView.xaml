@@ -48,7 +48,7 @@
                                FontSize="11"/>
                 </Border>
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Classes="ghost" Content="🧠 记忆" ToolTip.Tip="管理本会话角色的长期记忆"
+                    <Button Classes="ghost" Content="🧠 记忆" ToolTip.Tip="管理所有角色共享的长期记忆"
                             Command="{Binding OpenMemoryCommand}" Margin="0,0,4,0"/>
                     <Button Classes="ghost" Content="✏️ 重命名" Command="{Binding RenameConversationCommand}"
                             ToolTip.Tip="重命名会话" Margin="0,0,4,0"/>

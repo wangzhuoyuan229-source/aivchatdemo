@@ -42,6 +42,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.SystemPrompt).HasDefaultValue("");
             e.Property(x => x.DialogueExamples).HasDefaultValue("");
             e.Property(x => x.Greeting).HasDefaultValue("");
+            e.Property(x => x.PromptTemplateVersion).HasDefaultValue(0);
         });
 
         b.Entity<RoleKnowledgeGroup>(e =>

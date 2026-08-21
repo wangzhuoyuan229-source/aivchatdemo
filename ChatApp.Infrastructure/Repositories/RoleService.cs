@@ -10,11 +10,16 @@ public class RoleService : IRoleService
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly ILogger<RoleService> _logger;
+    private readonly IVectorStore? _vectors;
 
-    public RoleService(IDbContextFactory<AppDbContext> factory, ILogger<RoleService> logger)
+    public RoleService(
+        IDbContextFactory<AppDbContext> factory,
+        ILogger<RoleService> logger,
+        IVectorStore? vectors = null)
     {
         _factory = factory;
         _logger = logger;
+        _vectors = vectors;
     }
 
     public async Task<IReadOnlyList<Role>> GetAllAsync(CancellationToken ct = default)
@@ -98,6 +103,11 @@ public class RoleService : IRoleService
         var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == id, ct);
         if (role is null) return;
         var attachmentStorageKeys = new HashSet<string>(StringComparer.Ordinal);
+        var memoryVectorIds = await db.MemoryEntries
+            .Where(memory => memory.RoleId == id && memory.ExternalId != string.Empty)
+            .Select(memory => memory.ExternalId)
+            .Distinct()
+            .ToListAsync(ct);
 
         // 级联删除：先收集私聊会话 ID，删除其下所有消息，再删会话、记忆条目，最后删角色本身
         var conversationIds = await db.Conversations
@@ -154,6 +164,17 @@ public class RoleService : IRoleService
         db.Roles.Remove(role);
 
         await db.SaveChangesAsync(ct);
+        if (_vectors is not null)
+        {
+            foreach (var vectorId in memoryVectorIds)
+            {
+                try { await _vectors.DeleteAsync(vectorId, CancellationToken.None); }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete shared memory vector {VectorId} for role {RoleId}.", vectorId, id);
+                }
+            }
+        }
         foreach (var storageKey in attachmentStorageKeys.Where(key => !string.IsNullOrWhiteSpace(key)))
         {
             try

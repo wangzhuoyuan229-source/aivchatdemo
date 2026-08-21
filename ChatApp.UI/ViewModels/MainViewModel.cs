@@ -122,6 +122,13 @@ public partial class MainViewModel : ViewModelBase, INavigation
             await Chat.LoadAsync(conversationId);
     }
 
+    public void CloseConversationIfOpen(int conversationId)
+    {
+        if (Chat.Conversation?.Id != conversationId) return;
+        Chat.ClearConversation();
+        if (ReferenceEquals(RightView, Chat)) RightView = null;
+    }
+
     public async Task OpenNewGroupChatAsync(IReadOnlyList<Role> members, string title, string? avatar = null)
     {
         if (members is null || members.Count < 2) return;

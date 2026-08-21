@@ -171,7 +171,7 @@ public partial class SettingsViewModel : ViewModelBase
         else if (url.Contains("deepseek.com"))
         {
             provider = "DeepSeek";
-            defaultChat = "deepseek-v4-flash";
+            defaultChat = AiSettings.DeepSeekOfficialChatModel;
             defaultEmbed = string.Empty;
             defaultUrl = "https://api.deepseek.com/v1";
         }
@@ -185,7 +185,7 @@ public partial class SettingsViewModel : ViewModelBase
         else if (url.Contains("siliconflow.cn") || url.Contains("siliconflow"))
         {
             provider = "SiliconFlow";
-            defaultChat = "deepseek-ai/DeepSeek-V3.1";
+            defaultChat = AiSettings.DefaultChatModel;
             defaultEmbed = "BAAI/bge-m3";
             defaultUrl = "https://api.siliconflow.cn/v1";
         }
@@ -231,7 +231,7 @@ public partial class SettingsViewModel : ViewModelBase
             {
                 VisionProviderPresetName = VisionPresetNames.SiliconFlow;
             }
-            ProviderHint = "已识别为 SiliconFlow 统一API（deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL），单Key单端点已自动填充 ✓";
+            ProviderHint = "已识别为 SiliconFlow 统一API（DeepSeek-V4-Flash + BAAI/bge-m3 + Qwen3-VL），单Key单端点已自动填充 ✓";
             return;
         }
         ProviderHint = provider == "DeepSeek"
@@ -339,7 +339,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     public ObservableCollection<string> CommonChatModels { get; } = new()
     {
-        "deepseek-ai/DeepSeek-V3.1", "deepseek-v4-flash", "deepseek-v4-pro", "Qwen/Qwen3-32B", "qwen-plus", "qwen-turbo", "gpt-4o-mini", "gpt-4o"
+        "deepseek-ai/DeepSeek-V4-Flash", "deepseek-v4-flash", "deepseek-v4-pro", "Qwen/Qwen3-32B", "qwen-plus", "qwen-turbo", "gpt-4o-mini", "gpt-4o"
     };
 
     public ObservableCollection<string> CommonEmbeddingModels { get; } = new()
@@ -479,7 +479,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusText = $"自动保存失败：{ex.Message}";
+            StatusText = $"自动保存失败：{SafeError(ex)}";
         }
     }
 
@@ -495,8 +495,7 @@ public partial class SettingsViewModel : ViewModelBase
             if (_settings.UseUnifiedApi)
             {
                 var detected = UnifiedApiPresetProfiles.Detect(_settings.ApiBaseUrl, _settings.ChatModel, _settings.EmbeddingModel);
-                if (detected != UnifiedApiPreset.Custom && detected != _settings.UnifiedPreset)
-                    UnifiedPresetName = FormatUnifiedPreset(detected);
+                UnifiedPresetName = FormatUnifiedPreset(detected);
             }
             UpdateUnifiedState();
             ApiBaseUrl = _settings.ApiBaseUrl;
@@ -554,7 +553,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusText = $"自动保存失败：{ex.Message}";
+            StatusText = $"自动保存失败：{SafeError(ex)}";
         }
         finally
         {
@@ -695,7 +694,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ChatTestStatus = $"连接失败：{ex.Message}";
+            ChatTestStatus = $"连接失败：{SafeError(ex)}";
         }
         finally
         {
@@ -730,7 +729,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            EmbeddingTestStatus = $"连接失败：{ex.Message}";
+            EmbeddingTestStatus = $"连接失败：{SafeError(ex)}";
         }
         finally
         {
@@ -768,7 +767,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            VisionTestStatus = $"连接失败：{ex.Message}";
+            VisionTestStatus = $"连接失败：{SafeError(ex)}";
         }
         finally
         {

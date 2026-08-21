@@ -18,14 +18,20 @@ public partial class RoleListViewModel : ViewModelBase
 
     public ObservableCollection<Role> Roles { get; } = new();
 
-    /// <summary>Past group chats, shown above the role list so they can be reopened.</summary>
+    /// <summary>Past group chats shown in their own library section so they can be reopened.</summary>
     public ObservableCollection<ConversationItemViewModel> GroupChats { get; } = new();
 
-    /// <summary>True when there is at least one past group chat (drives section visibility).</summary>
+    /// <summary>True when there is at least one past group chat.</summary>
     public bool HasGroupChats => GroupChats.Count > 0;
+
+    /// <summary>The role library is the default section so group chats never push roles out of view.</summary>
+    public bool IsRolesSection => !IsGroupChatsSection;
 
     [ObservableProperty] private Role? _selectedRole;
     [ObservableProperty] private string _searchText = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRolesSection))]
+    private bool _isGroupChatsSection;
 
     public RoleListViewModel(IRoleService roleService, IChatHistoryService history, INavigation navigation,
         ILogger<RoleListViewModel> logger, IDialogService dialogs)
@@ -104,6 +110,12 @@ public partial class RoleListViewModel : ViewModelBase
     private async Task RefreshAsync() => await LoadAsync();
 
     [RelayCommand]
+    private void ShowRolesSection() => IsGroupChatsSection = false;
+
+    [RelayCommand]
+    private void ShowGroupChatsSection() => IsGroupChatsSection = true;
+
+    [RelayCommand]
     private async Task OpenAsync(Role role) => await _navigation.OpenChatForRoleAsync(role);
 
     [RelayCommand]
@@ -132,6 +144,30 @@ public partial class RoleListViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task DeleteGroupChatAsync(ConversationItemViewModel item)
+    {
+        if (item is null) return;
+        var confirmed = await _dialogs.ConfirmAsync(
+            $"确定要删除群聊「{item.Title}」吗？\n\n该操作不可撤销，将一并删除群聊消息、附件和由该群聊产生的长期记忆。角色本身不会被删除。",
+            "删除群聊");
+        if (!confirmed) return;
+
+        try
+        {
+            var conversationId = item.Conversation.Id;
+            await _history.DeleteConversationAsync(conversationId);
+            GroupChats.Remove(item);
+            OnPropertyChanged(nameof(HasGroupChats));
+            _navigation.CloseConversationIfOpen(conversationId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Delete group conversation {ConversationId} failed.", item.Conversation.Id);
+            await _dialogs.ShowErrorAsync($"删除群聊失败：{SafeError(ex)}");
+        }
+    }
+
+    [RelayCommand]
     private async Task DeleteAsync(Role role)
     {
         // 弹出确认对话框，避免误删；预设角色给出更强警告
@@ -155,7 +191,7 @@ public partial class RoleListViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Delete role failed.");
-            await _dialogs.ShowErrorAsync($"删除失败：{ex.Message}");
+            await _dialogs.ShowErrorAsync($"删除失败：{SafeError(ex)}");
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ChatApp.Core.Models;
+using ChatApp.Core.Security;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
 using ChatApp.Infrastructure.Data;
@@ -249,7 +250,7 @@ public sealed class BundledKnowledgeService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Automatic built-in knowledge import failed.");
-            return new(BundledKnowledgeImportStatus.Partial, Failed: 1, Detail: ex.Message);
+            return new(BundledKnowledgeImportStatus.Partial, Failed: 1, Detail: UserFacingError.FromException(ex));
         }
         finally
         {

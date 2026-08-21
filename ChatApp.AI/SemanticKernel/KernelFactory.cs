@@ -44,6 +44,44 @@ public static class KernelFactory
     internal static string ResolveEmbeddingApiKey(AiSettings settings) =>
         settings.ResolveEmbeddingApiKey();
 
+    /// <summary>
+    /// Creates settings for user-facing chat responses. SiliconFlow's
+    /// DeepSeek-V4-Flash supports explicit thinking levels; role-play replies use
+    /// Think High while avoiding the slower Think Max mode.
+    /// </summary>
+    internal static OpenAIPromptExecutionSettings CreateChatExecutionSettings(
+        AiSettings settings,
+        double temperature,
+        int? maxTokens = null,
+        double? topP = null)
+    {
+        var executionSettings = new OpenAIPromptExecutionSettings
+        {
+            Temperature = Math.Clamp(temperature, 0, 2),
+            TopP = topP,
+            MaxTokens = maxTokens
+        };
+
+        if (UsesSiliconFlowDeepSeekV4Flash(settings))
+        {
+            executionSettings.ReasoningEffort = "high";
+            executionSettings.ExtensionData = new Dictionary<string, object>
+            {
+                ["enable_thinking"] = true
+            };
+        }
+
+        return executionSettings;
+    }
+
+    internal static bool UsesSiliconFlowDeepSeekV4Flash(AiSettings settings) =>
+        Uri.TryCreate(settings.ApiBaseUrl, UriKind.Absolute, out var endpoint) &&
+        endpoint.Host.EndsWith("siliconflow.cn", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(
+            settings.ChatModel.Trim(),
+            "deepseek-ai/DeepSeek-V4-Flash",
+            StringComparison.OrdinalIgnoreCase);
+
 private static HttpClient CreateHttpClient(string baseUrl, TimeSpan? timeout = null) => new()
     {
         BaseAddress = NormalizeEndpoint(baseUrl),

@@ -13,7 +13,7 @@ public static class UnifiedApiPresetProfiles
     public static (string baseUrl, string chatModel, string embeddingModel, string visionModel, MultimodalApiProtocol visionProtocol, VisionProviderPreset visionPreset) Get(UnifiedApiPreset preset) => preset switch
     {
         UnifiedApiPreset.SiliconFlow =>
-            ("https://api.siliconflow.cn/v1", "deepseek-ai/DeepSeek-V3.1", "BAAI/bge-m3", "Qwen/Qwen3-VL-32B-Instruct", MultimodalApiProtocol.ChatCompletions, VisionProviderPreset.SiliconFlow),
+            ("https://api.siliconflow.cn/v1", AiSettings.DefaultChatModel, "BAAI/bge-m3", "Qwen/Qwen3-VL-32B-Instruct", MultimodalApiProtocol.ChatCompletions, VisionProviderPreset.SiliconFlow),
         UnifiedApiPreset.AlibabaDashScope =>
             ("https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus", "text-embedding-v4", "qwen3-vl-flash", MultimodalApiProtocol.ChatCompletions, VisionProviderPreset.AlibabaModelStudio),
         UnifiedApiPreset.OpenAI =>
@@ -26,7 +26,7 @@ public static class UnifiedApiPresetProfiles
         var url = (baseUrl ?? string.Empty).Trim().TrimEnd('/').ToLowerInvariant();
         var chat = (chatModel ?? string.Empty).Trim();
         var embed = (embeddingModel ?? string.Empty).Trim();
-        if (url == "https://api.siliconflow.cn/v1" && chat == "deepseek-ai/DeepSeek-V3.1" && embed == "BAAI/bge-m3")
+        if (url == "https://api.siliconflow.cn/v1" && chat == AiSettings.DefaultChatModel && embed == "BAAI/bge-m3")
             return UnifiedApiPreset.SiliconFlow;
         if (url == "https://dashscope.aliyuncs.com/compatible-mode/v1" && chat == "qwen-plus" && embed == "text-embedding-v4")
             return UnifiedApiPreset.AlibabaDashScope;

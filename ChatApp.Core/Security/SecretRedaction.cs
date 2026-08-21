@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace ChatApp.Core.Security;
 
 /// <summary>
@@ -9,6 +11,12 @@ public static class SecretRedaction
 {
     private static readonly HashSet<string> Secrets = new(StringComparer.Ordinal);
     private static readonly object Gate = new();
+    private static readonly Regex ApiKeyPattern = new(
+        @"(?<![A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex BearerPattern = new(
+        @"\b(Bearer\s+)[A-Za-z0-9._~+/=-]{12,}",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     public static void Register(string? secret)
     {
@@ -25,7 +33,8 @@ public static class SecretRedaction
             foreach (var secret in Secrets)
                 text = text.Replace(secret, "[REDACTED]", StringComparison.Ordinal);
         }
-        return text;
+        text = ApiKeyPattern.Replace(text, "[REDACTED]");
+        return BearerPattern.Replace(text, "$1[REDACTED]");
     }
 
     public static int RegisteredCount { get { lock (Gate) return Secrets.Count; } }

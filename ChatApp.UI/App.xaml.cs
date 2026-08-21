@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using ChatApp.AI;
 using ChatApp.Core.Services;
+using ChatApp.Core.Security;
 using ChatApp.Infrastructure;
 using ChatApp.UI.Services;
 using ChatApp.UI.ViewModels;
@@ -67,7 +68,7 @@ public partial class App : Application
             catch (Exception ex)
             {
                 await _host.Services.GetRequiredService<IDialogService>()
-                    .ShowErrorAsync($"初始化数据库失败：\n{ex.Message}", "启动错误");
+                    .ShowErrorAsync($"初始化数据库失败：\n{UserFacingError.FromException(ex)}", "启动错误");
             }
         }
 

@@ -38,6 +38,7 @@ public interface IChatHistoryService
     /// <summary>Pins or unpins a conversation (pinned ones sort first).</summary>
     Task SetConversationPinnedAsync(int conversationId, bool pinned, CancellationToken ct = default);
 
+    /// <summary>Deletes a conversation and its messages, attachments, group members and derived memories.</summary>
     Task DeleteConversationAsync(int conversationId, CancellationToken ct = default);
 
     /// <summary>Full-text keyword search across a conversation's messages.</summary>

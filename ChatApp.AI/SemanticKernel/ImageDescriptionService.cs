@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using ChatApp.Core.Models;
+using ChatApp.Core.Security;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
 using Microsoft.Extensions.Logging;
@@ -92,7 +93,7 @@ public sealed class ImageDescriptionService : IImageDescriptionService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Vision description failed for {File}; using metadata fallback.", fileName);
-            return fallback with { Detail = ex.Message };
+            return fallback with { Detail = UserFacingError.FromException(ex) };
         }
         finally
         {
@@ -248,7 +249,7 @@ public sealed class ImageDescriptionService : IImageDescriptionService
                 Provider = provider,
                 Model = settings.VisionModel,
                 ErrorCategory = "invalid_response",
-                ErrorDetail = $"服务已响应，但图片输入或响应格式不兼容：{ex.Message}"
+                ErrorDetail = $"服务已响应，但图片输入或响应格式不兼容：{UserFacingError.FromException(ex)}"
             };
         }
     }
@@ -260,7 +261,7 @@ public sealed class ImageDescriptionService : IImageDescriptionService
         "unsupported_image" => "当前模型或接口不支持图片输入，请改用视觉模型并确认协议。",
         "rate_limited" => "服务正在限流，请稍后重试或检查账户配额。",
         "provider_unavailable" => "服务端暂时不可用，请稍后重试。",
-        _ => $"请求被拒绝，模型可能不支持图片输入：{detail}"
+        _ => $"请求被拒绝，模型可能不支持图片输入：{SecretRedaction.Redact(detail)}"
     };
 
     private static bool LooksLikeModelError(string detail)

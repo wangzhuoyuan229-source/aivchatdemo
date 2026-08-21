@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using ChatApp.Core.Security;
 using ChatApp.UI.Views;
 
 namespace ChatApp.UI.Services;
@@ -64,7 +65,7 @@ public sealed class DialogService : IDialogService
 
     public async Task ShowErrorAsync(string message, string title = "错误")
     {
-        var dialog = new MessageDialog(message, title, "确定");
+        var dialog = new MessageDialog(SecretRedaction.Redact(message), title, "确定");
         await dialog.ShowDialog<MessageDialogResult>(Owner);
     }
 

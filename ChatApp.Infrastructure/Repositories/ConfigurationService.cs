@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ChatApp.Core.Security;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
 using ChatApp.Infrastructure.Data;
@@ -27,16 +28,18 @@ public class ConfigurationService : IConfigurationService
             if (row.Value.IndexOf("useUnifiedApi", StringComparison.OrdinalIgnoreCase) < 0)
                 settings.UseUnifiedApi = false;
             settings.MigrateToRemoteApiOnly();
+            RegisterSecrets(settings);
             return settings;
         }
         catch
         {
-            return new AiSettings();
+            return new AiSettings { UseUnifiedApi = true };
         }
     }
 
     public async Task SaveAsync(AiSettings settings, CancellationToken ct = default)
     {
+        RegisterSecrets(settings);
         settings.ApiBaseUrl = RemoteApiEndpointPolicy
             .NormalizeOrThrow(settings.ApiBaseUrl)
             .ToString().TrimEnd('/');
@@ -60,6 +63,13 @@ public class ConfigurationService : IConfigurationService
         else
             row.Value = json;
         await db.SaveChangesAsync(ct);
+    }
+
+    private static void RegisterSecrets(AiSettings settings)
+    {
+        SecretRedaction.Register(settings.ApiKey);
+        SecretRedaction.Register(settings.ResolveEmbeddingApiKey());
+        SecretRedaction.Register(settings.ResolveVisionApiKey());
     }
 
     public async Task<bool> IsConfiguredAsync(CancellationToken ct = default)

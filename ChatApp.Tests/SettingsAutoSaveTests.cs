@@ -19,7 +19,7 @@ public class SettingsAutoSaveTests
         var saved = await config.Saved.Task.WaitAsync(TimeSpan.FromSeconds(3));
         await Task.Delay(50);
         Assert.Equal("sk-test-autosave", saved.ApiKey);
-        Assert.Equal("deepseek-ai/DeepSeek-V3.1", saved.ChatModel);
+        Assert.Equal("deepseek-ai/DeepSeek-V4-Flash", saved.ChatModel);
         Assert.True(saved.EnableKnowledgeBase);
         Assert.Contains("已自动保存", viewModel.StatusText);
     }

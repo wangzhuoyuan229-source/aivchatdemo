@@ -2,22 +2,26 @@
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ChatApp.UI.ViewModels"
-        Title="记忆管理" Width="560" Height="600"
+        Title="共享记忆管理" Width="600" Height="640"
         WindowStartupLocation="CenterOwner" MinWidth="420" MinHeight="380"
         Background="{DynamicResource BgBrush}">
     <Grid RowDefinitions="Auto,*,Auto" Margin="24">
         <Grid Grid.Row="0" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,16">
             <TextBlock Grid.Row="0" Text="{Binding HeaderText}" FontSize="18" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextMainBrush}" Margin="0,0,0,8"/>
-            <ComboBox Grid.Row="1" ItemsSource="{Binding SelectableRoles}" SelectedItem="{Binding SelectedRole}"
-                      Margin="0,0,0,8" MinWidth="220" HorizontalAlignment="Left"
-                      IsVisible="{Binding HasSelectableRoles}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding Name}"/>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8"
+                        IsVisible="{Binding HasSelectableRoles}">
+                <TextBlock Text="手动新增时的来源角色" FontSize="12" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSubBrush}" Margin="0,0,10,0"/>
+                <ComboBox ItemsSource="{Binding SelectableRoles}" SelectedItem="{Binding SelectedRole}"
+                          MinWidth="220">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
             <TextBlock Grid.Row="2" Text="{Binding StatusText}" FontSize="11"
                        Foreground="{DynamicResource TextSubBrush}" TextWrapping="Wrap"/>
         </Grid>
@@ -29,13 +33,18 @@
                         <Border Margin="2,4" Padding="10" CornerRadius="6"
                                 Background="{DynamicResource SubtlePanelBrush}">
                             <Grid RowDefinitions="Auto,Auto,Auto">
-                                <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto">
-                                    <TextBlock Grid.Column="0" Text="{Binding CreatedText}" FontSize="10"
+                                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto">
+                                    <Border Grid.Column="0" Background="{DynamicResource AccentSoftBrush}"
+                                            CornerRadius="7" Padding="7,3" Margin="0,0,8,0">
+                                        <TextBlock Text="{Binding SourceRoleText}" FontSize="10"
+                                                   Foreground="{DynamicResource AccentSoftTextBrush}"/>
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Text="{Binding CreatedText}" FontSize="10"
                                                Foreground="{DynamicResource TimeBrush}" VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1" Classes="ghost" Content="编辑" Padding="8,2" Margin="4,0,0,0"
+                                    <Button Grid.Column="2" Classes="ghost" Content="编辑" Padding="8,2" Margin="4,0,0,0"
                                             Command="{Binding $parent[ListBox].DataContext.EditCommand}"
                                             CommandParameter="{Binding}"/>
-                                    <Button Grid.Column="2" Classes="ghost" Content="删除" Padding="8,2" Margin="4,0,0,0"
+                                    <Button Grid.Column="3" Classes="ghost" Content="删除" Padding="8,2" Margin="4,0,0,0"
                                             Foreground="{DynamicResource DangerBrush}"
                                             Command="{Binding $parent[ListBox].DataContext.DeleteCommand}"
                                             CommandParameter="{Binding}"/>
@@ -63,11 +72,11 @@
         </Border>
 
         <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,16,0,0">
-            <TextBox Grid.Column="0" Text="{Binding NewMemoryText}" Watermark="手动新增一条记忆…"
+            <TextBox Grid.Column="0" Text="{Binding NewMemoryText}" Watermark="手动新增一条共享记忆…"
                      VerticalContentAlignment="Center"/>
             <Button Grid.Column="1" Classes="primary" Content="新增" Margin="8,0,0,0"
                     Command="{Binding AddCommand}"/>
-            <Button Grid.Column="2" Classes="ghost" Content="清空全部" Margin="6,0,0,0"
+            <Button Grid.Column="2" Classes="ghost" Content="清空共享记忆" Margin="6,0,0,0"
                     Foreground="{DynamicResource DangerBrush}"
                     Command="{Binding ClearCommand}"/>
         </Grid>
