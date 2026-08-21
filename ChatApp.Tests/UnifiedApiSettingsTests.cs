@@ -35,6 +35,7 @@ public class UnifiedApiSettingsTests
     {
         var settings = new AiSettings
         {
+            UseUnifiedApi = false,
             ApiBaseUrl = "https://api.deepseek.com/v1",
             ApiKey = "chat-key",
             EmbeddingApiBaseUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1",
@@ -148,6 +149,7 @@ public class UnifiedApiSettingsTests
         var client = new MultimodalClient(new HttpClient(handler));
         var settings = new AiSettings
         {
+            UseUnifiedApi = false,
             ApiBaseUrl = "https://api.deepseek.com/v1",
             ApiKey = "chat-key",
             VisionApiBaseUrl = "https://open.bigmodel.cn/api/paas/v4",
@@ -242,6 +244,7 @@ public class UnifiedApiSettingsTests
     {
         var config = new RecordingConfigurationService(new AiSettings
         {
+            UseUnifiedApi = false,
             ApiBaseUrl = "https://api.siliconflow.cn/v1",
             ApiKey = "main-key",
             ChatModel = "deepseek-ai/DeepSeek-V3",
@@ -276,6 +279,8 @@ public class UnifiedApiSettingsTests
         var viewModel = new SettingsViewModel(config, new MemoryUiSettingsService());
         await viewModel.LoadAsync();
 
+        viewModel.UnifiedPresetName = "自定义";
+        viewModel.ApiBaseUrl = "https://api.deepseek.com/v1";
         viewModel.ApiKey = "sk-test";
         viewModel.EnableKnowledgeBase = true;
         viewModel.UseUnifiedApi = true;

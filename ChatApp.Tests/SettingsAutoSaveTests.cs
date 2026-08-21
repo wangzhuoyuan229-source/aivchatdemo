@@ -19,9 +19,9 @@ public class SettingsAutoSaveTests
         var saved = await config.Saved.Task.WaitAsync(TimeSpan.FromSeconds(3));
         await Task.Delay(50);
         Assert.Equal("sk-test-autosave", saved.ApiKey);
-        Assert.Equal("deepseek-v4-flash", saved.ChatModel);
+        Assert.Equal("deepseek-ai/DeepSeek-V3.1", saved.ChatModel);
         Assert.True(saved.EnableKnowledgeBase);
-        Assert.Contains("RAG", viewModel.StatusText);
+        Assert.Contains("已自动保存", viewModel.StatusText);
     }
 
     [Fact]
@@ -31,6 +31,7 @@ public class SettingsAutoSaveTests
         var viewModel = new SettingsViewModel(config, new MemoryUiSettingsService());
         await viewModel.LoadAsync();
 
+        viewModel.UseUnifiedApi = false;
         viewModel.EmbeddingApiKey = "sk-test-bailian";
         viewModel.EmbeddingProviderPreset = SettingsViewModel.AlibabaEmbeddingPreset;
 

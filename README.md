@@ -2,7 +2,7 @@
 
 > .NET 8 + Avalonia 跨平台桌面应用 | Semantic Kernel AI 引擎 | EF Core + SQLite 持久化
 
-当前版本：**v1.3.1** · [更新日志](CHANGELOG.md)
+当前版本：**v1.3.3** · [更新日志](CHANGELOG.md)
 
 ## 项目概述
 
@@ -10,14 +10,15 @@ ChatApp 是一款支持 macOS 与 Windows 的桌面 AI 角色扮演聊天应用�
 
 ## 模型接入策略
 
-默认服务为 DeepSeek，默认聊天模型为 `deepseek-v4-flash`。设置页仍允许接入其他
+默认服务为 SiliconFlow 统一API，默认聊天模型为 `deepseek-ai/DeepSeek-V3.1`（`BAAI/bge-m3` + `Qwen/Qwen3-VL-32B-Instruct`）。设置页仍允许接入其他
 OpenAI 兼容的远程 HTTPS API；localhost、回环地址、私有网络地址和普通 HTTP 地址
 会在界面、持久化与运行时三层被拒绝。仓库中的 LoRA 训练材料仅保留用于离线研究和
 评测，不再接入桌面应用；详情见 [training/README.md](training/README.md)。
 
 设置页提供“统一 API 模式”开关：开启后聊天、Embedding 与多模态识图共用同一个
-端点和 API Key（适合 SiliconFlow 等聚合平台，只需为各功能分别填写模型 ID）；
-关闭时保留三路独立端点与密钥的接入能力，两种模式可随时切换，独立配置会被保留。
+端点和 API Key（适合 SiliconFlow 等聚合平台），通过“统一 API 预设”一键选择三模型
+（SiliconFlow 推荐 `deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL`，阿里百炼 `qwen-plus + text-embedding-v4 + qwen3-vl-flash`，OpenAI `gpt-4o-mini`）；
+预设内单独模型选择自动禁用，`自定义` 预设除外；关闭时保留三路独立端点与密钥，两种模式可随时切换。
 
 图片知识默认使用另一套完全独立的多模态 API 配置。内置阿里云百炼
 (`qwen3-vl-flash`)、智谱 (`glm-4.6v-flash`)、火山方舟 Responses API
@@ -28,11 +29,11 @@ Responses 兼容服务。多模态 API 只在导入图片和“重新识图”�
 
 ## macOS Release 使用说明
 
-当前正式版为 [v1.1.0](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.1.0)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
+当前正式版为 [v1.3.3](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.3.2)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
 
 ### 下载与安装
 
-1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.1.0/ChatApp-macOS-arm64.zip)。
+1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.3.3/ChatApp-macOS-arm64.zip)。
 2. 双击 ZIP 文件解压，得到 `ChatApp.app`。
 3. 将 `ChatApp.app` 拖入“应用程序（Applications）”文件夹。
 4. 首次启动时，在 Finder 中右键 `ChatApp.app`，选择“打开”，然后在系统提示中再次选择“打开”。后续可正常双击启动。
@@ -53,10 +54,10 @@ open /Applications/ChatApp.app
 shasum -a 256 ~/Downloads/ChatApp-macOS-arm64.zip
 ```
 
-v1.1.0 的 SHA-256 应为：
+v1.3.3 的 SHA-256（待发布后更新）：
 
 ```text
-8dcaeb3a4ebb58eb1c2469ce0feda4a4626918f09d1becbbd19c8eac9f50673e
+待发布后由 `publish-macos.sh` 输出 SHA-256 并更新此处
 ```
 
 ### 首次配置
@@ -186,7 +187,8 @@ ChatApp.UI ──────────────► ChatApp.AI ────
 | 📌 **会话整理** | 私聊/群聊支持重命名与置顶（置顶优先排序）；一键导出为 Markdown（含角色名、时间与附件快照）或结构化 JSON |
 | 📎 **知识引用溯源** | AI 回复下方展示所引用的知识文档标签，点击跳转到知识库对应文档 |
 | 🗜️ **长对话摘要压缩** | 上下文接近上限时用 LLM 生成“摘要 + 关键记忆点”替换早期消息，保留最近完整消息；失败时回退原有截断逻辑 |
-| ⚙️ **BYOK 设置** | 自定义 API 端点/密钥/模型，支持 OpenAI 兼容服务；可切换统一 API 模式（单端点单 Key 驱动聊天/Embedding/视觉），每项旁 `?` 提供悬停/点击通俗帮助 |
+| ⚙️ **BYOK 设置** | 自定义 API 端点/密钥/模型，支持 OpenAI 兼容服务；统一 API 模式下通过预设一键填充对话/向量/视觉三模型（SiliconFlow/阿里百炼/OpenAI），预设内单独模型选择自动禁用（自定义除外），每项旁 `?` 提供悬停/点击通俗帮助 |
+| 💬 **帮助与支持** | 侧边栏常驻 `💬` 入口，一键查看开发者社交账户（GitHub/邮箱/反馈），支持外链打开与复制，弹窗 `Panel.ZIndex` 置顶，不占滚动空间 |
 | ⌨️ **快捷发送** | 聊天输入框 `回车` 发送、`Shift+回车` 换行 |
 | 📁 **知识库目录与批处理** | 一次选择多个多层文件夹递归导入，保留完整相对目录树；可按分组/目录范围全选、移动、删除及批量重新识图 |
 | 📦 **内置知识库** | 根目录 `知识库/` 随应用发布，首次自动索引并支持断点续传，后续启动和覆盖安装直接复用本机向量 |
@@ -608,4 +610,4 @@ dotnet run --project ChatApp.UI
 
 ---
 
-> 文档生成日期：2026-08-21 | 项目版本：v1.3.1
+> 文档生成日期：2026-08-23 | 项目版本：v1.3.3

@@ -31,6 +31,8 @@ public partial class CreateRoleViewModel : ViewModelBase
     [ObservableProperty] private string _speakingStyle = string.Empty;
     [ObservableProperty] private string _dialogueExamples = string.Empty;
     [ObservableProperty] private string _greeting = string.Empty;
+    [ObservableProperty] private string _supplementaryPrompt = string.Empty;
+    [ObservableProperty] private bool _isSupplementaryExpanded;
     [ObservableProperty] private string _errorText = string.Empty;
     [ObservableProperty] private string _windowTitle = "创建 AI 角色";
     [ObservableProperty] private string _submitText = "创建并对话";
@@ -81,6 +83,8 @@ public partial class CreateRoleViewModel : ViewModelBase
         SpeakingStyle = string.Empty;
         DialogueExamples = string.Empty;
         Greeting = string.Empty;
+        SupplementaryPrompt = string.Empty;
+        IsSupplementaryExpanded = false;
         ErrorText = string.Empty;
         AvatarMatchStatus = string.Empty;
         WindowTitle = "创建 AI 角色";
@@ -106,6 +110,13 @@ public partial class CreateRoleViewModel : ViewModelBase
         SpeakingStyle = _editingRole.SpeakingStyle;
         DialogueExamples = _editingRole.DialogueExamples;
         Greeting = _editingRole.Greeting;
+        SupplementaryPrompt = _editingRole.SystemPrompt ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(SupplementaryPrompt) &&
+            (!string.IsNullOrWhiteSpace(Background) || !string.IsNullOrWhiteSpace(Personality) || !string.IsNullOrWhiteSpace(SpeakingStyle)))
+        {
+            SupplementaryPrompt = string.Join("\n", new[] { Background, Personality, SpeakingStyle }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        }
+        IsSupplementaryExpanded = !string.IsNullOrWhiteSpace(DialogueExamples) || !string.IsNullOrWhiteSpace(Greeting) || !string.IsNullOrWhiteSpace(Description);
         ErrorText = string.Empty;
         AvatarMatchStatus = string.Empty;
         WindowTitle = $"编辑角色：{_editingRole.Name}";
@@ -290,6 +301,7 @@ public partial class CreateRoleViewModel : ViewModelBase
             role.SpeakingStyle = SpeakingStyle.Trim();
             role.DialogueExamples = DialogueExamples.Trim();
             role.Greeting = Greeting.Trim();
+            role.SystemPrompt = SupplementaryPrompt.Trim();
 
             if (isNew)
             {

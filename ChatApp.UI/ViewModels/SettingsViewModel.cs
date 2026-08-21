@@ -22,15 +22,17 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly IImageDescriptionService? _imageDescriptions;
     private readonly IApiProbeService? _apiProbe;
     private readonly KnowledgeViewModel? _knowledgeViewModel;
+    private readonly IUrlLauncher? _urlLauncher;
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private CancellationTokenSource? _autoSaveCts;
     private AiSettings _settings = new();
     private bool _isApplyingEmbeddingPreset;
     private bool _isApplyingVisionPreset;
+    private bool _isApplyingUnifiedPreset;
 
     private static readonly HashSet<string> PersistedPropertyNames = new()
     {
-        nameof(UseUnifiedApi),
+        nameof(UseUnifiedApi), nameof(UnifiedPresetName),
         nameof(ApiBaseUrl), nameof(ApiKey), nameof(ChatModel), nameof(EmbeddingModel),
         nameof(EmbeddingApiBaseUrl), nameof(EmbeddingApiKey), nameof(ContextWindowSize),
         nameof(MemoryTopK), nameof(KnowledgeTopK), nameof(KnowledgeMinScore),
@@ -45,6 +47,7 @@ public partial class SettingsViewModel : ViewModelBase
     };
 
     [ObservableProperty] private bool _useUnifiedApi;
+    [ObservableProperty] private string _unifiedPresetName = UnifiedPresetNames.SiliconFlow;
     [ObservableProperty] private string _apiBaseUrl = string.Empty;
     [ObservableProperty] private string _apiKey = string.Empty;
     [ObservableProperty] private string _chatModel = string.Empty;
@@ -52,7 +55,7 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _embeddingApiBaseUrl = string.Empty;
     [ObservableProperty] private string _embeddingApiKey = string.Empty;
     [ObservableProperty] private string _embeddingProviderPreset = NoEmbeddingPreset;
-    [ObservableProperty] private string _visionProviderPresetName = VisionPresetNames.Alibaba;
+    [ObservableProperty] private string _visionProviderPresetName = VisionPresetNames.SiliconFlow;
     [ObservableProperty] private MultimodalApiProtocol _visionProtocol = MultimodalApiProtocol.ChatCompletions;
     [ObservableProperty] private string _visionApiBaseUrl = string.Empty;
     [ObservableProperty] private string _visionApiKey = string.Empty;
@@ -89,6 +92,12 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private bool _enableContextSummarization;
     [ObservableProperty] private int _contextSummaryKeepRecent = 10;
 
+    // ----- P0-07 开发者帮助入口 -----
+    [ObservableProperty] private bool _isDeveloperHelpOpen;
+    public IReadOnlyList<DeveloperSocial> DeveloperSocialItems { get; } = ChatApp.Core.Settings.DeveloperSocials.All;
+
+    [ObservableProperty] private bool _areIndividualModelsEnabled = true;
+
     private static class VisionPresetNames
     {
         public const string Alibaba = "阿里云百炼（推荐）";
@@ -96,6 +105,14 @@ public partial class SettingsViewModel : ViewModelBase
         public const string Volcengine = "火山方舟";
         public const string SiliconFlow = "SiliconFlow";
         public const string Custom = "自定义 OpenAI 兼容服务";
+    }
+
+    private static class UnifiedPresetNames
+    {
+        public const string SiliconFlow = "SiliconFlow（推荐 · 统一）";
+        public const string Alibaba = "阿里云百炼（通义千问）";
+        public const string OpenAI = "OpenAI";
+        public const string Custom = "自定义";
     }
 
     /// <summary>Group-chat mode options for the settings dropdown.</summary>
@@ -128,6 +145,7 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>识别规则：根据 ApiKey 前缀 + ApiBaseUrl 域名推断服务商，自动填充默认模型。</summary>
     private void DetectProviderAndApplyModel(string apiKey, string baseUrl)
     {
+        if (_isApplyingUnifiedPreset) return;
         var key = (apiKey ?? string.Empty).Trim();
         var url = (baseUrl ?? string.Empty).Trim().ToLowerInvariant();
 
@@ -168,8 +186,8 @@ public partial class SettingsViewModel : ViewModelBase
         else if (url.Contains("siliconflow.cn") || url.Contains("siliconflow"))
         {
             provider = "SiliconFlow";
-            defaultChat = "Qwen/Qwen2.5-7B-Instruct";
-            defaultEmbed = "BAAI/bge-large-zh-v1.5";
+            defaultChat = "deepseek-ai/DeepSeek-V3.1";
+            defaultEmbed = "BAAI/bge-m3";
             defaultUrl = "https://api.siliconflow.cn/v1";
         }
         // 规则2：基于 ApiKey 前缀的兜底识别（仅当 ApiBaseUrl 为空或未匹配时）
@@ -198,6 +216,25 @@ public partial class SettingsViewModel : ViewModelBase
         else if (!string.IsNullOrWhiteSpace(defaultEmbed))
             EmbeddingModel = defaultEmbed;
 
+        if (provider == "SiliconFlow")
+        {
+            // 同步视觉预设：统一API下 SiliconFlow 的视觉模型为 Qwen/Qwen3-VL-...（带组织前缀），
+            // 旧的 qwen3-vl-flash 为 DashScope 专用，在 SiliconFlow 上会 404，需自动纠偏
+            if (VisionModel is "qwen3-vl-flash" or "qwen3-vl-plus" or "qwen-vl-max" or "qwen2-vl-2b" ||
+                string.IsNullOrWhiteSpace(VisionModel) ||
+                !VisionModel.Contains('/'))
+            {
+                VisionProviderPresetName = VisionPresetNames.SiliconFlow;
+                VisionModel = "Qwen/Qwen3-VL-32B-Instruct";
+                VisionProtocol = MultimodalApiProtocol.ChatCompletions;
+            }
+            else if (VisionProviderPresetName != VisionPresetNames.SiliconFlow)
+            {
+                VisionProviderPresetName = VisionPresetNames.SiliconFlow;
+            }
+            ProviderHint = "已识别为 SiliconFlow 统一API（deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL），单Key单端点已自动填充 ✓";
+            return;
+        }
         ProviderHint = provider == "DeepSeek"
             ? "已识别为 DeepSeek，推荐使用 DeepSeek V4 Flash；知识库需另配远程 Embedding API"
             : $"已识别为 {provider}，已自动选择推荐模型（可手动修改）";
@@ -205,10 +242,10 @@ public partial class SettingsViewModel : ViewModelBase
 
     public ObservableCollection<string> PresetEndpoints { get; } = new()
     {
+        "https://api.siliconflow.cn/v1",
         "https://api.deepseek.com/v1",
         "https://api.openai.com/v1",
-        "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "https://api.siliconflow.cn/v1"
+        "https://dashscope.aliyuncs.com/compatible-mode/v1"
     };
 
     public ObservableCollection<string> VisionProviderPresetOptions { get; } = new()
@@ -220,6 +257,14 @@ public partial class SettingsViewModel : ViewModelBase
         VisionPresetNames.Custom
     };
 
+    public ObservableCollection<string> UnifiedPresetOptions { get; } = new()
+    {
+        UnifiedPresetNames.SiliconFlow,
+        UnifiedPresetNames.Alibaba,
+        UnifiedPresetNames.OpenAI,
+        UnifiedPresetNames.Custom
+    };
+
     public ObservableCollection<MultimodalApiProtocol> VisionProtocolOptions { get; } = new()
     {
         MultimodalApiProtocol.ChatCompletions,
@@ -228,7 +273,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     partial void OnVisionProviderPresetNameChanged(string value)
     {
-        if (_isLoading || _isApplyingVisionPreset) return;
+        if (_isLoading || _isApplyingVisionPreset || _isApplyingUnifiedPreset) return;
         var preset = ParseVisionPreset(value);
         if (preset == VisionProviderPreset.Custom) return;
         var profile = VisionProviderProfiles.Get(preset);
@@ -246,9 +291,56 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
+    partial void OnUseUnifiedApiChanged(bool value)
+    {
+        UpdateUnifiedState();
+        if (_isLoading) return;
+        if (value && !_isApplyingUnifiedPreset)
+            ApplyUnifiedPreset(UnifiedPresetName);
+    }
+
+    partial void OnUnifiedPresetNameChanged(string value)
+    {
+        if (_isLoading || _isApplyingUnifiedPreset) return;
+        UpdateUnifiedState();
+        if (UseUnifiedApi)
+            ApplyUnifiedPreset(value);
+    }
+
+    private void UpdateUnifiedState()
+    {
+        AreIndividualModelsEnabled = !UseUnifiedApi || UnifiedPresetName == UnifiedPresetNames.Custom;
+    }
+
+    private void ApplyUnifiedPreset(string presetName)
+    {
+        if (_isApplyingUnifiedPreset) return;
+        _isApplyingUnifiedPreset = true;
+        try
+        {
+            var preset = ParseUnifiedPreset(presetName);
+            if (preset == UnifiedApiPreset.Custom) return;
+            var profile = UnifiedApiPresetProfiles.Get(preset);
+            // Apply preset's baseUrl and models; API key stays untouched
+            ApiBaseUrl = profile.baseUrl;
+            ChatModel = profile.chatModel;
+            EmbeddingModel = profile.embeddingModel;
+            // Vision preset/model/protocol follow the unified preset's vision profile
+            VisionProviderPresetName = FormatVisionPreset(profile.visionPreset);
+            VisionProtocol = profile.visionProtocol;
+            VisionModel = profile.visionModel;
+            // Keep VisionApiBaseUrl in sync for when switching back to independent
+            VisionApiBaseUrl = profile.baseUrl;
+        }
+        finally
+        {
+            _isApplyingUnifiedPreset = false;
+        }
+    }
+
     public ObservableCollection<string> CommonChatModels { get; } = new()
     {
-        "deepseek-v4-flash", "deepseek-v4-pro", "gpt-4o-mini", "gpt-4o", "qwen-plus", "qwen-turbo"
+        "deepseek-ai/DeepSeek-V3.1", "deepseek-v4-flash", "deepseek-v4-pro", "Qwen/Qwen3-32B", "qwen-plus", "qwen-turbo", "gpt-4o-mini", "gpt-4o"
     };
 
     public ObservableCollection<string> CommonEmbeddingModels { get; } = new()
@@ -350,13 +442,15 @@ public partial class SettingsViewModel : ViewModelBase
         IUiSettingsService uiConfig,
         IImageDescriptionService? imageDescriptions = null,
         KnowledgeViewModel? knowledgeViewModel = null,
-        IApiProbeService? apiProbe = null)
+        IApiProbeService? apiProbe = null,
+        IUrlLauncher? urlLauncher = null)
     {
         _config = config;
         _uiConfig = uiConfig;
         _imageDescriptions = imageDescriptions;
         _knowledgeViewModel = knowledgeViewModel;
         _apiProbe = apiProbe;
+        _urlLauncher = urlLauncher;
         PropertyChanged += OnSettingPropertyChanged;
     }
 
@@ -398,6 +492,14 @@ public partial class SettingsViewModel : ViewModelBase
             _settings = await _config.LoadAsync();
             RegisterSecrets();
             UseUnifiedApi = _settings.UseUnifiedApi;
+            UnifiedPresetName = FormatUnifiedPreset(_settings.UnifiedPreset);
+            if (_settings.UseUnifiedApi)
+            {
+                var detected = UnifiedApiPresetProfiles.Detect(_settings.ApiBaseUrl, _settings.ChatModel, _settings.EmbeddingModel);
+                if (detected != UnifiedApiPreset.Custom && detected != _settings.UnifiedPreset)
+                    UnifiedPresetName = FormatUnifiedPreset(detected);
+            }
+            UpdateUnifiedState();
             ApiBaseUrl = _settings.ApiBaseUrl;
             ApiKey = _settings.ApiKey;
             ChatModel = _settings.ChatModel;
@@ -432,6 +534,7 @@ public partial class SettingsViewModel : ViewModelBase
             GroupChatMode = _settings.GroupChat.Mode;
             MaxSpeakersPerTurn = _settings.GroupChat.MaxSpeakersPerTurn;
             RespondToOtherAgents = _settings.GroupChat.RespondToOtherAgents;
+            UpdateUnifiedState();
             StatusText = string.Empty;
             ProviderHint = string.Empty;
             VisionTestStatus = string.Empty;
@@ -487,6 +590,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
 
         _settings.UseUnifiedApi = UseUnifiedApi;
+        _settings.UnifiedPreset = ParseUnifiedPreset(UnifiedPresetName);
         _settings.ApiBaseUrl = chatEndpoint.ToString().TrimEnd('/');
         _settings.ApiKey = ApiKey;
         _settings.ChatModel = ChatModel;
@@ -673,13 +777,40 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private void ShowDeveloperHelp() => IsDeveloperHelpOpen = true;
+
+    [RelayCommand]
+    private void CloseDeveloperHelp() => IsDeveloperHelpOpen = false;
+
+    [RelayCommand]
+    private async Task OpenDeveloperSocialAsync(DeveloperSocial? social)
+    {
+        if (social is null || string.IsNullOrWhiteSpace(social.Url)) return;
+        var url = social.Url.Trim();
+        if (_urlLauncher is not null)
+        {
+            if (await _urlLauncher.TryOpenAsync(url)) return;
+        }
+        await ClipboardService.CopyTextAsync(social.CopyText ?? url);
+        StatusText = $"已复制：{social.Label}";
+    }
+
+    [RelayCommand]
+    private async Task CopyDeveloperSocialAsync(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        await ClipboardService.CopyTextAsync(text);
+        StatusText = "已复制到剪贴板";
+    }
+
     private static VisionProviderPreset ParseVisionPreset(string value) => value switch
     {
         VisionPresetNames.Zhipu => VisionProviderPreset.Zhipu,
         VisionPresetNames.Volcengine => VisionProviderPreset.VolcengineArk,
         VisionPresetNames.SiliconFlow => VisionProviderPreset.SiliconFlow,
         VisionPresetNames.Custom => VisionProviderPreset.Custom,
-        _ => VisionProviderPreset.AlibabaModelStudio
+        _ => VisionProviderPreset.SiliconFlow
     };
 
     private static string FormatVisionPreset(VisionProviderPreset value) => value switch
@@ -688,6 +819,22 @@ public partial class SettingsViewModel : ViewModelBase
         VisionProviderPreset.VolcengineArk => VisionPresetNames.Volcengine,
         VisionProviderPreset.SiliconFlow => VisionPresetNames.SiliconFlow,
         VisionProviderPreset.Custom => VisionPresetNames.Custom,
-        _ => VisionPresetNames.Alibaba
+        _ => VisionPresetNames.SiliconFlow
+    };
+
+    private static UnifiedApiPreset ParseUnifiedPreset(string value) => value switch
+    {
+        UnifiedPresetNames.Alibaba => UnifiedApiPreset.AlibabaDashScope,
+        UnifiedPresetNames.OpenAI => UnifiedApiPreset.OpenAI,
+        UnifiedPresetNames.Custom => UnifiedApiPreset.Custom,
+        _ => UnifiedApiPreset.SiliconFlow
+    };
+
+    private static string FormatUnifiedPreset(UnifiedApiPreset value) => value switch
+    {
+        UnifiedApiPreset.AlibabaDashScope => UnifiedPresetNames.Alibaba,
+        UnifiedApiPreset.OpenAI => UnifiedPresetNames.OpenAI,
+        UnifiedApiPreset.Custom => UnifiedPresetNames.Custom,
+        _ => UnifiedPresetNames.SiliconFlow
     };
 }

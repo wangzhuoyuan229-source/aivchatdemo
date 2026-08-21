@@ -19,10 +19,13 @@ public class ConfigurationService : IConfigurationService
         await using var db = await _factory.CreateDbContextAsync(ct);
         var row = await db.Settings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == Key, ct);
         if (row is null || string.IsNullOrWhiteSpace(row.Value))
-            return new AiSettings();
+            return new AiSettings { UseUnifiedApi = true };
         try
         {
             var settings = JsonSerializer.Deserialize<AiSettings>(row.Value, JsonOpts) ?? new AiSettings();
+            // Preserve legacy databases that predate UseUnifiedApi (v1.2.0): missing flag must stay independent (false)
+            if (row.Value.IndexOf("useUnifiedApi", StringComparison.OrdinalIgnoreCase) < 0)
+                settings.UseUnifiedApi = false;
             settings.MigrateToRemoteApiOnly();
             return settings;
         }

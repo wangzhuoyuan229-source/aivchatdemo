@@ -10,9 +10,9 @@ public class KernelFactoryTests
     {
         var settings = new AiSettings();
 
-        Assert.Equal("https://api.deepseek.com/v1", settings.ApiBaseUrl);
-        Assert.Equal("deepseek-v4-flash", settings.ChatModel);
-        Assert.Empty(settings.EmbeddingModel);
+        Assert.Equal("https://api.siliconflow.cn/v1", settings.ApiBaseUrl);
+        Assert.Equal("deepseek-ai/DeepSeek-V3.1", settings.ChatModel);
+        Assert.Equal("BAAI/bge-m3", settings.EmbeddingModel);
     }
 
     [Fact]
@@ -41,6 +41,7 @@ public class KernelFactoryTests
     {
         var settings = new AiSettings
         {
+            UseUnifiedApi = false,
             ApiBaseUrl = "https://api.deepseek.com/v1",
             ApiKey = "deepseek-secret",
             EmbeddingApiBaseUrl = "https://embedding.example.test/openai/v1/",
@@ -102,6 +103,6 @@ public class KernelFactoryTests
         };
 
         Assert.True(settings.MigrateToRemoteApiOnly());
-        Assert.Equal("deepseek-v4-flash", settings.ChatModel);
+        Assert.Equal("deepseek-ai/DeepSeek-V3.1", settings.ChatModel);
     }
 }

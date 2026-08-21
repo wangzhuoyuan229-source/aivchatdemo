@@ -9,7 +9,7 @@ namespace ChatApp.Core.Settings;
 /// </summary>
 public static class RemoteApiEndpointPolicy
 {
-    public const string DefaultBaseUrl = "https://api.deepseek.com/v1";
+    public const string DefaultBaseUrl = "https://api.siliconflow.cn/v1";
 
     public static Uri NormalizeOrThrow(string? baseUrl, string fieldName = "API Base URL")
     {

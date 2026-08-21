@@ -11,35 +11,63 @@
     <conv:InverseNullToVisibilityConverter x:Key="InverseNull2Vis"/>
     <conv:AccentIfEqualConverter x:Key="AccentIfEqual"/>
   </Window.Resources>
-  <Grid ColumnDefinitions="64,Auto,*">
-    <Border Grid.Column="0" Background="{DynamicResource NavRailBrush}">
-      <Grid RowDefinitions="Auto,*,Auto">
-        <TextBlock Grid.Row="0" Text="AI" FontSize="22" FontWeight="Bold" Foreground="White"
-                   HorizontalAlignment="Center" Margin="0,18,0,12"/>
-        <StackPanel Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Center">
-          <Button Classes="nav" ToolTip.Tip="角色库" Command="{Binding ShowRolesCommand}"
-                  Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=roles}" Content="🎭"/>
-          <Button Classes="nav" ToolTip.Tip="知识库" Command="{Binding ShowKnowledgeCommand}"
-                  Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=knowledge}" Content="📚"/>
-          <Button Classes="nav" ToolTip.Tip="设置" Command="{Binding ShowSettingsCommand}"
-                  Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=settings}" Content="⚙️"/>
-        </StackPanel>
-        <TextBlock Grid.Row="2" Text="v1.3.1" Foreground="{DynamicResource TimeBrush}" FontSize="10"
-                   HorizontalAlignment="Center" Margin="0,0,0,12"/>
+  <Grid>
+    <Grid ColumnDefinitions="64,Auto,*">
+      <Border Grid.Column="0" Background="{DynamicResource NavRailBrush}">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <TextBlock Grid.Row="0" Text="AI" FontSize="22" FontWeight="Bold" Foreground="White"
+                     HorizontalAlignment="Center" Margin="0,18,0,12"/>
+          <StackPanel Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Center">
+            <Button Classes="nav" ToolTip.Tip="角色库" Command="{Binding ShowRolesCommand}"
+                    Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=roles}" Content="🎭"/>
+            <Button Classes="nav" ToolTip.Tip="知识库" Command="{Binding ShowKnowledgeCommand}"
+                    Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=knowledge}" Content="📚"/>
+            <Button Classes="nav" ToolTip.Tip="设置" Command="{Binding ShowSettingsCommand}"
+                    Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=settings}" Content="⚙️"/>
+            <Button Classes="nav" ToolTip.Tip="帮助与支持" Command="{Binding ShowDeveloperHelpCommand}" Content="💬"/>
+          </StackPanel>
+          <TextBlock Grid.Row="2" Text="v1.3.3" Foreground="{DynamicResource TimeBrush}" FontSize="10"
+                     HorizontalAlignment="Center" Margin="0,0,0,12"/>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="1" Width="340" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0"
+              IsVisible="{Binding MiddleView, Converter={StaticResource Null2Vis}}">
+        <ContentControl Content="{Binding MiddleView}"/>
+      </Border>
+
+      <Grid Grid.Column="2">
+        <ContentControl Content="{Binding RightView}"/>
+        <Border IsVisible="{Binding RightView, Converter={StaticResource InverseNull2Vis}}">
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="🤖" FontSize="64" Opacity="0.4" HorizontalAlignment="Center"/>
+            <TextBlock Text="选择左侧的角色，开始聊天" FontSize="14" Foreground="{DynamicResource TextSubBrush}" Margin="0,16,0,0"/>
+          </StackPanel>
+        </Border>
       </Grid>
-    </Border>
-
-    <Border Grid.Column="1" Width="340" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0"
-            IsVisible="{Binding MiddleView, Converter={StaticResource Null2Vis}}">
-      <ContentControl Content="{Binding MiddleView}"/>
-    </Border>
-
-    <Grid Grid.Column="2">
-      <ContentControl Content="{Binding RightView}"/>
-      <Border IsVisible="{Binding RightView, Converter={StaticResource InverseNull2Vis}}">
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-          <TextBlock Text="🤖" FontSize="64" Opacity="0.4" HorizontalAlignment="Center"/>
-          <TextBlock Text="选择左侧的角色，开始聊天" FontSize="14" Foreground="{DynamicResource TextSubBrush}" Margin="0,16,0,0"/>
+    </Grid>
+    <Grid IsVisible="{Binding IsDeveloperHelpOpen}" Background="#80000000" Panel.ZIndex="10">
+      <Border Background="{DynamicResource PanelBrush}" CornerRadius="8" Padding="20" Width="420" MaxWidth="420" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel>
+          <TextBlock Text="开发者社交账户" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,12"/>
+          <ItemsControl ItemsSource="{Binding DeveloperSocialItems}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,6" ColumnDefinitions="Auto,*,Auto,Auto">
+                  <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium"/>
+                    <TextBlock Text="{Binding Url}" FontSize="11" Foreground="{DynamicResource TextSubBrush}" TextWrapping="Wrap"/>
+                  </StackPanel>
+                  <Button Grid.Column="2" Content="打开" Command="{Binding $parent[Window].DataContext.OpenDeveloperSocialCommand}" CommandParameter="{Binding}" Margin="8,0,4,0" Padding="8,2"/>
+                  <Button Grid.Column="3" Content="复制" Command="{Binding $parent[Window].DataContext.CopyDeveloperSocialCommand}" CommandParameter="{Binding CopyText}" IsVisible="{Binding CopyText, Converter={StaticResource Null2Vis}}" Padding="8,2"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="关闭" Command="{Binding CloseDeveloperHelpCommand}"/>
+          </StackPanel>
         </StackPanel>
       </Border>
     </Grid>

@@ -43,6 +43,22 @@
                             </Button>
                     </StackPanel>
 
+                    <StackPanel IsVisible="{Binding UseUnifiedApi}" Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,2">
+                            <TextBlock Text="统一 API 预设" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
+                            <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="统一模式下无需单独选模型，选一个预设即可一键填好对话/向量/视觉三模型。&#10;• SiliconFlow（推荐）：deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL&#10;• 阿里云百炼：qwen-plus + text-embedding-v4 + qwen3-vl-flash&#10;• OpenAI：gpt-4o-mini + text-embedding-3-small&#10;选自定义可单独手填模型。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
+                                <Button.Flyout>
+                                    <Flyout Placement="Right">
+                                        <TextBlock Text="统一模式下无需单独选模型，选一个预设即可一键填好对话/向量/视觉三模型。&#10;• SiliconFlow（推荐）：deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL&#10;• 阿里云百炼：qwen-plus + text-embedding-v4 + qwen3-vl-flash&#10;• OpenAI：gpt-4o-mini + text-embedding-3-small&#10;选自定义可单独手填模型。" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+                        <ComboBox ItemsSource="{Binding UnifiedPresetOptions}" SelectedItem="{Binding UnifiedPresetName}" Margin="0,4,0,0"/>
+                        <TextBlock Text="统一模式下对话/向量/视觉模型由预设自动填充，无需单独选择；自定义预设除外。" FontSize="11" Foreground="{DynamicResource AccentBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,2">
                         <TextBlock Text="远程 API Base URL（仅 HTTPS）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
                         <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="就是 AI 公司的服务器网址。&#10;小白不用手打，直接在下拉框选：DeepSeek / OpenAI / SiliconFlow / 阿里百炼。&#10;只支持 https 开头的远程地址，不能填本地或 http。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
@@ -72,7 +88,7 @@
                     <TextBlock Text="{Binding ProviderHint}" FontSize="11" Foreground="{DynamicResource AccentBrush}"
                                Margin="0,0,0,12" TextWrapping="Wrap" IsVisible="{Binding ProviderHint, Converter={StaticResource StringToVis}}"/>
 
-                    <Grid Margin="0,0,0,0">
+                    <Grid Margin="0,0,0,0" IsEnabled="{Binding AreIndividualModelsEnabled}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="16"/>
@@ -250,7 +266,7 @@
                         </StackPanel>
                         <TextBox Text="{Binding VisionApiKey}" PasswordChar="●" Margin="0,4,0,0"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,12,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,12,0,0" IsEnabled="{Binding AreIndividualModelsEnabled}">
                         <TextBlock Text="视觉模型或 Endpoint ID" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
                         <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="具体用哪个‘眼睛’来看图。&#10;例如：&#10;• 百炼填 qwen3-vl-plus&#10;• 智谱填 glm-4.6v&#10;• 火山方舟填控制台的 Endpoint ID（如 ep-xxxx）&#10;不在列表里的也能手打。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
@@ -261,7 +277,7 @@
                                 </Button.Flyout>
                             </Button>
                     </StackPanel>
-                    <TextBox Text="{Binding VisionModel}" Margin="0,4,0,0"/>
+                    <TextBox Text="{Binding VisionModel}" Margin="0,4,0,0" IsEnabled="{Binding AreIndividualModelsEnabled}"/>
                     <TextBlock Text="百炼可换 qwen3-vl-plus，智谱可换 glm-4.6v；方舟也可填写控制台 Endpoint ID。SiliconFlow 模型可能上下架，字段始终可编辑。"
                                FontSize="11" Foreground="{DynamicResource TextSubBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
 

@@ -50,7 +50,8 @@ public class GroupChatOrchestrator : IGroupChatService
         int conversationId,
         string userText,
         IProgress<GroupChatEvent>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IReadOnlyList<int>? mentionedRoleIds = null)
     {
         if (string.IsNullOrWhiteSpace(userText))
             throw new ArgumentException("消息不能为空。", nameof(userText));
@@ -108,6 +109,32 @@ public class GroupChatOrchestrator : IGroupChatService
         {
             speakerIds = CompleteHybridSelection(
                 speakerIds, members, rolesById, settings.GroupChat.MaxSpeakersPerTurn);
+        }
+
+        // @ mentions have highest priority
+        if (mentionedRoleIds != null && mentionedRoleIds.Count > 0)
+        {
+            var validMentioned = mentionedRoleIds.Where(rolesById.ContainsKey).Distinct().ToList();
+            if (validMentioned.Count > 0)
+            {
+                if (settings.GroupChat.Mode == GroupChatMode.Hybrid)
+                {
+                    var targetCount = Math.Clamp(settings.GroupChat.MaxSpeakersPerTurn, 1, rolesById.Count);
+                    var combined = validMentioned.Concat(speakerIds).Distinct().ToList();
+                    speakerIds = CompleteHybridSelection(combined, members, rolesById, targetCount);
+                    var ordered = validMentioned.Where(rolesById.ContainsKey).ToList();
+                    foreach (var id in speakerIds)
+                        if (!ordered.Contains(id)) ordered.Add(id);
+                    speakerIds = ordered.Take(targetCount).ToList();
+                }
+                else
+                {
+                    var ordered = validMentioned.Where(rolesById.ContainsKey).ToList();
+                    foreach (var id in speakerIds)
+                        if (!ordered.Contains(id)) ordered.Add(id);
+                    speakerIds = ordered;
+                }
+            }
         }
 
         _logger.LogInformation(

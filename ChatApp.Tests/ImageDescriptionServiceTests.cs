@@ -162,6 +162,7 @@ public class ImageDescriptionServiceTests
         var service = new ImageDescriptionService(
             new FixedConfigurationService(new AiSettings
             {
+                UseUnifiedApi = false,
                 VisionApiBaseUrl = "https://vision.example/v1",
                 VisionApiKey = "bad-key",
                 VisionModel = "vision"
@@ -189,6 +190,7 @@ public class ImageDescriptionServiceTests
         var service = new ImageDescriptionService(
             new FixedConfigurationService(new AiSettings
             {
+                UseUnifiedApi = false,
                 VisionApiBaseUrl = "https://vision.example/v1",
                 VisionApiKey = "key",
                 VisionModel = "vision"

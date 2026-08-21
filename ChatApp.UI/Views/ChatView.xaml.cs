@@ -42,13 +42,73 @@ public partial class ChatView : UserControl
     private void ScrollToBottom() => Dispatcher.UIThread.Post(() =>
         this.FindControl<ScrollViewer>("MessagesScroll")?.ScrollToEnd(), DispatcherPriority.Background);
 
+    private void InputBox_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (DataContext is ChatViewModel vm && sender is TextBox tb)
+            vm.UpdateMentionState(tb.Text ?? string.Empty, tb.CaretIndex);
+    }
+
+    private void MentionList_DoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is ChatViewModel vm && sender is ListBox lb && lb.SelectedItem is ChatApp.Core.Models.Role role)
+        {
+            vm.InsertMention(role);
+            var tb = this.FindControl<TextBox>("InputBox");
+            if (tb != null)
+            {
+                tb.CaretIndex = vm.InputText.Length;
+                tb.Focus();
+            }
+        }
+    }
+
     private void InputBox_KeyDown(object? sender, KeyEventArgs e)
     {
+        if (DataContext is ChatViewModel vm && vm.IsMentionPopupOpen)
+        {
+            if (e.Key == Key.Down)
+            {
+                if (vm.FilteredMentionCandidates.Count > 0)
+                    vm.SelectedMentionIndex = (vm.SelectedMentionIndex + 1) % vm.FilteredMentionCandidates.Count;
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.Up)
+            {
+                if (vm.FilteredMentionCandidates.Count > 0)
+                    vm.SelectedMentionIndex = (vm.SelectedMentionIndex - 1 + vm.FilteredMentionCandidates.Count) % vm.FilteredMentionCandidates.Count;
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.Escape)
+            {
+                vm.IsMentionPopupOpen = false;
+                e.Handled = true;
+                return;
+            }
+            if ((e.Key == Key.Enter || e.Key == Key.Return) && e.KeyModifiers == KeyModifiers.None)
+            {
+                if (vm.FilteredMentionCandidates.Count > 0 && vm.SelectedMentionIndex >= 0 && vm.SelectedMentionIndex < vm.FilteredMentionCandidates.Count)
+                {
+                    var role = vm.FilteredMentionCandidates[vm.SelectedMentionIndex];
+                    vm.InsertMention(role);
+                    var tb2 = this.FindControl<TextBox>("InputBox");
+                    if (tb2 != null)
+                    {
+                        tb2.CaretIndex = vm.InputText.Length;
+                        tb2.Focus();
+                    }
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
         var isEnter = e.Key == Key.Enter || e.Key == Key.Return;
         if (isEnter && e.KeyModifiers == KeyModifiers.None &&
-            DataContext is ChatViewModel vm && vm.SendCommand.CanExecute(null))
+            DataContext is ChatViewModel vm2 && vm2.SendCommand.CanExecute(null))
         {
-            vm.SendCommand.Execute(null);
+            // If mention popup is open, Enter should have been handled above
+            vm2.SendCommand.Execute(null);
             e.Handled = true;
         }
         // Shift+Enter 保持换行（AcceptsReturn=true 时默认行为），此处不拦截

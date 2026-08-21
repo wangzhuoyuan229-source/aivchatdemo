@@ -42,7 +42,7 @@ public class ApiProbeServiceTests
     public async Task EmbeddingProbeFailsFastWithoutEmbeddingModel()
     {
         var probe = new ApiProbeService(
-            new FixedConfigurationService(new AiSettings { ApiKey = "sk-test", ChatModel = "deepseek-v4-flash" }),
+            new FixedConfigurationService(new AiSettings { ApiKey = "sk-test", ChatModel = "deepseek-v4-flash", EmbeddingModel = "" }),
             NullLogger<ApiProbeService>.Instance);
 
         var result = await probe.TestEmbeddingAsync();

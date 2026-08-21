@@ -1,5 +1,7 @@
 using ChatApp.Core.Models;
 using ChatApp.Core.Services;
+using ChatApp.Core.Settings;
+using ChatApp.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,11 +15,13 @@ public partial class MainViewModel : ViewModelBase, INavigation
 {
     private readonly IServiceProvider _services;
     private readonly ILogger<MainViewModel> _logger;
+    private readonly IUrlLauncher? _urlLauncher;
 
-    public MainViewModel(IServiceProvider services, ILogger<MainViewModel> logger)
+    public MainViewModel(IServiceProvider services, ILogger<MainViewModel> logger, IUrlLauncher? urlLauncher = null)
     {
         _services = services;
         _logger = logger;
+        _urlLauncher = urlLauncher;
     }
 
     public ChatViewModel Chat => _services.GetRequiredService<ChatViewModel>();
@@ -30,6 +34,8 @@ public partial class MainViewModel : ViewModelBase, INavigation
     [ObservableProperty] private ViewModelBase? _rightView;
     [ObservableProperty] private string _currentPageKey = "roles";
     [ObservableProperty] private string _windowTitle = "AI 角色扮演聊天";
+    [ObservableProperty] private bool _isDeveloperHelpOpen;
+    public IReadOnlyList<DeveloperSocial> DeveloperSocialItems { get; } = DeveloperSocials.All;
 
     public async Task InitializeAsync()
     {
@@ -131,6 +137,28 @@ public partial class MainViewModel : ViewModelBase, INavigation
     {
         Navigate("knowledge");
         await Knowledge.RevealDocumentAsync(documentId);
+    }
+
+    [RelayCommand]
+    private void ShowDeveloperHelp() => IsDeveloperHelpOpen = true;
+
+    [RelayCommand]
+    private void CloseDeveloperHelp() => IsDeveloperHelpOpen = false;
+
+    [RelayCommand]
+    private async Task OpenDeveloperSocialAsync(DeveloperSocial? social)
+    {
+        if (social is null || string.IsNullOrWhiteSpace(social.Url)) return;
+        var url = social.Url.Trim();
+        if (_urlLauncher is not null && await _urlLauncher.TryOpenAsync(url)) return;
+        await ClipboardService.CopyTextAsync(social.CopyText ?? url);
+    }
+
+    [RelayCommand]
+    private async Task CopyDeveloperSocialAsync(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        await ClipboardService.CopyTextAsync(text);
     }
 
     /// <summary>Opens the memory-management window scoped to the current conversation.</summary>

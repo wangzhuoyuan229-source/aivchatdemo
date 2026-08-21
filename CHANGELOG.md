@@ -2,6 +2,39 @@
 
 项目遵循语义化版本号。版本日期按 Asia/Shanghai 记录。
 
+## [1.3.3] - 2026-08-23
+
+### 新增
+
+- 消息撤回：用户 2 分钟内可撤回最后一条本人消息，撤回后原文回填草稿栏并聚焦（`ChatBubbleViewModel.CanRecall` + `ChatViewModel.RecallMessageAsync` + `IChatHistoryService.DeleteMessageAsync`），超期置灰。
+- 群聊 @ 成员：输入框键入 `@` 自动弹出成员列表（`ChatViewModel.FilteredMentionCandidates` + `Popup`），支持过滤、上下选择、回车/点击插入 `@Name `，发送时导演优先让被 @ 成员发言（`GroupChatOrchestrator` 提及优先）。
+
+### 改进
+
+- 新建角色极简化：首屏仅保留头像、名称、用户扮演角色、知识分组、补充设定 5 项，`CreateRoleWindow` 高度 680，旧字段（简介/背景/性格/说话风格/示范对话/开场问候）收进 `Expander 补充设定（高级）` 默认折叠，`CreateRoleViewModel.SupplementaryPrompt` 复用 `Role.SystemPrompt` 兼容老角色。
+- 聊天气泡隐藏时间：`ChatView.xaml` 气泡时间 `TextBlock IsVisible=False` 仅保留 `ToolTip`，`Message.CreatedAt` 仍用于排序与导出，侧边栏时间不动。
+
+### 质量保障
+
+- `dotnet build` 0 警告/0 错误，`dotnet test` 117 项通过（含撤回/提及/新建简化契约），`ChatView` 虚拟化与 `@` 弹窗轻量。
+
+## [1.3.2] - 2026-08-22
+
+### 新增
+
+- 帮助与支持常驻侧边栏：左侧导航栏新增 `💬` 入口，`MainWindow` 全窗 `Panel.ZIndex=10` 模态弹窗展示 `DeveloperSocials`（GitHub / 邮箱 / 反馈），`MainViewModel.IsDeveloperHelpOpen` + `IUrlLauncher.TryOpenAsync` 外链与 `ClipboardService` 回退，`SettingsView` 移除底部滚动内分组以修复截断。
+- 统一 API 预设：`UnifiedApiPresets`（SiliconFlow 推荐 `deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL` / 阿里百炼 `qwen-plus + text-embedding-v4 + qwen3-vl-flash` / OpenAI `gpt-4o-mini`），`AiSettings.UnifiedPreset` 持久化，`SettingsView` 预设下拉在统一模式下自动填充三模型。
+
+### 改进
+
+- 统一API默认切换至 SiliconFlow：`RemoteApiEndpointPolicy.DefaultBaseUrl` → `https://api.siliconflow.cn/v1`，`AiSettings` 默认 `deepseek-ai/DeepSeek-V3.1` + `BAAI/bge-m3` + `SiliconFlow/Qwen3-VL-32B-Instruct`，`UseUnifiedApi=true`（`ConfigurationService` 对旧库缺 `useUnifiedApi` 保持 `false` 兼容），`SettingsViewModel` 预设与 `DetectProvider` 同步（`BAAI/bge-m3` + 提示文案）。
+- 统一模式下模型选择锁定：`AreIndividualModelsEnabled = !UseUnifiedApi || UnifiedPreset==Custom`，`ChatModel/EmbeddingModel/VisionModel` 在预设非自定义时 `IsEnabled=false`，`VisionModel` 对 `qwen3-vl-flash` 等旧 ID 自动迁移至 `Qwen/Qwen3-VL-32B-Instruct`（`AiSettings.MigrateToRemoteApiOnly` + `SettingsViewModel` 硅基检测）。
+- 版本标识同步：`ChatApp.UI.csproj` `1.3.2/1.3.2.0`，`Info.plist` `1.3.2/4`，`MainWindow` `v1.3.2`，`README` 默认服务更新为 SiliconFlow 三件套，修复设置页滚动容器 `Grid RowDefinitions="*"` + `VerticalAlignment=Stretch` 截断。
+
+### 质量保障
+
+- `dotnet build` 0 警告/0 错误，`dotnet test` 117 项通过（含统一预设、视觉迁移与旧库幂等新契约），`publish-macos.sh` `BundledKnowledge` 拷贝校验仍通过。
+
 ## [1.3.1] - 2026-08-21
 
 ### 改进

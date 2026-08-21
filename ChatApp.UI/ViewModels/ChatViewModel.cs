@@ -42,6 +42,12 @@ public partial class ChatViewModel : ViewModelBase
     [ObservableProperty] private bool _hasMoreMessages;
     private int _editingMessageId;
 
+    // ----- @ mention (group) -----
+    [ObservableProperty] private bool _isMentionPopupOpen;
+    [ObservableProperty] private string _mentionFilter = string.Empty;
+    [ObservableProperty] private int _selectedMentionIndex;
+    public ObservableCollection<Role> FilteredMentionCandidates { get; } = new();
+
     /// <summary>Messages fetched per "load earlier" page (virtualized list keeps rendering cheap).</summary>
     private const int MessagePageSize = 120;
 
@@ -240,9 +246,11 @@ public partial class ChatViewModel : ViewModelBase
                 await LoadAsync(Conversation.Id);
         }
 
+        IsMentionPopupOpen = false;
         if (IsGroupMode)
         {
-            await SendGroupAsync(text);
+            var mentioned = ExtractMentionedRoleIds(text);
+            await SendGroupAsync(text, mentioned);
             return;
         }
 
@@ -295,7 +303,7 @@ public partial class ChatViewModel : ViewModelBase
     }
 
     /// <summary>Group-chat send: one user bubble, then N streaming speaker bubbles driven by events.</summary>
-    private async Task SendGroupAsync(string text)
+    private async Task SendGroupAsync(string text, IReadOnlyList<int>? mentionedRoleIds = null)
     {
         var userBubble = new ChatBubbleViewModel { Author = MessageAuthor.User, Content = text, Avatar = "🧑", RoleName = "我" };
         Messages.Add(userBubble);
@@ -307,7 +315,7 @@ public partial class ChatViewModel : ViewModelBase
 
         try
         {
-            await _groupChat.SendAsync(Conversation!.Id, text, progress, _cts.Token);
+            await _groupChat.SendAsync(Conversation!.Id, text, progress, _cts.Token, mentionedRoleIds);
         }
         catch (OperationCanceledException)
         {
@@ -380,6 +388,75 @@ public partial class ChatViewModel : ViewModelBase
                 // IsSending/StatusText are reset in SendGroupAsync's finally.
                 break;
         }
+    }
+
+    public void UpdateMentionState(string inputText, int caretIndex)
+    {
+        if (!IsGroupMode || string.IsNullOrEmpty(inputText) || caretIndex <= 0)
+        {
+            IsMentionPopupOpen = false;
+            return;
+        }
+        var textBeforeCaret = inputText.Substring(0, Math.Min(caretIndex, inputText.Length));
+        var lastAt = textBeforeCaret.LastIndexOf('@');
+        if (lastAt < 0)
+        {
+            IsMentionPopupOpen = false;
+            return;
+        }
+        var filter = textBeforeCaret.Substring(lastAt + 1);
+        if (filter.Contains(' ') || filter.Contains('\n') || filter.Contains('\r') || filter.Contains('@'))
+        {
+            IsMentionPopupOpen = false;
+            return;
+        }
+        MentionFilter = filter;
+        FilteredMentionCandidates.Clear();
+        var normalized = filter.Trim().ToLowerInvariant();
+        foreach (var role in _groupMembers.Values.OrderBy(r => r.Name))
+        {
+            if (string.IsNullOrEmpty(normalized) || role.Name.ToLowerInvariant().Contains(normalized))
+                FilteredMentionCandidates.Add(role);
+        }
+        if (FilteredMentionCandidates.Count > 0)
+        {
+            SelectedMentionIndex = 0;
+            IsMentionPopupOpen = true;
+        }
+        else
+        {
+            IsMentionPopupOpen = false;
+        }
+    }
+
+    public void InsertMention(Role role)
+    {
+        if (role == null) return;
+        var text = InputText;
+        var lastAt = text.LastIndexOf('@');
+        if (lastAt < 0) return;
+        var afterAt = text.Substring(lastAt + 1);
+        var end = afterAt.Length;
+        var space = afterAt.IndexOf(' ');
+        if (space >= 0 && space < end) end = space;
+        var nl = afterAt.IndexOf('\n');
+        if (nl >= 0 && nl < end) end = nl;
+        var before = text.Substring(0, lastAt);
+        var after = (lastAt + 1 + end) < text.Length ? text.Substring(lastAt + 1 + end) : string.Empty;
+        InputText = before + "@" + role.Name + " " + after;
+        IsMentionPopupOpen = false;
+    }
+
+    private IReadOnlyList<int> ExtractMentionedRoleIds(string text)
+    {
+        var list = new List<int>();
+        if (!IsGroupMode || string.IsNullOrWhiteSpace(text)) return list;
+        foreach (var role in _groupMembers.Values)
+        {
+            if (text.Contains("@" + role.Name, StringComparison.Ordinal))
+                list.Add(role.Id);
+        }
+        return list.Distinct().ToList();
     }
 
     [RelayCommand]
@@ -482,14 +559,47 @@ public partial class ChatViewModel : ViewModelBase
         InputText = string.Empty;
     }
 
+    [RelayCommand]
+    private async Task RecallMessageAsync(ChatBubbleViewModel bubble)
+    {
+        if (bubble is null || !bubble.CanRecall) return;
+        if (DateTime.UtcNow - bubble.CreatedAt > TimeSpan.FromMinutes(2))
+        {
+            StatusText = "已超过2分钟，无法撤回";
+            UpdateMessageOperationFlags();
+            return;
+        }
+        try
+        {
+            await _history.DeleteMessageAsync(bubble.Id);
+            Messages.Remove(bubble);
+            if (bubble.IsUser)
+            {
+                InputText = bubble.Content;
+                StatusText = "已撤回，可重新编辑";
+            }
+            UpdateMessageOperationFlags();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Recall failed for {MessageId}", bubble.Id);
+            StatusText = $"撤回失败：{ex.Message}";
+        }
+    }
+
     private void UpdateMessageOperationFlags()
     {
         var last = Messages.LastOrDefault();
+        var lastUser = Messages.LastOrDefault(m => m.IsUser);
         foreach (var bubble in Messages)
         {
             bubble.CanRegenerate = !IsGroupMode &&
                 ReferenceEquals(bubble, last) && bubble.IsAssistant && !IsSending;
             bubble.CanEdit = bubble.IsUser;
+            bubble.CanRecall = bubble.IsUser &&
+                ReferenceEquals(bubble, lastUser) &&
+                (DateTime.UtcNow - bubble.CreatedAt) < TimeSpan.FromMinutes(2) &&
+                !IsSending;
         }
     }
 

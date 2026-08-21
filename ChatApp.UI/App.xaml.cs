@@ -33,6 +33,7 @@ public partial class App : Application
             {
                 services.AddInfrastructure();
                 services.AddChatAppAi();
+                services.AddSingleton<IUrlLauncher, UrlLauncher>();
                 services.AddSingleton<IDialogService, DialogService>();
                 services.AddSingleton<BundledKnowledgeService>();
                 services.AddSingleton<MainViewModel>();

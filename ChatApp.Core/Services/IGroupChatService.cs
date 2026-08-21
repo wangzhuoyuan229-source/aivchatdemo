@@ -14,5 +14,6 @@ public interface IGroupChatService
         int conversationId,
         string userText,
         IProgress<GroupChatEvent>? progress = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        IReadOnlyList<int>? mentionedRoleIds = null);
 }

@@ -5,7 +5,11 @@ public class AiSettings
 {
     public const string DefaultApiBaseUrl = RemoteApiEndpointPolicy.DefaultBaseUrl;
 
-    public const string DefaultChatModel = "deepseek-v4-flash";
+    public const string DefaultChatModel = "deepseek-ai/DeepSeek-V3.1";
+
+    public const string DefaultEmbeddingModel = "BAAI/bge-m3";
+
+    public const string DefaultVisionModel = "Qwen/Qwen3-VL-32B-Instruct";
 
     public string ApiBaseUrl { get; set; } = DefaultApiBaseUrl;
 
@@ -21,7 +25,9 @@ public class AiSettings
     /// </summary>
     public bool UseUnifiedApi { get; set; } = false;
 
-    public string EmbeddingModel { get; set; } = string.Empty;
+    public UnifiedApiPreset UnifiedPreset { get; set; } = UnifiedApiPreset.SiliconFlow;
+
+    public string EmbeddingModel { get; set; } = DefaultEmbeddingModel;
 
     /// <summary>
     /// Optional OpenAI-compatible endpoint used only for embeddings. Blank means
@@ -33,17 +39,18 @@ public class AiSettings
     public string EmbeddingApiKey { get; set; } = string.Empty;
 
     /// <summary>Independent image-understanding provider used only while importing/re-describing images.</summary>
-    public VisionProviderPreset VisionProviderPreset { get; set; } = VisionProviderPreset.AlibabaModelStudio;
+    public VisionProviderPreset VisionProviderPreset { get; set; } = VisionProviderPreset.SiliconFlow;
 
-    public MultimodalApiProtocol VisionProtocol { get; set; } = MultimodalApiProtocol.ChatCompletions;
+    public MultimodalApiProtocol VisionProtocol { get; set; } = VisionProviderProfiles
+        .Get(VisionProviderPreset.SiliconFlow).protocol;
 
     public string VisionApiBaseUrl { get; set; } = VisionProviderProfiles
-        .Get(VisionProviderPreset.AlibabaModelStudio).baseUrl;
+        .Get(VisionProviderPreset.SiliconFlow).baseUrl;
 
     public string VisionApiKey { get; set; } = string.Empty;
 
     public string VisionModel { get; set; } = VisionProviderProfiles
-        .Get(VisionProviderPreset.AlibabaModelStudio).model;
+        .Get(VisionProviderPreset.SiliconFlow).model;
 
     public int VisionTimeoutSeconds { get; set; } = 90;
 
@@ -165,9 +172,55 @@ public class AiSettings
 
         if (Uri.TryCreate(ApiBaseUrl, UriKind.Absolute, out var chatUri) &&
             chatUri.Host.EndsWith("deepseek.com", StringComparison.OrdinalIgnoreCase) &&
-            ChatModel is "deepseek-chat" or "deepseek-reasoner" or "default_model")
+            ChatModel is "deepseek-chat" or "deepseek-reasoner" or "deepseek-v4-flash" or "default_model")
         {
             ChatModel = DefaultChatModel;
+            changed = true;
+        }
+
+        // Scheme-A rollover: legacy single-model deepseek-v4-flash on an invalid/empty endpoint adopts SiliconFlow defaults
+        if (ChatModel is "deepseek-v4-flash" && string.IsNullOrWhiteSpace(EmbeddingModel))
+        {
+            EmbeddingModel = DefaultEmbeddingModel;
+            changed = true;
+        }
+        // Robust scheme-A vision migration: any Alibaba-derived visual model while
+        // unified on SiliconFlow must adopt the SiliconFlow ID (slash-prefixed).
+        var alibabaModel = VisionProviderProfiles.Get(VisionProviderPreset.AlibabaModelStudio).model;
+        var silicon = VisionProviderProfiles.Get(VisionProviderPreset.SiliconFlow);
+        var isAlibabaVision = VisionProviderPreset == VisionProviderPreset.AlibabaModelStudio ||
+                              VisionModel == alibabaModel ||
+                              VisionModel is "qwen3-vl-flash" or "qwen3-vl-plus" or "qwen-vl-max" or "qwen2-vl-2b";
+        var isSiliconUnified = UseUnifiedApi &&
+                               !string.IsNullOrWhiteSpace(ApiBaseUrl) &&
+                               ApiBaseUrl.Contains("siliconflow.cn", StringComparison.OrdinalIgnoreCase);
+        if (isAlibabaVision && (isSiliconUnified || string.IsNullOrWhiteSpace(VisionApiKey)))
+        {
+            // Only migrate slash-less Alibaba IDs to the slash-prefixed SiliconFlow ID
+            if (!VisionModel.Contains('/'))
+            {
+                VisionProviderPreset = VisionProviderPreset.SiliconFlow;
+                VisionProtocol = silicon.protocol;
+                VisionApiBaseUrl = silicon.baseUrl;
+                VisionModel = silicon.model;
+                changed = true;
+            }
+            else if (VisionProviderPreset == VisionProviderPreset.AlibabaModelStudio)
+            {
+                VisionProviderPreset = VisionProviderPreset.SiliconFlow;
+                VisionProtocol = silicon.protocol;
+                VisionApiBaseUrl = silicon.baseUrl;
+                changed = true;
+            }
+        }
+        else if (VisionProviderPreset == VisionProviderPreset.AlibabaModelStudio &&
+            string.IsNullOrWhiteSpace(VisionApiKey) &&
+            VisionModel == alibabaModel)
+        {
+            VisionProviderPreset = VisionProviderPreset.SiliconFlow;
+            VisionProtocol = silicon.protocol;
+            VisionApiBaseUrl = silicon.baseUrl;
+            VisionModel = silicon.model;
             changed = true;
         }
 

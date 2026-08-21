@@ -94,7 +94,8 @@
                                                IsVisible="{Binding IsGroupBubble, Converter={StaticResource Bool2Vis}}"/>
                                     <TextBlock Text="{Binding TimeText}" FontSize="10"
                                                Foreground="{DynamicResource TimeBrush}" Margin="0,0,0,4"
-                                               HorizontalAlignment="{Binding IsUser, Converter={StaticResource Align}}"/>
+                                               HorizontalAlignment="{Binding IsUser, Converter={StaticResource Align}}"
+                                               IsVisible="False" ToolTip.Tip="{Binding TimeText}"/>
                                     <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FlowDirection="LeftToRight"
                                                FontSize="{Binding $parent[ItemsControl].DataContext.ChatFontSize}"/>
                                     <ItemsControl ItemsSource="{Binding Attachments}" Margin="0,8,0,0">
@@ -156,6 +157,10 @@
                                                 IsVisible="{Binding CanEdit, Converter={StaticResource Bool2Vis}}"
                                                 Command="{Binding $parent[ItemsControl].DataContext.StartEditMessageCommand}"
                                                 CommandParameter="{Binding}"/>
+                                        <Button Classes="ghost" Content="撤回" Padding="8,2" FontSize="11"
+                                                IsVisible="{Binding CanRecall, Converter={StaticResource Bool2Vis}}"
+                                                Command="{Binding $parent[ItemsControl].DataContext.RecallMessageCommand}"
+                                                CommandParameter="{Binding}"/>
                                         <Button Classes="ghost" Content="重新生成" Padding="8,2" FontSize="11"
                                                 IsVisible="{Binding CanRegenerate, Converter={StaticResource Bool2Vis}}"
                                                 Command="{Binding $parent[ItemsControl].DataContext.RegenerateCommand}"/>
@@ -195,9 +200,23 @@
                     </Grid.ColumnDefinitions>
                     <TextBox Grid.Column="0" x:Name="InputBox" Text="{Binding InputText}"
                              AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             Watermark="输入消息，回车发送 · Shift+回车换行"
+                             Watermark="输入消息，回车发送 · Shift+回车换行（@提及成员）"
                              MaxHeight="120" MinHeight="40" FontSize="14" Padding="10,8"
-                             KeyDown="InputBox_KeyDown"/>
+                             KeyDown="InputBox_KeyDown" TextChanged="InputBox_TextChanged"/>
+                    <Popup IsOpen="{Binding IsMentionPopupOpen}" PlacementTarget="{Binding #InputBox}" Placement="TopEdgeAlignedLeft" VerticalOffset="-6" IsLightDismissEnabled="True" WindowManagerAddShadowHint="True">
+                        <Border Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="6" MaxHeight="180" Width="260" BoxShadow="0 4 12 0 #20000000">
+                            <ListBox x:Name="MentionList" ItemsSource="{Binding FilteredMentionCandidates}" SelectedIndex="{Binding SelectedMentionIndex}" SelectionMode="Single" Background="Transparent" Tapped="MentionList_DoubleTapped" DoubleTapped="MentionList_DoubleTapped">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="4">
+                                            <controls:AvatarView Avatar="{Binding Avatar}" Width="28" Height="28"/>
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="13"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+                    </Popup>
                     <Button Grid.Column="1" Classes="ghost" Content="停止"
                             Command="{Binding StopCommand}" Margin="6,0,0,0"
                             IsVisible="{Binding IsSending, Converter={StaticResource Bool2Vis}}"/>

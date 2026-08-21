@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="using:ChatApp.UI.Converters"
         xmlns:controls="using:ChatApp.UI.Controls"
-        Title="{Binding WindowTitle}" Height="780" Width="560"
+        Title="{Binding WindowTitle}" Height="680" Width="560"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BgBrush}">
     <Window.Resources>
         <conv:BoolToVisibilityConverter x:Key="Bool2Vis"/>
@@ -22,6 +22,7 @@
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,16">
             <StackPanel>
+                <!-- 1. 头像 -->
                 <Grid Margin="0,0,0,12" RowDefinitions="Auto,Auto">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
@@ -45,30 +46,16 @@
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AvatarMatchStatus}" FontSize="10"
                                Foreground="{StaticResource AccentDarkBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
                 </Grid>
+                <!-- 2. 名称 -->
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="名称 *" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
-                    <TextBox Grid.Column="1" Text="{Binding Name}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Name}" Watermark="例如：林溪"/>
                 </Grid>
-                <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="简介" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
-                    <TextBox Grid.Column="1" Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48"/>
-                </Grid>
-                <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="背景设定" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
-                    <TextBox Grid.Column="1" Text="{Binding Background}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"/>
-                </Grid>
+                <!-- 3. 用户扮演角色 -->
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
@@ -82,35 +69,7 @@
                                    FontSize="10" Foreground="{DynamicResource TextSubBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Grid>
-                <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="性格" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
-                    <TextBox Grid.Column="1" Text="{Binding Personality}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56"/>
-                </Grid>
-                <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="说话风格" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
-                    <TextBox Grid.Column="1" Text="{Binding SpeakingStyle}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56"/>
-                </Grid>
-                <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="示范对话" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
-                    <StackPanel Grid.Column="1">
-                        <TextBox Text="{Binding DialogueExamples}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120"
-                                 Watermark="用户：今天有点累。&#10;角色：那就先歇一会儿，我陪你安静坐着。&#10;&#10;用户：……&#10;角色：不用急着说，我在。"/>
-                        <TextBlock Text="建议填写 6–12 组真实、多样的多轮示范；这些内容只用于模仿语气，不作为设定事实。"
-                                   FontSize="10" Foreground="{DynamicResource TextSubBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Grid>
+                <!-- 4. 知识分组 -->
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
@@ -133,15 +92,79 @@
                                    Margin="0,4,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Grid>
+                <!-- 5. 补充设定 -->
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="开场问候" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
-                    <TextBox Grid.Column="1" Text="{Binding Greeting}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48"/>
+                    <TextBlock Grid.Column="0" Text="补充设定" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBox Text="{Binding SupplementaryPrompt}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="96"
+                                 Watermark="人设、背景、说话风格等补充设定（可选，支持多行）。例如：性格温柔但坚定，说话简洁，熟悉泰拉世界观。"/>
+                        <TextBlock Text="简洁填写角色的核心人设与补充规则，将作为系统提示注入；留空则仅按基础信息对话。"
+                                   FontSize="10" Foreground="{DynamicResource TextSubBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
                 </Grid>
-                <TextBlock Text="{Binding ErrorText}" Foreground="{DynamicResource DangerBrush}" FontSize="12" TextWrapping="Wrap"/>
+                <!-- 高级折叠区（旧字段兼容） -->
+                <Expander Header="补充设定（高级）" IsExpanded="{Binding IsSupplementaryExpanded}" Margin="0,8,0,0">
+                    <StackPanel Margin="0,8,0,0">
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="简介" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
+                            <TextBox Grid.Column="1" Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="背景设定" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
+                            <TextBox Grid.Column="1" Text="{Binding Background}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="性格" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
+                            <TextBox Grid.Column="1" Text="{Binding Personality}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="说话风格" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
+                            <TextBox Grid.Column="1" Text="{Binding SpeakingStyle}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="示范对话" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBox Text="{Binding DialogueExamples}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120"
+                                         Watermark="用户：今天有点累。&#10;角色：那就先歇一会儿，我陪你安静坐着。"/>
+                                <TextBlock Text="建议填写 6–12 组真实、多样的多轮示范；这些内容只用于模仿语气，不作为设定事实。"
+                                           FontSize="10" Foreground="{DynamicResource TextSubBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="开场问候" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
+                            <TextBox Grid.Column="1" Text="{Binding Greeting}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48"/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+                <TextBlock Text="{Binding ErrorText}" Foreground="{DynamicResource DangerBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"/>
             </StackPanel>
         </ScrollViewer>
 

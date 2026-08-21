@@ -118,6 +118,7 @@ public sealed class BundledKnowledgeServiceTests
     {
         private readonly AiSettings _settings = new()
         {
+            UseUnifiedApi = false,
             EnableKnowledgeBase = true,
             EmbeddingApiBaseUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1",
             EmbeddingApiKey = "test-only-key",

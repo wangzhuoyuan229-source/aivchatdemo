@@ -19,6 +19,7 @@ public partial class ChatBubbleViewModel : ViewModelBase
     [ObservableProperty] private bool _isStreaming;
     [ObservableProperty] private bool _canRegenerate;
     [ObservableProperty] private bool _canEdit;
+    [ObservableProperty] private bool _canRecall;
 
     public int Id { get; set; }
     public MessageAuthor Author { get; init; }

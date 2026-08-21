@@ -70,6 +70,7 @@ public class MultimodalClientTests
 
     private static AiSettings Settings(MultimodalApiProtocol protocol) => new()
     {
+        UseUnifiedApi = false,
         VisionApiBaseUrl = "https://vision.example/v1",
         VisionApiKey = "secret-key",
         VisionModel = "vision-model",
