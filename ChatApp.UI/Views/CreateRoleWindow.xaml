@@ -16,11 +16,11 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,14">
-            <TextBlock Text="{Binding WindowTitle}" FontSize="16" FontWeight="SemiBold"/>
+        <Border Grid.Row="0" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,18">
+            <TextBlock Text="{Binding WindowTitle}" FontSize="18" FontWeight="SemiBold"/>
         </Border>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,16">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,20">
             <StackPanel>
                 <!-- 1. 头像 -->
                 <Grid Margin="0,0,0,12" RowDefinitions="Auto,Auto">
@@ -77,7 +77,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="知识分组" VerticalAlignment="Top" Margin="0,8" FontSize="12" Foreground="{DynamicResource TextSubBrush}"/>
                     <StackPanel Grid.Column="1">
-                        <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="4" Padding="8" MinHeight="70" MaxHeight="140">
+                        <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="8" Padding="10" MinHeight="70" MaxHeight="140" Background="{DynamicResource PanelBrush}">
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <ItemsControl ItemsSource="{Binding KnowledgeGroups}">
                                     <ItemsControl.ItemTemplate>
@@ -168,7 +168,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="20,12">
+        <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="24,14">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Classes="ghost" Content="取消" Command="{Binding CancelCommand}" Padding="20,8" Margin="0,0,8,0"/>
                 <Button Classes="primary" Content="{Binding SubmitText}" Command="{Binding SaveCommand}" Padding="24,8"/>

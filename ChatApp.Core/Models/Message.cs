@@ -103,6 +103,9 @@ public class Conversation
 
     public string Title { get; set; } = string.Empty;
 
+    /// <summary>Optional custom avatar for group chats; empty uses a member-avatar collage.</summary>
+    public string Avatar { get; set; } = string.Empty;
+
     /// <summary>Pinned conversations sort above unpinned ones regardless of recency.</summary>
     public bool IsPinned { get; set; }
 

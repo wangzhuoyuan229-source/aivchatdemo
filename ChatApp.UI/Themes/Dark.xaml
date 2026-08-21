@@ -1,26 +1,38 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <SolidColorBrush x:Key="AccentBrush" Color="#07C160"/>
-  <SolidColorBrush x:Key="AccentDarkBrush" Color="#06AD56"/>
-  <SolidColorBrush x:Key="BgBrush" Color="#1E1E1E"/>
-  <SolidColorBrush x:Key="PanelBrush" Color="#252525"/>
-  <SolidColorBrush x:Key="TextMainBrush" Color="#E8E8E8"/>
-  <SolidColorBrush x:Key="TextSubBrush" Color="#9A9A9A"/>
-  <SolidColorBrush x:Key="UserBubbleBrush" Color="#2F6B4F"/>
-  <SolidColorBrush x:Key="AssistantBubbleBrush" Color="#2D2D2D"/>
-  <SolidColorBrush x:Key="DividerBrush" Color="#3A3A3A"/>
-  <SolidColorBrush x:Key="SubtleBrush" Color="#2C2C2C"/>
-  <SolidColorBrush x:Key="SubtlePanelBrush" Color="#232826"/>
-  <SolidColorBrush x:Key="SubtleBorderBrush" Color="#33413A"/>
-  <SolidColorBrush x:Key="AccentSoftBrush" Color="#1C3325"/>
-  <SolidColorBrush x:Key="AccentSoftTextBrush" Color="#7FD9A6"/>
-  <SolidColorBrush x:Key="AvatarRingBrush" Color="#1F3A2A"/>
-  <SolidColorBrush x:Key="PlaceholderBrush" Color="#333333"/>
-  <SolidColorBrush x:Key="TimeBrush" Color="#808080"/>
+  <SolidColorBrush x:Key="AccentBrush" Color="#0A84FF"/>
+  <SolidColorBrush x:Key="AccentDarkBrush" Color="#409CFF"/>
+  <SolidColorBrush x:Key="BgBrush" Color="#000000"/>
+  <SolidColorBrush x:Key="PanelBrush" Color="#1C1C1E"/>
+  <SolidColorBrush x:Key="ChromeBrush" Color="#F21C1C1E"/>
+  <SolidColorBrush x:Key="ListPaneBrush" Color="#161618"/>
+  <SolidColorBrush x:Key="TextMainBrush" Color="#F2F2F7"/>
+  <SolidColorBrush x:Key="TextSubBrush" Color="#98989D"/>
+  <SolidColorBrush x:Key="TextDisabledBrush" Color="#636366"/>
+  <SolidColorBrush x:Key="UserBubbleBrush" Color="#174A75"/>
+  <SolidColorBrush x:Key="AssistantBubbleBrush" Color="#2C2C2E"/>
+  <SolidColorBrush x:Key="DividerBrush" Color="#38383A"/>
+  <SolidColorBrush x:Key="ControlBorderBrush" Color="#48484A"/>
+  <SolidColorBrush x:Key="SubtleBrush" Color="#2C2C2E"/>
+  <SolidColorBrush x:Key="SubtlePanelBrush" Color="#242426"/>
+  <SolidColorBrush x:Key="SubtleBorderBrush" Color="#3A3A3C"/>
+  <SolidColorBrush x:Key="SelectionBrush" Color="#3A3A3C"/>
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="#172D44"/>
+  <SolidColorBrush x:Key="AccentSoftTextBrush" Color="#64B5FF"/>
+  <SolidColorBrush x:Key="AvatarRingBrush" Color="#17324D"/>
+  <SolidColorBrush x:Key="PlaceholderBrush" Color="#3A3A3C"/>
+  <SolidColorBrush x:Key="TimeBrush" Color="#8E8E93"/>
   <SolidColorBrush x:Key="HoverOverlayBrush" Color="#14FFFFFF"/>
-  <SolidColorBrush x:Key="NavRailBrush" Color="#181818"/>
-  <SolidColorBrush x:Key="WarnBrush" Color="#E0A040"/>
-  <SolidColorBrush x:Key="WarnSoftBrush" Color="#3A2F1A"/>
-  <SolidColorBrush x:Key="InfoSoftBrush" Color="#1C2B3A"/>
-  <SolidColorBrush x:Key="DangerBrush" Color="#EF5350"/>
+  <SolidColorBrush x:Key="PressedOverlayBrush" Color="#24FFFFFF"/>
+  <SolidColorBrush x:Key="NavRailBrush" Color="#101012"/>
+  <SolidColorBrush x:Key="NavIconBrush" Color="#A1A1A6"/>
+  <SolidColorBrush x:Key="CardBorderBrush" Color="#26FFFFFF"/>
+  <BoxShadows x:Key="CardShadow">0 1 4 0 #50000000</BoxShadows>
+  <BoxShadows x:Key="FloatingShadow">0 14 40 0 #80000000</BoxShadows>
+  <BoxShadows x:Key="BubbleShadow">0 1 2 0 #40000000</BoxShadows>
+  <BoxShadows x:Key="InputShadow">0 2 12 0 #60000000</BoxShadows>
+  <SolidColorBrush x:Key="WarnBrush" Color="#FFD60A"/>
+  <SolidColorBrush x:Key="WarnSoftBrush" Color="#3A3010"/>
+  <SolidColorBrush x:Key="InfoSoftBrush" Color="#172D44"/>
+  <SolidColorBrush x:Key="DangerBrush" Color="#FF453A"/>
 </ResourceDictionary>

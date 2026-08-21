@@ -44,7 +44,8 @@ public class ChatHistoryService : IChatHistoryService
         return conv;
     }
 
-    public async Task<Conversation> CreateGroupConversationAsync(string title, IReadOnlyList<int> memberRoleIds, CancellationToken ct = default)
+    public async Task<Conversation> CreateGroupConversationAsync(string title, IReadOnlyList<int> memberRoleIds,
+        string? avatar = null, CancellationToken ct = default)
     {
         if (memberRoleIds is null || memberRoleIds.Count < 2)
             throw new ArgumentException("群聊至少需要 2 个成员角色。", nameof(memberRoleIds));
@@ -57,6 +58,7 @@ public class ChatHistoryService : IChatHistoryService
             RoleId = null,
             Type = ConversationType.Group,
             Title = string.IsNullOrWhiteSpace(title) ? $"群聊 {DateTime.Now:MM-dd HH:mm}" : title,
+            Avatar = avatar?.Trim() ?? string.Empty,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

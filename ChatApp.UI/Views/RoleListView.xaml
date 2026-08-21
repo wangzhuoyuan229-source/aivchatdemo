@@ -5,10 +5,19 @@
              xmlns:cm="using:ChatApp.Core.Models"
              xmlns:conv="using:ChatApp.UI.Converters"
              xmlns:controls="using:ChatApp.UI.Controls"
-             Background="{DynamicResource PanelBrush}">
+             Background="{DynamicResource ListPaneBrush}">
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="Bool2Vis"/>
     </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="ListBox#RoleList > ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource SelectionBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
+        </Style>
+        <Style Selector="ListBox#RoleList > ListBoxItem:selected:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SelectionBrush}"/>
+        </Style>
+    </UserControl.Styles>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -17,40 +26,62 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Margin="16,14,12,10">
+        <Border Grid.Row="0" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}"
+                BorderThickness="0,0,0,1" Padding="18,16,12,12">
+        <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="角色库" Classes="title"/>
-            <Button Grid.Column="1" Classes="ghost" Content="群聊"
-                    Click="CreateGroupChat_Click" Margin="0,0,4,0"/>
-            <Button Grid.Column="2" Classes="ghost" Content="新建"
-                    Click="CreateRole_Click" Margin="0,0,4,0" x:Name="CreateRoleButton"/>
-            <Button Grid.Column="3" Classes="ghost" Content="↻"
-                    Command="{Binding RefreshCommand}"/>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="消息" Classes="title"/>
+                <TextBlock Text="选择角色或最近群聊" Classes="sub" Margin="0,3,0,0"/>
+            </StackPanel>
+            <Button Grid.Column="1" Classes="primary" Width="40" Height="40" MinHeight="40" Padding="0"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                    ToolTip.Tip="新建角色或群聊" x:Name="CreateMenuButton">
+                <TextBlock Text="+" FontSize="26" FontWeight="Regular"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
+                <Button.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedRight">
+                        <Border Classes="floating" Padding="8">
+                            <StackPanel Spacing="2">
+                                <Button Classes="ghost" Content="新建角色" HorizontalContentAlignment="Left"
+                                        Click="CreateRole_Click"/>
+                                <Button Classes="ghost" Content="新建群聊" HorizontalContentAlignment="Left"
+                                        Click="CreateGroupChat_Click"/>
+                            </StackPanel>
+                        </Border>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+            <Button Grid.Column="2" Classes="ghost" Width="40" Height="40" MinHeight="40" Padding="0"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                    Command="{Binding RefreshCommand}" ToolTip.Tip="刷新">
+                <TextBlock Text="↻" FontSize="19" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Button>
         </Grid>
+        </Border>
 
         <!-- Recent group chats (collapses when empty) -->
         <StackPanel Grid.Row="1" Margin="0,2,0,8"
                     IsVisible="{Binding HasGroupChats, Converter={StaticResource Bool2Vis}}">
             <TextBlock Text="最近群聊" FontSize="12" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextSubBrush}" Margin="16,4,12,6"/>
+                       Foreground="{DynamicResource TextSubBrush}" Margin="18,8,12,6"/>
             <ItemsControl ItemsSource="{Binding GroupChats}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Button Command="{Binding DataContext.OpenGroupChatCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
-                                Classes="ghost" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Margin="8,2" Padding="0">
-                            <Border Background="{DynamicResource SubtlePanelBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1"
-                                    CornerRadius="9" Padding="10">
-                                <Grid ColumnDefinitions="48,*,Auto" RowDefinitions="Auto,Auto,Auto">
+                                Classes="ghost" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Margin="10,2" Padding="0">
+                            <Border Background="{DynamicResource SubtlePanelBrush}" BorderBrush="{DynamicResource CardBorderBrush}"
+                                    BorderThickness="1" CornerRadius="12" Padding="12,10">
+                                <Grid ColumnDefinitions="48,*" RowDefinitions="Auto,Auto,Auto">
                                     <Border Grid.Column="0" Grid.RowSpan="2" Width="42" Height="42"
                                             CornerRadius="9" Background="{DynamicResource AvatarRingBrush}" VerticalAlignment="Center"
                                             Margin="0,0,10,0" ClipToBounds="True">
-                                        <controls:AvatarView Avatar="{Binding Avatar}" FontSize="23"/>
+                                        <controls:GroupAvatarView CustomAvatar="{Binding Avatar}" Avatars="{Binding MemberAvatars}"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Horizontal">
                                         <TextBlock Text="{Binding PinIcon}" FontSize="11" VerticalAlignment="Center"
@@ -60,9 +91,6 @@
                                                    Foreground="{DynamicResource TextMainBrush}"
                                                    TextTrimming="CharacterEllipsis" Margin="0,0,8,2"/>
                                     </StackPanel>
-                                    <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding UpdatedText}"
-                                               FontSize="10" Foreground="{DynamicResource TextSubBrush}"
-                                               VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal">
                                         <TextBlock Text="成员 · " FontSize="11" Foreground="{DynamicResource TextSubBrush}"/>
                                         <TextBlock Text="{Binding RoleName}" FontSize="11"
@@ -88,14 +116,14 @@
 
         <ListBox Grid.Row="2" x:Name="RoleList"
                  ItemsSource="{Binding Roles}" Background="Transparent" BorderThickness="0"
-                 Padding="8,0"
+                 Padding="10,2"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Border Margin="2,4" Padding="10" CornerRadius="8" Background="{DynamicResource PanelBrush}">
+                    <Border Margin="0,2" Padding="10,11" CornerRadius="12" Background="Transparent">
                         <Grid ColumnDefinitions="48,*" RowDefinitions="Auto,Auto">
                             <Border Grid.Column="0" Grid.RowSpan="2"
-                                    Width="44" Height="44" CornerRadius="8" Background="{DynamicResource SubtleBrush}"
+                                    Width="44" Height="44" CornerRadius="10" Background="{DynamicResource SubtleBrush}"
                                     VerticalAlignment="Top" Margin="0,1,0,0" ClipToBounds="True">
                                 <controls:AvatarView Avatar="{Binding Avatar}" FontSize="26"/>
                             </Border>
@@ -111,7 +139,7 @@
                                     <TextBlock Text="未绑定知识库" FontSize="10" Foreground="{DynamicResource WarnBrush}"
                                                IsVisible="{Binding HasNoKnowledgeGroups, Converter={StaticResource Bool2Vis}}"/>
                                 </StackPanel>
-                                <Button Grid.Column="1" Classes="primary" Content="对话 →" Padding="12,6"
+                                <Button Grid.Column="1" Classes="primary" Content="对话" Padding="14,6"
                                         Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"/>
                             </Grid>

@@ -78,6 +78,7 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.RoleId);
             e.HasIndex(x => new { x.IsPinned, x.UpdatedAt });
             e.Property(x => x.Title).HasDefaultValue("");
+            e.Property(x => x.Avatar).HasDefaultValue("");
             e.Property(x => x.IsPinned).HasDefaultValue(false);
         });
 

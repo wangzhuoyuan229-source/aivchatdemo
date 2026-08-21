@@ -4,7 +4,7 @@
         Title="选择" Width="380" Height="200"
         WindowStartupLocation="CenterOwner" CanResize="False" ShowInTaskbar="False"
         Background="{StaticResource PanelBrush}">
-    <Grid Margin="20">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="8"/>
@@ -13,10 +13,9 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="{Binding PromptText}" FontWeight="SemiBold" TextWrapping="Wrap"
+        <TextBlock Grid.Row="0" Text="{Binding PromptText}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"
                    Foreground="{DynamicResource TextMainBrush}"/>
-        <ComboBox Grid.Row="2" x:Name="SelectionBox" ItemsSource="{Binding Options}"
-                  Padding="6,4" FontSize="14">
+        <ComboBox Grid.Row="2" x:Name="SelectionBox" ItemsSource="{Binding Options}" FontSize="14">
             <ComboBox.ItemTemplate>
                 <DataTemplate><TextBlock Text="{Binding Label}"/></DataTemplate>
             </ComboBox.ItemTemplate>

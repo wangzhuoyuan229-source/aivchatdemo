@@ -10,7 +10,8 @@ public interface IChatHistoryService
     Task<Conversation> CreateConversationAsync(int roleId, string? title = null, CancellationToken ct = default);
 
     /// <summary>Creates a group conversation with the given member role ids (Type=Group, RoleId=null).</summary>
-    Task<Conversation> CreateGroupConversationAsync(string title, IReadOnlyList<int> memberRoleIds, CancellationToken ct = default);
+    Task<Conversation> CreateGroupConversationAsync(string title, IReadOnlyList<int> memberRoleIds,
+        string? avatar = null, CancellationToken ct = default);
 
     Task<Conversation?> GetConversationAsync(int id, CancellationToken ct = default);
 

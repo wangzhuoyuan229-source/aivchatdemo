@@ -77,11 +77,18 @@ public partial class RoleListViewModel : ViewModelBase
                     .Select(m => roleMap.TryGetValue(m.RoleId, out var r) ? r.Name : null)
                     .Where(n => n is not null)
                     .ToList();
+                var avatars = members
+                    .Select(m => roleMap.TryGetValue(m.RoleId, out var r) ? r.Avatar : null)
+                    .Where(a => !string.IsNullOrWhiteSpace(a))
+                    .Cast<string>()
+                    .Take(4)
+                    .ToList();
                 GroupChats.Add(new ConversationItemViewModel
                 {
                     Conversation = c,
                     RoleName = names.Count > 0 ? string.Join("、", names) : "空群聊",
-                    Avatar = "👥",
+                    Avatar = c.Avatar,
+                    MemberAvatars = avatars,
                     IsGroup = true
                 });
             }

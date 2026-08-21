@@ -6,8 +6,8 @@
     <UserControl.Resources>
         <conv:StringToVisibilityConverter x:Key="StringToVis"/>
     </UserControl.Resources>
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24,20">
-        <Grid MaxWidth="720" HorizontalAlignment="Left">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32,28">
+        <Grid MaxWidth="820" HorizontalAlignment="Left">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -17,10 +17,14 @@
             </Grid.RowDefinitions>
 
             <!-- Header -->
-            <TextBlock Grid.Row="0" Text="⚙️ 设置" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
+            <StackPanel Grid.Row="0" Margin="0,0,0,24">
+                <TextBlock Text="设置" FontSize="24" FontWeight="SemiBold"/>
+                <TextBlock Text="管理远程服务、知识检索与群聊偏好" FontSize="13"
+                           Foreground="{DynamicResource TextSubBrush}" Margin="0,5,0,0"/>
+            </StackPanel>
 
             <!-- AI service -->
-            <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
+            <Border Grid.Row="1" Classes="card" Padding="24,20" Margin="0,0,0,18">
                 <StackPanel>
                     <TextBlock Text="远程 AI 服务（BYOK · 自动保存）" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,4"/>
                     <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource AccentBrush}"
@@ -32,7 +36,7 @@
                             <TextBlock Text="统一 API 模式：聊天、Embedding、多模态识图共用下方同一端点和 API Key（推荐 SiliconFlow 等聚合平台）"
                                        TextWrapping="Wrap"/>
                         </CheckBox>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="小白理解：打开后，聊天、记知识、看图都用同一把钥匙和同一个地址，一次填好就行。&#10;适合你只买了一家聚合平台（如 SiliconFlow、阿里百炼）的情况。&#10;如果你的聊天用 DeepSeek，但记知识用阿里百炼、看图用别的，就要关掉，分开填。&#10;例子：只买 SiliconFlow→打开；聊天 DeepSeek + 记知识 阿里百炼→关闭。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="小白理解：打开后，聊天、记知识、看图都用同一把钥匙和同一个地址，一次填好就行。&#10;适合你只买了一家聚合平台（如 SiliconFlow、阿里百炼）的情况。&#10;如果你的聊天用 DeepSeek，但记知识用阿里百炼、看图用别的，就要关掉，分开填。&#10;例子：只买 SiliconFlow→打开；聊天 DeepSeek + 记知识 阿里百炼→关闭。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -45,7 +49,7 @@
                     <StackPanel IsVisible="{Binding UseUnifiedApi}" Margin="0,0,0,12">
                         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,2">
                             <TextBlock Text="统一 API 预设" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                            <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="统一模式下无需单独选模型，选一个预设即可一键填好对话/向量/视觉三模型。&#10;• SiliconFlow（推荐）：deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL&#10;• 阿里云百炼：qwen-plus + text-embedding-v4 + qwen3-vl-flash&#10;• OpenAI：gpt-4o-mini + text-embedding-3-small&#10;选自定义可单独手填模型。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                            <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="统一模式下无需单独选模型，选一个预设即可一键填好对话/向量/视觉三模型。&#10;• SiliconFlow（推荐）：deepseek-ai/DeepSeek-V3.1 + BAAI/bge-m3 + Qwen3-VL&#10;• 阿里云百炼：qwen-plus + text-embedding-v4 + qwen3-vl-flash&#10;• OpenAI：gpt-4o-mini + text-embedding-3-small&#10;选自定义可单独手填模型。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -60,7 +64,7 @@
 
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,2">
                         <TextBlock Text="远程 API Base URL（仅 HTTPS）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="就是 AI 公司的服务器网址。&#10;小白不用手打，直接在下拉框选：DeepSeek / OpenAI / SiliconFlow / 阿里百炼。&#10;只支持 https 开头的远程地址，不能填本地或 http。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="就是 AI 公司的服务器网址。&#10;小白不用手打，直接在下拉框选：DeepSeek / OpenAI / SiliconFlow / 阿里百炼。&#10;只支持 https 开头的远程地址，不能填本地或 http。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -74,7 +78,7 @@
 
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,2">
                         <TextBlock Text="API Key" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="相当于你在 AI 平台的密码。&#10;去官网注册后会给你一串 sk- 开头的字符，复制粘贴到这里。&#10;只保存在你自己电脑上，不会上传，也不会显示给别人。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="相当于你在 AI 平台的密码。&#10;去官网注册后会给你一串 sk- 开头的字符，复制粘贴到这里。&#10;只保存在你自己电脑上，不会上传，也不会显示给别人。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -96,7 +100,7 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="聊天模型" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="决定陪你聊天的 AI 有多聪明。&#10;不确定就用推荐的 deepseek-v4-flash（又快又便宜）。&#10;也可以下拉选 gpt-4o-mini、qwen-plus 等，选了就能直接用。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="决定陪你聊天的 AI 有多聪明。&#10;不确定就用推荐的 deepseek-v4-flash（又快又便宜）。&#10;也可以下拉选 gpt-4o-mini、qwen-plus 等，选了就能直接用。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -111,7 +115,7 @@
                         <StackPanel Grid.Column="2">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="Embedding 模型" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="帮 AI‘记知识’的专用模型，把你的文档变成它能搜索的记忆。&#10;小白不用单独纠结这个名字，跟着下面的‘Embedding 服务预设’选就行，它会自动填好。&#10;例如选‘阿里云百炼’会自动填 text-embedding-v4。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="帮 AI‘记知识’的专用模型，把你的文档变成它能搜索的记忆。&#10;小白不用单独纠结这个名字，跟着下面的‘Embedding 服务预设’选就行，它会自动填好。&#10;例如选‘阿里云百炼’会自动填 text-embedding-v4。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -131,7 +135,7 @@
                     <StackPanel IsVisible="{Binding !UseUnifiedApi}">
                         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,12,0,0">
                             <TextBlock Text="Embedding 服务预设" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                            <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="一键帮你填好‘记知识’那一套。&#10;小白直接选：&#10;• 阿里云百炼（推荐，国内快）&#10;• SiliconFlow&#10;• OpenAI&#10;选完会自动填地址和模型，你只需再填对应的密码。&#10;选‘未配置’就是暂时不用知识库记忆。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                            <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="一键帮你填好‘记知识’那一套。&#10;小白直接选：&#10;• 阿里云百炼（推荐，国内快）&#10;• SiliconFlow&#10;• OpenAI&#10;选完会自动填地址和模型，你只需再填对应的密码。&#10;选‘未配置’就是暂时不用知识库记忆。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -148,7 +152,7 @@
                                    Margin="0,6,0,0" TextWrapping="Wrap"/>
                         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,12,0,0">
                             <TextBlock Text="独立 Embedding API Base URL（可选）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                            <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="专门用来‘记知识’的服务器地址。&#10;如果打开了‘统一模式’，这里可留空，会自动用上面的主地址。&#10;只有当聊天和记知识是两家不同公司时才需要单独填，比如聊天用 DeepSeek（它不提供记知识），就要在这里填百炼或 SiliconFlow 的地址。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                            <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="专门用来‘记知识’的服务器地址。&#10;如果打开了‘统一模式’，这里可留空，会自动用上面的主地址。&#10;只有当聊天和记知识是两家不同公司时才需要单独填，比如聊天用 DeepSeek（它不提供记知识），就要在这里填百炼或 SiliconFlow 的地址。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -161,7 +165,7 @@
                                   IsEditable="True" Margin="0,4,0,8"/>
                         <StackPanel Orientation="Horizontal" Spacing="4">
                             <TextBlock Text="独立 Embedding API Key（可选）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                            <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="专门用来‘记知识’的密码。&#10;统一模式下可留空，共用主密码；分开买的服务就各自填各自的密码。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                            <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="专门用来‘记知识’的密码。&#10;统一模式下可留空，共用主密码；分开买的服务就各自填各自的密码。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -192,7 +196,7 @@
             </Border>
 
             <!-- Independent multimodal service -->
-            <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
+            <Border Grid.Row="2" Classes="card" Padding="24,20" Margin="0,0,0,18">
                 <StackPanel>
                     <TextBlock Text="独立多模态图片识别 API" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,4"/>
                     <TextBlock Text="仅在导入或重新识图时调用，不会替换聊天模型，也不会在正常回复时重复读取图片。"
@@ -207,10 +211,10 @@
                             <ColumnDefinition Width="16"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" IsVisible="{Binding !UseUnifiedApi}">
+                        <StackPanel Grid.Column="2" IsVisible="{Binding !UseUnifiedApi}">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="服务预设" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="一键填好‘看图’的地址和模型。&#10;小白选：&#10;• 阿里云百炼（推荐，识图准）&#10;• 智谱、火山方舟、SiliconFlow&#10;切换时不会清空你已填的密码。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="一键填好‘看图’的地址和模型。&#10;小白选：&#10;• 阿里云百炼（推荐，识图准）&#10;• 智谱、火山方舟、SiliconFlow&#10;切换时不会清空你已填的密码。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -222,10 +226,10 @@
                             <ComboBox ItemsSource="{Binding VisionProviderPresetOptions}"
                                       SelectedItem="{Binding VisionProviderPresetName}" Margin="0,4,0,0"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="2">
+                        <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="协议" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="和‘看图’服务打交道的方式。&#10;一般选 ChatCompletions 就行（兼容 OpenAI）；如果平台文档说用 Responses 再切换。&#10;小白跟着预设自动选的走，无需手动改。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="和‘看图’服务打交道的方式。&#10;一般选 ChatCompletions 就行（兼容 OpenAI）；如果平台文档说用 Responses 再切换。&#10;小白跟着预设自动选的走，无需手动改。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -242,7 +246,7 @@
                     <StackPanel IsVisible="{Binding !UseUnifiedApi}">
                         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,12,0,0">
                             <TextBlock Text="多模态 API Base URL（仅 HTTPS）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                            <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="‘看图’服务的服务器地址。&#10;统一模式下可留空；独立模式下，去识图平台官网复制 https 地址粘过来。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                            <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="‘看图’服务的服务器地址。&#10;统一模式下可留空；独立模式下，去识图平台官网复制 https 地址粘过来。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -254,7 +258,7 @@
                         <TextBox Text="{Binding VisionApiBaseUrl}" Margin="0,4,0,0"/>
                         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,12,0,0">
                             <TextBlock Text="多模态 API Key" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                            <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="‘看图’服务的密码，去对应平台官网申请。&#10;统一模式下可留空，共用主密码。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                            <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="‘看图’服务的密码，去对应平台官网申请。&#10;统一模式下可留空，共用主密码。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -267,7 +271,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,12,0,0" IsEnabled="{Binding AreIndividualModelsEnabled}">
                         <TextBlock Text="视觉模型或 Endpoint ID" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="具体用哪个‘眼睛’来看图。&#10;例如：&#10;• 百炼填 qwen3-vl-plus&#10;• 智谱填 glm-4.6v&#10;• 火山方舟填控制台的 Endpoint ID（如 ep-xxxx）&#10;不在列表里的也能手打。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="具体用哪个‘眼睛’来看图。&#10;例如：&#10;• 百炼填 qwen3-vl-plus&#10;• 智谱填 glm-4.6v&#10;• 火山方舟填控制台的 Endpoint ID（如 ep-xxxx）&#10;不在列表里的也能手打。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -289,7 +293,7 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="单次超时（秒）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="看一张图最多等多久。默认 90 秒。&#10;网速慢或图片大可调到 120，大部分人不用改。填 10~600 之间的数字。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="看一张图最多等多久。默认 90 秒。&#10;网速慢或图片大可调到 120，大部分人不用改。填 10~600 之间的数字。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -303,7 +307,7 @@
                         <StackPanel Grid.Column="2">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="导入并发（1–3）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="一次同时让几张图一起去‘看图’。&#10;1 = 最稳但慢；3 = 最快但更费流量。&#10;家用网络建议 1 或 2。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="一次同时让几张图一起去‘看图’。&#10;1 = 最稳但慢；3 = 最快但更费流量。&#10;家用网络建议 1 或 2。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -327,13 +331,13 @@
             </Border>
 
             <!-- RAG / memory -->
-            <Border Grid.Row="3" Background="{DynamicResource PanelBrush}" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
+            <Border Grid.Row="3" Classes="card" Padding="24,20" Margin="0,0,0,18">
                 <StackPanel>
                     <TextBlock Text="记忆与知识库" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,10"/>
 
                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
                         <CheckBox Content="启用长期记忆（RAG 召回历史）" IsChecked="{Binding EnableLongTermMemory}" VerticalAlignment="Center"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="打开后，AI 会记住你和角色的过往对话，下次还能回忆起来。&#10;比如你说‘我叫小明’，以后它还能叫出你名字。&#10;关闭则每次都是全新开始，更省钱但没记忆。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="打开后，AI 会记住你和角色的过往对话，下次还能回忆起来。&#10;比如你说‘我叫小明’，以后它还能叫出你名字。&#10;关闭则每次都是全新开始，更省钱但没记忆。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -344,7 +348,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
                         <CheckBox Content="启用知识库检索" IsChecked="{Binding EnableKnowledgeBase}" VerticalAlignment="Center"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="打开后，AI 回答时会先去你上传的资料里找答案（角色设定、世界观等）。&#10;适合角色扮演时让 AI 严格按人设说话。&#10;关闭则只靠模型瞎猜，容易串人设。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="打开后，AI 回答时会先去你上传的资料里找答案（角色设定、世界观等）。&#10;适合角色扮演时让 AI 严格按人设说话。&#10;关闭则只靠模型瞎猜，容易串人设。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -355,7 +359,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
                         <CheckBox Content="启用长对话摘要压缩（超出窗口的早期消息折叠为 LLM 摘要，失败时回退截断）" IsChecked="{Binding EnableContextSummarization}" VerticalAlignment="Center"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="聊很长后，早期消息会被 AI 自动总结成一段摘要，而不是直接删掉。&#10;好处是超长聊天也不‘失忆’，总结失败会自动变成截断。&#10;一般建议打开。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="聊很长后，早期消息会被 AI 自动总结成一段摘要，而不是直接删掉。&#10;好处是超长聊天也不‘失忆’，总结失败会自动变成截断。&#10;一般建议打开。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -367,7 +371,7 @@
                     <StackPanel Orientation="Horizontal" Margin="4,6,0,0" Spacing="4">
                         <TextBlock Text="摘要保留最近消息数：" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
                         <TextBox Text="{Binding ContextSummaryKeepRecent}" Width="60" Margin="6,0,0,0"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="做总结时，最新多少条保持原样不总结。&#10;比如填 10，就是最近 10 句原样保留，更早的才被总结。&#10;数字越大越记得细节但更费 Token，建议 10 左右，小白别改。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="做总结时，最新多少条保持原样不总结。&#10;比如填 10，就是最近 10 句原样保留，更早的才被总结。&#10;数字越大越记得细节但更费 Token，建议 10 左右，小白别改。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -388,7 +392,7 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="上下文窗口" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="AI 每次回答能‘看到’的最近消息条数。&#10;20 表示看最近 20 句，越大越懂前文但越慢越贵。&#10;4~200 可调，小白用 20 就好。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="AI 每次回答能‘看到’的最近消息条数。&#10;20 表示看最近 20 句，越大越懂前文但越慢越贵。&#10;4~200 可调，小白用 20 就好。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -402,7 +406,7 @@
                         <StackPanel Grid.Column="2">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="记忆召回 Top-K" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="去回忆过往对话时，一次最多找回几条相关记忆。&#10;填 5 就是找最相关的 5 段。&#10;越大记得越多但可能混入不相关的，1~50，小白用 5。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="去回忆过往对话时，一次最多找回几条相关记忆。&#10;填 5 就是找最相关的 5 段。&#10;越大记得越多但可能混入不相关的，1~50，小白用 5。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -416,7 +420,7 @@
                         <StackPanel Grid.Column="4">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="知识召回 Top-K" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="去翻你的知识库时，一次最多翻几段资料。&#10;填 5 就是找最匹配的 5 段。&#10;资料多可调大，一般 5 够用。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="去翻你的知识库时，一次最多翻几段资料。&#10;填 5 就是找最匹配的 5 段。&#10;资料多可调大，一般 5 够用。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -430,7 +434,7 @@
                     </Grid>
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,12,0,0">
                         <TextBlock Text="记忆批量大小（每多少条消息触发一次向量化）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="攒够多少条新消息，AI 才一次性去‘整理记忆’。&#10;50 就是每 50 句才整理一次。&#10;太小会频繁整理费钱，太大则记忆更新慢，小白用 50。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="攒够多少条新消息，AI 才一次性去‘整理记忆’。&#10;50 就是每 50 句才整理一次。&#10;太小会频繁整理费钱，太大则记忆更新慢，小白用 50。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -452,7 +456,7 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="知识最低相似度" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="资料和你的问题有多像，才算‘有用’。&#10;0 表示什么都算有用，1 表示必须一模一样。&#10;默认 0.35，调高更严格（只用非常像的资料），调低更宽松但可能瞎用。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="资料和你的问题有多像，才算‘有用’。&#10;0 表示什么都算有用，1 表示必须一模一样。&#10;默认 0.35，调高更严格（只用非常像的资料），调低更宽松但可能瞎用。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -466,7 +470,7 @@
                         <StackPanel Grid.Column="2">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="知识上下文字数" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="找到了资料后，实际喂给 AI 看多少字。&#10;6000 字就是把匹配段落前后共 6000 字给 AI 参考。&#10;太大更全但更贵，200~50000，小白 6000。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="找到了资料后，实际喂给 AI 看多少字。&#10;6000 字就是把匹配段落前后共 6000 字给 AI 参考。&#10;太大更全但更贵，200~50000，小白 6000。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -480,7 +484,7 @@
                         <StackPanel Grid.Column="4">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="相邻分块半径" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="找到某段资料后，是否顺带把它的前后邻居也一起给 AI。&#10;0 = 只给命中的那一段，1 = 再多带前后各 1 段。&#10;想让 AI 看得更完整就调大，默认 1。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="找到某段资料后，是否顺带把它的前后邻居也一起给 AI。&#10;0 = 只给命中的那一段，1 = 再多带前后各 1 段。&#10;想让 AI 看得更完整就调大，默认 1。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -501,7 +505,7 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="图片召回 Top-K" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="专门针对你上传的图片，一次最多找回几张相关图。&#10;比如聊天时需要配图，AI 会找最相关的几张。&#10;一般 5 够用。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="专门针对你上传的图片，一次最多找回几张相关图。&#10;比如聊天时需要配图，AI 会找最相关的几张。&#10;一般 5 够用。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -515,7 +519,7 @@
                         <StackPanel Grid.Column="2">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="图片最低相似度" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="图片和对话内容的匹配门槛。&#10;原理同‘知识最低相似度’，调高则只有非常相关的图才会被选中。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="图片和对话内容的匹配门槛。&#10;原理同‘知识最低相似度’，调高则只有非常相关的图才会被选中。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -530,7 +534,7 @@
                     <StackPanel Margin="0,12,0,0" Width="220" HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal" Spacing="4">
                             <TextBlock Text="对话温度（0–2，默认 0.65）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                            <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="AI 的‘想象力’旋钮。&#10;0 = 最守规矩，只按设定说话；2 = 最放飞，创意多但容易胡说。&#10;角色扮演建议 0.6~0.85，默认 0.65。&#10;想更稳重调低，想更活泼调高。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                            <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="AI 的‘想象力’旋钮。&#10;0 = 最守规矩，只按设定说话；2 = 最放飞，创意多但容易胡说。&#10;角色扮演建议 0.6~0.85，默认 0.65。&#10;想更稳重调低，想更活泼调高。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -547,7 +551,7 @@
             </Border>
 
             <!-- Group chat -->
-            <Border Grid.Row="4" Background="{DynamicResource PanelBrush}" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
+            <Border Grid.Row="4" Classes="card" Padding="24,20" Margin="0,0,0,18">
                 <StackPanel>
                     <TextBlock Text="群聊设置" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,10"/>
 
@@ -560,7 +564,7 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="发言模式" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="群聊时谁决定下一个说话的人：&#10;• 轮询制：所有人按顺序一个个来（最公平）&#10;• 混合式：AI 导演挑几个人说（最智能，推荐）" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="群聊时谁决定下一个说话的人：&#10;• 轮询制：所有人按顺序一个个来（最公平）&#10;• 混合式：AI 导演挑几个人说（最智能，推荐）" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -575,7 +579,7 @@
                         <StackPanel Grid.Column="2" VerticalAlignment="Bottom">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="每轮发言人数（Hybrid）" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="只有‘混合式’下才有用：每轮让几个人发言。&#10;比如填 2，就是每轮挑 2 个角色回你。&#10;人多时填 2~3 更热闹，人少填 1。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="只有‘混合式’下才有用：每轮让几个人发言。&#10;比如填 2，就是每轮挑 2 个角色回你。&#10;人多时填 2~3 更热闹，人少填 1。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
@@ -590,7 +594,7 @@
 
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <CheckBox Content="允许角色之间互相回应/反驳" IsChecked="{Binding RespondToOtherAgents}" VerticalAlignment="Center"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="打开后，群聊里角色们会互相接话、吵架、打圆场。&#10;关闭则它们只会各自回你，不会理别的角色。&#10;想看角色间互动就打开。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                        <Button Classes="help" VerticalAlignment="Center" ToolTip.Tip="打开后，群聊里角色们会互相接话、吵架、打圆场。&#10;关闭则它们只会各自回你，不会理别的角色。&#10;想看角色间互动就打开。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">

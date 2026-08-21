@@ -9,7 +9,7 @@ public interface INavigation
     Task OpenConversationAsync(int conversationId);
 
     /// <summary>Creates a new group chat with the given members and opens it.</summary>
-    Task OpenNewGroupChatAsync(IReadOnlyList<Role> members, string title);
+    Task OpenNewGroupChatAsync(IReadOnlyList<Role> members, string title, string? avatar = null);
 
     void Navigate(string pageKey);
 

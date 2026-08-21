@@ -5,6 +5,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 namespace ChatApp.UI.Converters;
 
@@ -49,13 +50,10 @@ public sealed class BooleanToVisibilityInverseConverter : ConverterBase
     public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is not true;
 }
 
-public sealed class AccentIfEqualConverter : ConverterBase
+public sealed class StringEqualsConverter : ConverterBase
 {
-    private static readonly IBrush Accent = new SolidColorBrush(Color.Parse("#07C160"));
     public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => string.Equals(value?.ToString(), parameter?.ToString(), StringComparison.OrdinalIgnoreCase)
-            ? Accent
-            : Brushes.Transparent;
+        => string.Equals(value?.ToString(), parameter?.ToString(), StringComparison.OrdinalIgnoreCase);
 }
 
 public sealed class BoolToAlignmentConverter : ConverterBase
@@ -130,6 +128,12 @@ public sealed class AvatarToBitmapConverter : ConverterBase
                     using var stream = new MemoryStream(bytes, writable: false);
                     return Bitmap.DecodeToWidth(stream, 256, BitmapInterpolationMode.MediumQuality);
                 }
+                if (Uri.TryCreate(source, UriKind.Absolute, out var resourceUri) &&
+                    resourceUri.Scheme.Equals("avares", StringComparison.OrdinalIgnoreCase))
+                {
+                    using var resource = AssetLoader.Open(resourceUri);
+                    return Bitmap.DecodeToWidth(resource, 256, BitmapInterpolationMode.MediumQuality);
+                }
                 if (!File.Exists(source)) throw new FileNotFoundException("头像文件不存在。", source);
                 using var file = File.OpenRead(source);
                 return Bitmap.DecodeToWidth(file, 256, BitmapInterpolationMode.MediumQuality);
@@ -145,7 +149,9 @@ public sealed class AvatarToTextConverter : ConverterBase
     {
         var avatar = value as string;
         if (string.IsNullOrWhiteSpace(avatar)) return "🎭";
-        if (avatar.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) || File.Exists(avatar))
+        if (avatar.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) ||
+            avatar.StartsWith("avares://", StringComparison.OrdinalIgnoreCase) ||
+            File.Exists(avatar))
             return string.Empty;
         if (avatar.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) return "🎭";
         return avatar;

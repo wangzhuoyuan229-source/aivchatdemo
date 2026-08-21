@@ -1,0 +1,6 @@
+<UserControl x:Class="ChatApp.UI.Controls.GroupAvatarView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root" ClipToBounds="True">
+    <Grid x:Name="AvatarGrid"/>
+</UserControl>

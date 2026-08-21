@@ -333,6 +333,12 @@ public static class InfrastructureModule
                     "ALTER TABLE \"Conversations\" ADD COLUMN \"IsPinned\" INTEGER NOT NULL DEFAULT 0;", conn);
                 await addPinned.ExecuteNonQueryAsync(ct);
             }
+            if (!conversationColumns.ContainsKey("Avatar"))
+            {
+                using var addAvatar = new SqliteCommand(
+                    "ALTER TABLE \"Conversations\" ADD COLUMN \"Avatar\" TEXT NOT NULL DEFAULT '';", conn);
+                await addAvatar.ExecuteNonQueryAsync(ct);
+            }
 
             var messageColumns = await ReadColumnsAsync(conn, "Messages", ct);
             if (messageColumns.Count > 0 && !messageColumns.ContainsKey("CitedDocumentIds"))

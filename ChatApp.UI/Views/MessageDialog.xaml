@@ -4,7 +4,7 @@
         Width="440" SizeToContent="Height" MinHeight="170" MaxHeight="520"
         WindowStartupLocation="CenterOwner" CanResize="False" ShowInTaskbar="False"
         Background="{StaticResource PanelBrush}">
-  <Grid Margin="22" RowDefinitions="*,20,Auto">
+  <Grid Margin="24" RowDefinitions="*,24,Auto">
     <ScrollViewer MaxHeight="360">
       <TextBlock Text="{Binding MessageText}" TextWrapping="Wrap" LineHeight="22"/>
     </ScrollViewer>

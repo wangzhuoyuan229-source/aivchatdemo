@@ -7,7 +7,7 @@ namespace ChatApp.Tests;
 
 public class ReleaseBaselineTests
 {
-    private const string ExpectedVersion = "1.3.5";
+    private const string ExpectedVersion = "1.3.6";
 
     [Fact]
     public void ProductVersionIsConsistentAcrossReleaseFiles()

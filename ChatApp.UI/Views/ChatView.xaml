@@ -21,15 +21,21 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource DividerBrush}"
-                BorderThickness="0,0,0,1" Padding="18,10">
+        <Border Grid.Row="0" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}"
+                BorderThickness="0,0,0,1" Padding="22,15">
             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                <Border Grid.Column="0" Width="38" Height="38" CornerRadius="9"
-                        Background="{DynamicResource AvatarRingBrush}" Margin="0,0,10,0" ClipToBounds="True">
-                    <controls:AvatarView Avatar="{Binding ConversationAvatar}" FontSize="21"/>
+                <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10"
+                        Background="{DynamicResource AvatarRingBrush}" Margin="0,0,12,0" ClipToBounds="True">
+                    <Grid>
+                        <controls:AvatarView Avatar="{Binding ConversationAvatar}" FontSize="21"
+                                             IsVisible="{Binding IsGroupMode, Converter={StaticResource Bool2VisInv}}"/>
+                        <controls:GroupAvatarView CustomAvatar="{Binding ConversationAvatar}"
+                                                  Avatars="{Binding GroupMemberAvatars}"
+                                                  IsVisible="{Binding IsGroupMode, Converter={StaticResource Bool2Vis}}"/>
+                    </Grid>
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"
+                    <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextMainBrush}"/>
                     <TextBlock Text="{Binding ConversationSubtitle}" FontSize="11"
                                Foreground="{DynamicResource TextSubBrush}"
@@ -67,7 +73,7 @@
                     IsEnabled="{Binding !IsLoadingEarlier}"/>
             <ScrollViewer Grid.Row="1" x:Name="MessagesScroll" VerticalScrollBarVisibility="Auto"
                           Background="{DynamicResource BgBrush}">
-                <ItemsControl x:Name="MessagesList" ItemsSource="{Binding Messages}" Margin="12">
+                <ItemsControl x:Name="MessagesList" ItemsSource="{Binding Messages}" Margin="28,16">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <VirtualizingStackPanel/>
@@ -75,18 +81,19 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Grid Margin="0,6" HorizontalAlignment="{Binding IsUser, Converter={StaticResource Align}}"
+                        <Grid Margin="0,10" HorizontalAlignment="{Binding IsUser, Converter={StaticResource Align}}"
                               FlowDirection="{Binding IsUser, Converter={StaticResource FlowDir}}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="6"
-                                    Background="{DynamicResource SubtleBrush}" VerticalAlignment="Top" Margin="0,0,8,0" ClipToBounds="True">
+                            <Border Grid.Column="0" Width="40" Height="40" CornerRadius="9"
+                                    Background="{DynamicResource SubtleBrush}" VerticalAlignment="Top" Margin="0,0,10,0" ClipToBounds="True">
                                 <controls:AvatarView Avatar="{Binding Avatar}" FontSize="22"/>
                             </Border>
-                            <Border Grid.Column="1" MaxWidth="520" CornerRadius="8" Padding="12,8" VerticalAlignment="Top"
-                                    Background="{Binding IsUser, Converter={StaticResource BubbleBrush}}">
+                            <Border Grid.Column="1" MaxWidth="580" CornerRadius="16" Padding="15,11" VerticalAlignment="Top"
+                                    Background="{Binding IsUser, Converter={StaticResource BubbleBrush}}"
+                                    BoxShadow="{DynamicResource BubbleShadow}">
                                 <StackPanel FlowDirection="LeftToRight">
                                     <TextBlock Text="{Binding RoleName}" FontSize="11" FontWeight="SemiBold"
                                                Foreground="{DynamicResource AccentBrush}"
@@ -150,18 +157,18 @@
 
                                     <!-- 消息操作 -->
                                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0" Spacing="2">
-                                        <Button Classes="ghost" Content="复制" Padding="8,2" FontSize="11"
+                                        <Button Classes="ghost compact" Content="复制" FontSize="11"
                                                 Command="{Binding $parent[ItemsControl].DataContext.CopyMessageCommand}"
                                                 CommandParameter="{Binding}"/>
-                                        <Button Classes="ghost" Content="编辑" Padding="8,2" FontSize="11"
+                                        <Button Classes="ghost compact" Content="编辑" FontSize="11"
                                                 IsVisible="{Binding CanEdit, Converter={StaticResource Bool2Vis}}"
                                                 Command="{Binding $parent[ItemsControl].DataContext.StartEditMessageCommand}"
                                                 CommandParameter="{Binding}"/>
-                                        <Button Classes="ghost" Content="撤回" Padding="8,2" FontSize="11"
+                                        <Button Classes="ghost compact" Content="撤回" FontSize="11"
                                                 IsVisible="{Binding CanRecall, Converter={StaticResource Bool2Vis}}"
                                                 Command="{Binding $parent[ItemsControl].DataContext.RecallMessageCommand}"
                                                 CommandParameter="{Binding}"/>
-                                        <Button Classes="ghost" Content="重新生成" Padding="8,2" FontSize="11"
+                                        <Button Classes="ghost compact" Content="重新生成" FontSize="11"
                                                 IsVisible="{Binding CanRegenerate, Converter={StaticResource Bool2Vis}}"
                                                 Command="{Binding $parent[ItemsControl].DataContext.RegenerateCommand}"/>
                                     </StackPanel>
@@ -175,8 +182,8 @@
         </Grid>
 
         <!-- Input -->
-        <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource DividerBrush}"
-                BorderThickness="0,1,0,0" Padding="12,10">
+        <Border Grid.Row="2" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}"
+                BorderThickness="0,1,0,0" Padding="20,12,20,18">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -198,11 +205,15 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox Grid.Column="0" x:Name="InputBox" Text="{Binding InputText}"
-                             AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             Watermark="输入消息，回车发送 · Shift+回车换行（@提及成员）"
-                             MaxHeight="120" MinHeight="40" FontSize="14" Padding="10,8"
-                             KeyDown="InputBox_KeyDown" TextChanged="InputBox_TextChanged"/>
+                    <Border Grid.Column="0" CornerRadius="16" BoxShadow="{DynamicResource InputShadow}">
+                        <TextBox x:Name="InputBox" Text="{Binding InputText}"
+                                 AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 Watermark="输入消息，回车发送 · Shift+回车换行（@提及成员）"
+                                 MaxHeight="140" MinHeight="54" FontSize="14" Padding="15,11"
+                                 Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource ControlBorderBrush}"
+                                 BorderThickness="1" CornerRadius="16"
+                                 KeyDown="InputBox_KeyDown" TextChanged="InputBox_TextChanged"/>
+                    </Border>
                     <Popup IsOpen="{Binding IsMentionPopupOpen}" PlacementTarget="{Binding #InputBox}" Placement="TopEdgeAlignedLeft" VerticalOffset="-6" IsLightDismissEnabled="True" WindowManagerAddShadowHint="True">
                         <Border Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="6" MaxHeight="180" Width="260" BoxShadow="0 4 12 0 #20000000">
                             <ListBox x:Name="MentionList" ItemsSource="{Binding FilteredMentionCandidates}" SelectedIndex="{Binding SelectedMentionIndex}" SelectionMode="Single" Background="Transparent" Tapped="MentionList_DoubleTapped" DoubleTapped="MentionList_DoubleTapped">
@@ -221,7 +232,7 @@
                             Command="{Binding StopCommand}" Margin="6,0,0,0"
                             IsVisible="{Binding IsSending, Converter={StaticResource Bool2Vis}}"/>
                     <Button Grid.Column="2" Classes="primary" Content="发送"
-                            Command="{Binding SendCommand}" Margin="6,0,0,0" Padding="22,10"
+                            Command="{Binding SendCommand}" Margin="8,0,0,0" Padding="24,10"
                             FontSize="14"/>
                 </Grid>
             </Grid>

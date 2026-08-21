@@ -42,6 +42,7 @@ public partial class RoleListView : UserControl
     {
         var vm = App.Services.GetRequiredService<CreateGroupChatViewModel>();
         vm.Title = string.Empty;
+        vm.Avatar = string.Empty;
         vm.ErrorText = string.Empty;
         await vm.LoadAsync();
 

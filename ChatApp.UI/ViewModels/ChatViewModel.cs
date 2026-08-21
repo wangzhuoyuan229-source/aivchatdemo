@@ -11,6 +11,7 @@ namespace ChatApp.UI.ViewModels;
 
 public partial class ChatViewModel : ViewModelBase
 {
+    private const string UserAvatar = "avares://ChatApp.UI/Assets/user-avatar.jpg";
     private readonly IChatService _chat;
     private readonly IGroupChatService _groupChat;
     private readonly IChatHistoryService _history;
@@ -52,6 +53,7 @@ public partial class ChatViewModel : ViewModelBase
     private const int MessagePageSize = 120;
 
     public ObservableCollection<ChatBubbleViewModel> Messages { get; } = new();
+    public ObservableCollection<string> GroupMemberAvatars { get; } = new();
 
     public string PinText => Conversation is { IsPinned: true } ? "📌 已置顶" : "📌 置顶";
 
@@ -94,6 +96,7 @@ public partial class ChatViewModel : ViewModelBase
         if (conv is null) return;
         Conversation = conv;
         IsGroupMode = false;
+        GroupMemberAvatars.Clear();
         _groupMembers.Clear();
         _activeBubbles.Clear();
         Role = await _roles.GetAsync(conv.RoleId ?? 0);
@@ -139,8 +142,9 @@ public partial class ChatViewModel : ViewModelBase
         if (conv is null) return;
         Conversation = conv;
         IsGroupMode = true;
-        ConversationAvatar = "👥";
+        ConversationAvatar = conv.Avatar;
         Role = null;
+        GroupMemberAvatars.Clear();
         _groupMembers.Clear();
         _activeBubbles.Clear();
         IsEditingMessage = false;
@@ -149,7 +153,11 @@ public partial class ChatViewModel : ViewModelBase
         foreach (var m in members)
         {
             var r = await _roles.GetAsync(m.RoleId);
-            if (r is not null) _groupMembers[m.RoleId] = r;
+            if (r is not null)
+            {
+                _groupMembers[m.RoleId] = r;
+                if (GroupMemberAvatars.Count < 4) GroupMemberAvatars.Add(r.Avatar);
+            }
         }
 
         Title = string.IsNullOrWhiteSpace(conv.Title)
@@ -168,6 +176,7 @@ public partial class ChatViewModel : ViewModelBase
         Conversation = null;
         Role = null;
         IsGroupMode = false;
+        GroupMemberAvatars.Clear();
         _groupMembers.Clear();
         _activeBubbles.Clear();
         Messages.Clear();
@@ -256,7 +265,7 @@ public partial class ChatViewModel : ViewModelBase
 
         if (Role is null) return;
 
-        var userBubble = new ChatBubbleViewModel { Author = MessageAuthor.User, Content = text, Avatar = "🧑", RoleName = "我" };
+        var userBubble = new ChatBubbleViewModel { Author = MessageAuthor.User, Content = text, Avatar = UserAvatar, RoleName = "我" };
         Messages.Add(userBubble);
 
         var assistantBubble = new ChatBubbleViewModel
@@ -305,7 +314,7 @@ public partial class ChatViewModel : ViewModelBase
     /// <summary>Group-chat send: one user bubble, then N streaming speaker bubbles driven by events.</summary>
     private async Task SendGroupAsync(string text, IReadOnlyList<int>? mentionedRoleIds = null)
     {
-        var userBubble = new ChatBubbleViewModel { Author = MessageAuthor.User, Content = text, Avatar = "🧑", RoleName = "我" };
+        var userBubble = new ChatBubbleViewModel { Author = MessageAuthor.User, Content = text, Avatar = UserAvatar, RoleName = "我" };
         Messages.Add(userBubble);
 
         IsSending = true;
@@ -708,7 +717,7 @@ public partial class ChatViewModel : ViewModelBase
                 Id = m.Id,
                 Author = m.Author,
                 Content = m.Content,
-                Avatar = m.Author == MessageAuthor.User ? "🧑" : (gRole?.Avatar ?? "🤖"),
+                Avatar = m.Author == MessageAuthor.User ? UserAvatar : (gRole?.Avatar ?? "🤖"),
                 RoleName = m.Author == MessageAuthor.User ? "我" : (gRole?.Name ?? "AI"),
                 IsGroupBubble = true,
                 CreatedAt = m.CreatedAt,
@@ -723,7 +732,7 @@ public partial class ChatViewModel : ViewModelBase
                 Id = m.Id,
                 Author = m.Author,
                 Content = m.Content,
-                Avatar = m.Author == MessageAuthor.User ? "🧑" : (role?.Avatar ?? "🤖"),
+                Avatar = m.Author == MessageAuthor.User ? UserAvatar : (role?.Avatar ?? "🤖"),
                 RoleName = m.Author == MessageAuthor.User ? "我" : (role?.Name ?? "AI"),
                 CreatedAt = m.CreatedAt,
                 IsStreaming = false

@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
 
         <!-- 顶部工具栏 -->
-        <Border Grid.Row="0" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,14">
+        <Border Grid.Row="0" Background="{DynamicResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,18">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -28,7 +28,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical">
-                    <TextBlock Text="📚 知识库" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock Text="知识库" FontSize="18" FontWeight="SemiBold"/>
                     <TextBlock Text="支持多文件夹递归批量导入并保留原目录层级；图片会生成中文描述与标签并按角色分组检索。" FontSize="12" Foreground="{DynamicResource TextSubBrush}" Margin="0,2,0,0"/>
                 </StackPanel>
                 <Button Grid.Column="1" Classes="ghost" Content="↻ 刷新" Command="{Binding RefreshCommand}" Margin="0,0,8,0"/>
@@ -88,19 +88,19 @@
         <!-- 主区域：左分组 + 右文档 -->
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="272"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- 左侧：分组列表 -->
-            <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Background="{DynamicResource ListPaneBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="16,12,8,8">
                         <TextBlock Text="分组 / 文件夹" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
-                            <Button Classes="ghost" Content="▸ 全部折叠" Padding="6,2" FontSize="11"
+                            <Button Classes="ghost compact" Content="▸ 全部折叠" FontSize="11"
                                     Command="{Binding CollapseAllGroupsCommand}" ToolTip.Tip="折叠所有分组/文件夹"/>
-                            <Button Classes="ghost" Content="▾ 全部展开" Padding="6,2" FontSize="11"
+                            <Button Classes="ghost compact" Content="▾ 全部展开" FontSize="11"
                                     Command="{Binding ExpandAllGroupsCommand}" ToolTip.Tip="展开所有分组/文件夹"/>
                         </StackPanel>
                     </DockPanel>
@@ -150,8 +150,7 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                            <Border Background="{DynamicResource PanelBrush}" CornerRadius="6" Padding="16,12" Margin="0,0,0,10"
-                                    BoxShadow="0 1 6 0 #26000000">
+                            <Border Classes="card" Padding="20,16" Margin="0,0,0,14">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>

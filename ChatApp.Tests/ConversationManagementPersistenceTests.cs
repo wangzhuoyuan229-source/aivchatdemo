@@ -78,6 +78,32 @@ public class ConversationManagementPersistenceTests
     }
 
     [Fact]
+    public async Task GroupAvatarPersistsAndEmptyAvatarRemainsAvailableForCollageFallback()
+    {
+        var path = NewDatabasePath();
+        try
+        {
+            var factory = new TestDbContextFactory(path);
+            await using (var db = await factory.CreateDbContextAsync())
+            {
+                await db.Database.EnsureCreatedAsync();
+                await InfrastructureModule.MigrateConversationExtrasAsync(db, CancellationToken.None);
+            }
+
+            var history = new ChatHistoryService(factory, NullLogger<ChatHistoryService>.Instance);
+            var custom = await history.CreateGroupConversationAsync("自定义头像", [1, 2], "data:image/png;base64,AA==");
+            var fallback = await history.CreateGroupConversationAsync("成员拼图", [1, 2]);
+
+            Assert.Equal("data:image/png;base64,AA==", (await history.GetConversationAsync(custom.Id))!.Avatar);
+            Assert.Equal(string.Empty, (await history.GetConversationAsync(fallback.Id))!.Avatar);
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
+    [Fact]
     public async Task DeleteMessagesFromAsyncRemovesTailAndKeepsEarlierMessages()
     {
         var path = NewDatabasePath();
@@ -181,9 +207,12 @@ public class ConversationManagementPersistenceTests
             await verify.OpenAsync();
             await using var checkConv = new SqliteCommand(
                 "SELECT count(*) FROM pragma_table_info('Conversations') WHERE name='IsPinned';", verify);
+            await using var checkAvatar = new SqliteCommand(
+                "SELECT count(*) FROM pragma_table_info('Conversations') WHERE name='Avatar';", verify);
             await using var checkMsg = new SqliteCommand(
                 "SELECT count(*) FROM pragma_table_info('Messages') WHERE name='CitedDocumentIds';", verify);
             Assert.Equal(1L, (long)(await checkConv.ExecuteScalarAsync())!);
+            Assert.Equal(1L, (long)(await checkAvatar.ExecuteScalarAsync())!);
             Assert.Equal(1L, (long)(await checkMsg.ExecuteScalarAsync())!);
         }
         finally

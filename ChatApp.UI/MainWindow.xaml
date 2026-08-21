@@ -2,7 +2,7 @@
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="using:ChatApp.UI.Converters"
-        Title="{Binding WindowTitle}" Height="760" Width="1180"
+        Title="{Binding WindowTitle}" Height="820" Width="1280"
         MinHeight="600" MinWidth="960"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BgBrush}"
@@ -10,29 +10,69 @@
   <Window.Resources>
     <conv:NullToVisibilityConverter x:Key="Null2Vis"/>
     <conv:InverseNullToVisibilityConverter x:Key="InverseNull2Vis"/>
-    <conv:AccentIfEqualConverter x:Key="AccentIfEqual"/>
+    <conv:StringEqualsConverter x:Key="StringEquals"/>
+    <conv:BooleanToVisibilityInverseConverter x:Key="Bool2VisInv"/>
+    <conv:AvatarToBitmapConverter x:Key="SocialIconImage"/>
   </Window.Resources>
   <Grid>
-    <Grid ColumnDefinitions="64,Auto,*">
-      <Border Grid.Column="0" Background="{DynamicResource NavRailBrush}">
+    <Grid ColumnDefinitions="76,Auto,*">
+      <Border Grid.Column="0" Background="{DynamicResource NavRailBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
         <Grid RowDefinitions="Auto,*,Auto">
-          <TextBlock Grid.Row="0" Text="AI" FontSize="22" FontWeight="Bold" Foreground="White"
-                     HorizontalAlignment="Center" Margin="0,18,0,12"/>
+          <Border Grid.Row="0" Width="48" Height="48" CornerRadius="12" Background="Transparent"
+                  HorizontalAlignment="Center" Margin="0,18,0,16" ClipToBounds="True">
+            <Image Source="/Assets/Icons/app-logo.png" Stretch="Uniform"/>
+          </Border>
           <StackPanel Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Center">
-            <Button Classes="nav" ToolTip.Tip="角色库" Command="{Binding ShowRolesCommand}"
-                    Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=roles}" Content="🎭"/>
-            <Button Classes="nav" ToolTip.Tip="知识库" Command="{Binding ShowKnowledgeCommand}"
-                    Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=knowledge}" Content="📚"/>
-            <Button Classes="nav" ToolTip.Tip="设置" Command="{Binding ShowSettingsCommand}"
-                    Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=settings}" Content="⚙️"/>
-            <Button Classes="nav" ToolTip.Tip="帮助与支持" Command="{Binding ShowDeveloperHelpCommand}" Content="💬"/>
+            <Button Classes="nav" ToolTip.Tip="角色库" Command="{Binding ShowRolesCommand}">
+              <Grid Width="44" Height="44">
+                <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="12"
+                        IsVisible="{Binding CurrentPageKey, Converter={StaticResource StringEquals}, ConverterParameter=roles}"/>
+                <Border Width="24" Height="24" Background="{DynamicResource NavIconBrush}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <Border.OpacityMask>
+                    <ImageBrush Source="/Assets/Icons/nav-roles.png" Stretch="Uniform"/>
+                  </Border.OpacityMask>
+                </Border>
+              </Grid>
+            </Button>
+            <Button Classes="nav" ToolTip.Tip="知识库" Command="{Binding ShowKnowledgeCommand}">
+              <Grid Width="44" Height="44">
+                <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="12"
+                        IsVisible="{Binding CurrentPageKey, Converter={StaticResource StringEquals}, ConverterParameter=knowledge}"/>
+                <Border Width="24" Height="24" Background="{DynamicResource NavIconBrush}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <Border.OpacityMask>
+                    <ImageBrush Source="/Assets/Icons/nav-knowledge.png" Stretch="Uniform"/>
+                  </Border.OpacityMask>
+                </Border>
+              </Grid>
+            </Button>
+            <Button Classes="nav" ToolTip.Tip="设置" Command="{Binding ShowSettingsCommand}">
+              <Grid Width="44" Height="44">
+                <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="12"
+                        IsVisible="{Binding CurrentPageKey, Converter={StaticResource StringEquals}, ConverterParameter=settings}"/>
+                <Border Width="24" Height="24" Background="{DynamicResource NavIconBrush}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <Border.OpacityMask>
+                    <ImageBrush Source="/Assets/Icons/nav-settings.png" Stretch="Uniform"/>
+                  </Border.OpacityMask>
+                </Border>
+              </Grid>
+            </Button>
+            <Button Classes="nav" ToolTip.Tip="帮助与支持" Command="{Binding ShowDeveloperHelpCommand}">
+              <Border Width="24" Height="24" Background="{DynamicResource NavIconBrush}">
+                <Border.OpacityMask>
+                  <ImageBrush Source="/Assets/Icons/nav-help.png" Stretch="Uniform"/>
+                </Border.OpacityMask>
+              </Border>
+            </Button>
           </StackPanel>
-          <TextBlock Grid.Row="2" Text="v1.3.5" Foreground="{DynamicResource TimeBrush}" FontSize="10"
+          <TextBlock Grid.Row="2" Text="v1.3.6" Foreground="{DynamicResource TimeBrush}" FontSize="10"
                      HorizontalAlignment="Center" Margin="0,0,0,12"/>
         </Grid>
       </Border>
 
-      <Border Grid.Column="1" Width="340" Background="{DynamicResource PanelBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0"
+      <Border Grid.Column="1" Width="350" Background="{DynamicResource ListPaneBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0"
               IsVisible="{Binding MiddleView, Converter={StaticResource Null2Vis}}">
         <ContentControl Content="{Binding MiddleView}"/>
       </Border>
@@ -41,21 +81,32 @@
         <ContentControl Content="{Binding RightView}"/>
         <Border IsVisible="{Binding RightView, Converter={StaticResource InverseNull2Vis}}">
           <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-            <TextBlock Text="🤖" FontSize="64" Opacity="0.4" HorizontalAlignment="Center"/>
-            <TextBlock Text="选择左侧的角色，开始聊天" FontSize="14" Foreground="{DynamicResource TextSubBrush}" Margin="0,16,0,0"/>
+            <Border Width="76" Height="76" CornerRadius="22" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Center">
+              <TextBlock Text="AI" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="选择一个角色，开始聊天" FontSize="14" Foreground="{DynamicResource TextSubBrush}" Margin="0,18,0,0"/>
           </StackPanel>
         </Border>
       </Grid>
     </Grid>
-    <Grid IsVisible="{Binding IsDeveloperHelpOpen}" Background="#80000000" Panel.ZIndex="10">
-      <Border Background="{DynamicResource PanelBrush}" CornerRadius="8" Padding="20" Width="420" MaxWidth="420" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Grid IsVisible="{Binding IsDeveloperHelpOpen}" Background="#66000000" Panel.ZIndex="10">
+      <Border Classes="floating" Padding="24" Width="440" MaxWidth="440" HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel>
           <TextBlock Text="开发者社交账户" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,12"/>
           <ItemsControl ItemsSource="{Binding DeveloperSocialItems}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Grid Margin="0,6" ColumnDefinitions="Auto,*,Auto,Auto">
-                  <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                  <Border Grid.Column="0" Width="32" Height="32" CornerRadius="8" ClipToBounds="True"
+                          VerticalAlignment="Center" Margin="0,0,12,0" Background="{DynamicResource SubtleBrush}">
+                    <Grid>
+                      <TextBlock Text="{Binding Icon}" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 IsVisible="{Binding HasIconAsset, Converter={StaticResource Bool2VisInv}}"/>
+                      <Image Source="{Binding IconAsset, Converter={StaticResource SocialIconImage}}" Stretch="UniformToFill"
+                             IsVisible="{Binding HasIconAsset}"/>
+                    </Grid>
+                  </Border>
                   <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium"/>
                     <TextBlock Text="{Binding Url}" FontSize="11" Foreground="{DynamicResource TextSubBrush}" TextWrapping="Wrap"/>

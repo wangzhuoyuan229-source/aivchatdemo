@@ -2,7 +2,7 @@
 
 > .NET 8 + Avalonia 跨平台桌面应用 | Semantic Kernel AI 引擎 | EF Core + SQLite 持久化
 
-当前版本：**v1.3.5** · [更新日志](CHANGELOG.md)
+当前版本：**v1.3.6** · [更新日志](CHANGELOG.md)
 
 ## 项目概述
 
@@ -29,11 +29,11 @@ Responses 兼容服务。多模态 API 只在导入图片和“重新识图”�
 
 ## macOS Release 使用说明
 
-当前正式版为 [v1.3.5](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.3.5)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
+当前正式版为 [v1.3.6](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.3.6)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
 
 ### 下载与安装
 
-1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.3.5/ChatApp-macOS-arm64.zip)。
+1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.3.6/ChatApp-macOS-arm64.zip)。
 2. 双击 ZIP 文件解压，得到 `ChatApp.app`。
 3. 将 `ChatApp.app` 拖入“应用程序（Applications）”文件夹。
 4. 首次启动时，在 Finder 中右键 `ChatApp.app`，选择“打开”，然后在系统提示中再次选择“打开”。后续可正常双击启动。
@@ -54,10 +54,10 @@ open /Applications/ChatApp.app
 shasum -a 256 ~/Downloads/ChatApp-macOS-arm64.zip
 ```
 
-v1.3.5 的 SHA-256：
+v1.3.6 的 SHA-256：
 
 ```text
-95af115261c35b164a79dc5cf2d60cd390b222b6900f2e5cbe15262d5bdbb860
+f39066ad487f4e850caf889c7b73df505d1317112205aa926762846bc2a99d22
 ```
 
 ### 首次配置
@@ -179,7 +179,7 @@ ChatApp.UI ──────────────► ChatApp.AI ────
 | 🧑‍🎨 **知识图片头像** | 新建角色时先查找名称匹配的图片目录/文件（内置图片尚未生成向量时也可使用），再回退语义检索；独立多模态模型定位主要人物面部，本地放大裁剪为 256×256 头像快照，无命中时保留 emoji |
 | 📦 **预设角色库** | 6 个内置角色（林溪、诸葛亮、福尔摩斯、Emma、苏念、李白） |
 | 💬 **1:1 私聊** | 单角色对话，流式输出，支持上下文窗口管理 |
-| 👥 **AI 群聊** | 多角色同台对话，支持混合导演(Hybrid)与轮询(RoundRobin)两种模式 |
+| 👥 **AI 群聊** | 多角色同台对话，支持混合导演(Hybrid)与轮询(RoundRobin)两种模式；群头像可自定义，未设置时自动使用成员头像拼图 |
 | 📚 **严格知识库 RAG** | 导入 txt/md/pdf 文档，按角色绑定的分组检索；无命中时不编造设定 |
 | 🖼️ **知识图片检索** | 导入 PNG/JPEG/WebP，独立多模态 API 生成中文描述与标签；私聊/群聊按角色检索并按需附带至多 3 张原图快照 |
 | 🧠 **长期记忆** | 按角色隔离的长期记忆，自动批量抽取+向量召回；可查看/新增/编辑/删除/清空单角色记忆（群聊仅显示当前发言者自己的记忆） |
@@ -610,4 +610,4 @@ dotnet run --project ChatApp.UI
 
 ---
 
-> 文档更新日期：2026-08-21 | 项目版本：v1.3.5
+> 文档更新日期：2026-08-21 | 项目版本：v1.3.6

@@ -122,11 +122,11 @@ public partial class MainViewModel : ViewModelBase, INavigation
             await Chat.LoadAsync(conversationId);
     }
 
-    public async Task OpenNewGroupChatAsync(IReadOnlyList<Role> members, string title)
+    public async Task OpenNewGroupChatAsync(IReadOnlyList<Role> members, string title, string? avatar = null)
     {
         if (members is null || members.Count < 2) return;
         var history = _services.GetRequiredService<IChatHistoryService>();
-        var conv = await history.CreateGroupConversationAsync(title, members.Select(r => r.Id).ToList());
+        var conv = await history.CreateGroupConversationAsync(title, members.Select(r => r.Id).ToList(), avatar);
         RightView = Chat;
         await Chat.LoadGroupAsync(conv.Id);
         // Refresh the "最近群聊" list so the new group appears immediately.

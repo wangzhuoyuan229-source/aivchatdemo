@@ -45,6 +45,7 @@ Windows PowerShell：
 
 ## 实现约定
 
+- 新建或迭代 UI 页面前必须先阅读根目录 `design.md`，并复用其中的设计令牌、字号、间距和组件规则。
 - 使用已启用的 nullable reference types 和 implicit usings；新代码保持空值语义明确。
 - 遵循现有 C# 风格：4 空格缩进、文件作用域命名空间、类型/公开成员使用 PascalCase、局部变量和私有字段使用 camelCase。
 - 接口以 `I` 开头，异步方法以 `Async` 结尾，并尽可能向下传递 `CancellationToken`。

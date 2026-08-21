@@ -38,6 +38,7 @@ public partial class CreateGroupChatViewModel : ViewModelBase
     private readonly ILogger<CreateGroupChatViewModel> _logger;
 
     [ObservableProperty] private string _title = string.Empty;
+    [ObservableProperty] private string _avatar = string.Empty;
     [ObservableProperty] private string _errorText = string.Empty;
 
     public ObservableCollection<RoleSelectionItem> Roles { get; } = new();
@@ -53,11 +54,22 @@ public partial class CreateGroupChatViewModel : ViewModelBase
     }
 
     public bool CanCreate => Roles.Any(r => r.IsSelected) && Roles.Count(r => r.IsSelected) >= 2;
+    public bool HasCustomAvatar => !string.IsNullOrWhiteSpace(Avatar);
+    public IReadOnlyList<string> SelectedAvatars => Roles
+        .Where(r => r.IsSelected)
+        .Select(r => r.Avatar)
+        .Take(4)
+        .ToList();
 
     partial void OnTitleChanged(string value) => CreateCommand.NotifyCanExecuteChanged();
+    partial void OnAvatarChanged(string value) => OnPropertyChanged(nameof(HasCustomAvatar));
 
     /// <summary>Re-evaluate CanCreate when a checkbox toggles.</summary>
-    internal void NotifySelectionChanged() => CreateCommand.NotifyCanExecuteChanged();
+    internal void NotifySelectionChanged()
+    {
+        CreateCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(SelectedAvatars));
+    }
 
     public async Task LoadAsync()
     {
@@ -86,7 +98,7 @@ public partial class CreateGroupChatViewModel : ViewModelBase
         try
         {
             RequestClose?.Invoke();
-            await _navigation.OpenNewGroupChatAsync(selected, Title?.Trim() ?? string.Empty);
+            await _navigation.OpenNewGroupChatAsync(selected, Title?.Trim() ?? string.Empty, Avatar);
         }
         catch (Exception ex)
         {
@@ -97,4 +109,7 @@ public partial class CreateGroupChatViewModel : ViewModelBase
 
     [RelayCommand]
     private void Cancel() => RequestClose?.Invoke();
+
+    [RelayCommand]
+    private void ClearAvatar() => Avatar = string.Empty;
 }

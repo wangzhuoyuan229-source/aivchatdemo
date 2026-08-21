@@ -14,13 +14,35 @@
 
   <Application.Styles>
     <FluentTheme/>
+    <Style Selector="Window, UserControl">
+      <Setter Property="FontFamily" Value="SF Pro Text, PingFang SC, Inter, Microsoft YaHei UI, sans-serif"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
+    </Style>
+    <Style Selector="Button">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="MinHeight" Value="36"/>
+      <Setter Property="Padding" Value="14,7"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Background" Value="{DynamicResource SubtleBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button:pointerover">
+      <Setter Property="Background" Value="{DynamicResource HoverOverlayBrush}"/>
+    </Style>
+    <Style Selector="Button:pressed">
+      <Setter Property="Opacity" Value="0.72"/>
+    </Style>
     <Style Selector="Button.primary">
       <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
       <Setter Property="Foreground" Value="White"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Padding" Value="16,8"/>
+      <Setter Property="MinHeight" Value="38"/>
+      <Setter Property="Padding" Value="20,9"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="5"/>
+      <Setter Property="CornerRadius" Value="10"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
     <Style Selector="Button.primary:pointerover">
@@ -29,33 +51,72 @@
     <Style Selector="Button.ghost">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
-      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="Padding" Value="10,7"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="5"/>
+      <Setter Property="CornerRadius" Value="10"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
     <Style Selector="Button.ghost:pointerover">
       <Setter Property="Background" Value="{DynamicResource HoverOverlayBrush}"/>
     </Style>
     <Style Selector="Button.nav">
-      <Setter Property="Width" Value="48"/>
-      <Setter Property="Height" Value="48"/>
-      <Setter Property="Margin" Value="6,8"/>
-      <Setter Property="FontSize" Value="20"/>
+      <Setter Property="Width" Value="44"/>
+      <Setter Property="Height" Value="44"/>
+      <Setter Property="MinHeight" Value="44"/>
+      <Setter Property="Margin" Value="8,5"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="FontSize" Value="19"/>
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="Foreground" Value="{DynamicResource NavIconBrush}"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="CornerRadius" Value="12"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
-    <Style Selector="TextBox">
-      <Setter Property="Padding" Value="8,6"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
-      <Setter Property="BorderThickness" Value="1"/>
+    <Style Selector="Button.compact">
+      <Setter Property="Height" Value="28"/>
+      <Setter Property="MinHeight" Value="28"/>
+      <Setter Property="Padding" Value="8,2"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
+    <Style Selector="Button.help">
+      <Setter Property="Width" Value="24"/>
+      <Setter Property="Height" Value="24"/>
+      <Setter Property="MinHeight" Value="24"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="Background" Value="{DynamicResource SubtleBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="MinHeight" Value="40"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="11,8"/>
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBox:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="MinHeight" Value="40"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+    </Style>
+    <Style Selector="ComboBox:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    </Style>
     <Style Selector="TextBlock.title">
-      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="FontSize" Value="19"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
     </Style>
@@ -65,6 +126,26 @@
     </Style>
     <Style Selector="ListBoxItem">
       <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Margin" Value="0,2"/>
+    </Style>
+    <Style Selector="ListBoxItem:selected">
+      <Setter Property="Background" Value="{DynamicResource SelectionBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}"/>
+    </Style>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="16"/>
+      <Setter Property="BoxShadow" Value="{DynamicResource CardShadow}"/>
+    </Style>
+    <Style Selector="Border.floating">
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="16"/>
+      <Setter Property="BoxShadow" Value="{DynamicResource FloatingShadow}"/>
     </Style>
   </Application.Styles>
 
