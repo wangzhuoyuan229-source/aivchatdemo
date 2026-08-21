@@ -2,7 +2,7 @@
 
 > .NET 8 + Avalonia 跨平台桌面应用 | Semantic Kernel AI 引擎 | EF Core + SQLite 持久化
 
-当前版本：**v1.3.4** · [更新日志](CHANGELOG.md)
+当前版本：**v1.3.5** · [更新日志](CHANGELOG.md)
 
 ## 项目概述
 
@@ -29,11 +29,11 @@ Responses 兼容服务。多模态 API 只在导入图片和“重新识图”�
 
 ## macOS Release 使用说明
 
-当前正式版为 [v1.3.4](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.3.4)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
+当前正式版为 [v1.3.5](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.3.5)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
 
 ### 下载与安装
 
-1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.3.4/ChatApp-macOS-arm64.zip)。
+1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.3.5/ChatApp-macOS-arm64.zip)。
 2. 双击 ZIP 文件解压，得到 `ChatApp.app`。
 3. 将 `ChatApp.app` 拖入“应用程序（Applications）”文件夹。
 4. 首次启动时，在 Finder 中右键 `ChatApp.app`，选择“打开”，然后在系统提示中再次选择“打开”。后续可正常双击启动。
@@ -54,10 +54,10 @@ open /Applications/ChatApp.app
 shasum -a 256 ~/Downloads/ChatApp-macOS-arm64.zip
 ```
 
-v1.3.4 的 SHA-256：
+v1.3.5 的 SHA-256：
 
 ```text
-53cd95f2b85c94c6b1c6741cc1b5f7aaf95520d8d7188ac71c74096dffa6bbfc
+95af115261c35b164a79dc5cf2d60cd390b222b6900f2e5cbe15262d5bdbb860
 ```
 
 ### 首次配置
@@ -135,9 +135,9 @@ v1.3.4 的 SHA-256：
 | 运行时 | .NET 8 | 8.0 |
 | UI 框架 | Avalonia | 11.3.20 |
 | MVVM 框架 | CommunityToolkit.Mvvm | 8.2.2 |
-| AI 引擎 | Microsoft Semantic Kernel | 1.21.1 |
-| 数据库 | EF Core + SQLite (Microsoft.Data.Sqlite) | 8.0.11 |
-| DI 容器 | Microsoft.Extensions.Hosting | 8.0.1 |
+| AI 引擎 | Microsoft Semantic Kernel | 1.71.0 |
+| 数据库 | EF Core + SQLite (Microsoft.Data.Sqlite) | 8.0.30 |
+| DI 容器 | Microsoft.Extensions.Hosting | 10.0.11 |
 | PDF 解析 | PdfPig | 0.1.9 |
 | 向量存储 | 自研 SQLite Vector Store | — |
 
@@ -610,4 +610,4 @@ dotnet run --project ChatApp.UI
 
 ---
 
-> 文档生成日期：2026-08-22 | 项目版本：v1.3.4
+> 文档更新日期：2026-08-21 | 项目版本：v1.3.5

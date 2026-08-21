@@ -119,8 +119,7 @@ public partial class SettingsViewModel : ViewModelBase
     public ObservableCollection<GroupChatMode> GroupChatModeOptions { get; } = new()
     {
         GroupChatMode.RoundRobin,
-        GroupChatMode.Hybrid,
-        GroupChatMode.FreeForAll
+        GroupChatMode.Hybrid
     };
 
     /// <summary>用户粘贴 API Key 后触发：根据 key 前缀 + 当前远程 ApiBaseUrl 综合识别服务商，

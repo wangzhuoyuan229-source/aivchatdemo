@@ -1,11 +1,11 @@
 using ChatApp.Core.Security;
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
-using Microsoft.SemanticKernel.Embeddings;
 
 namespace ChatApp.AI.SemanticKernel;
 
@@ -58,8 +58,9 @@ public sealed class ApiProbeService : IApiProbeService
         try
         {
             var kernel = KernelFactory.Build(settings, TimeSpan.FromSeconds(ProbeTimeoutSeconds));
-            var embedding = kernel.GetRequiredService<ITextEmbeddingGenerationService>();
-            var vector = await embedding.GenerateEmbeddingAsync("连接测试", kernel, ct);
+            var embedding = kernel.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
+            var vectors = await embedding.GenerateAsync(new[] { "连接测试" }, options: null, ct);
+            var vector = vectors[0].Vector;
             return vector.Length > 0
                 ? ConnectionProbeResult.Ok($"连接成功：{settings.EmbeddingModel} 返回 {vector.Length} 维向量")
                 : ConnectionProbeResult.Fail("连接成功但返回了空向量。");

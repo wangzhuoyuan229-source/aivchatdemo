@@ -30,7 +30,7 @@ public static class KernelFactory
         {
             var embeddingApiKey = ResolveEmbeddingApiKey(settings);
             var embeddingClient = CreateHttpClient(ResolveEmbeddingEndpoint(settings).ToString(), requestTimeout);
-            builder.AddOpenAITextEmbeddingGeneration(
+            builder.AddOpenAIEmbeddingGenerator(
                 settings.EmbeddingModel,
                 embeddingApiKey,
                 httpClient: embeddingClient);

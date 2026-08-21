@@ -266,6 +266,14 @@ public class AiSettings
             }
         }
 
+        // FreeForAll is a reserved Phase 2 value. Older development builds exposed
+        // it in settings even though the runtime treated it as round-robin.
+        if (GroupChat.Mode == GroupChatMode.FreeForAll)
+        {
+            GroupChat.Mode = GroupChatMode.Hybrid;
+            changed = true;
+        }
+
         return changed;
     }
 }

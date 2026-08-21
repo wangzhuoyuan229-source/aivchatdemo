@@ -27,7 +27,7 @@
                     Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=settings}" Content="⚙️"/>
             <Button Classes="nav" ToolTip.Tip="帮助与支持" Command="{Binding ShowDeveloperHelpCommand}" Content="💬"/>
           </StackPanel>
-          <TextBlock Grid.Row="2" Text="v1.3.4" Foreground="{DynamicResource TimeBrush}" FontSize="10"
+          <TextBlock Grid.Row="2" Text="v1.3.5" Foreground="{DynamicResource TimeBrush}" FontSize="10"
                      HorizontalAlignment="Center" Margin="0,0,0,12"/>
         </Grid>
       </Border>

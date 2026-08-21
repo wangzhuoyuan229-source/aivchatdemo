@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - name: Restore locked dependencies and audit vulnerabilities
+        run: dotnet restore ChatApp.sln --locked-mode
+      - name: Report vulnerable dependencies
+        run: dotnet list ChatApp.sln package --vulnerable --include-transitive
+      - name: Build
+        run: dotnet build ChatApp.sln --configuration Debug --nologo --no-restore
+      - name: Test
+        run: dotnet test ChatApp.sln --configuration Debug --nologo --no-build --no-restore

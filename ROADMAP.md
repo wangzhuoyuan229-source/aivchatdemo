@@ -1,22 +1,28 @@
 # ROADMAP
 
-> `v1.3.2`/`v1.3.3` 已交付（`v1.3.3`：撤回回填 + @提及 + 极简新建 + 隐藏时间）。`git tag v1.3.3` 待打，本文件仅保留未完成 P1/P2。
+> 当前正式版为 `v1.3.5`。`@提及` 已在 `v1.3.3` 交付，FreeForAll 仍属于后续规划。
+
+---
+
+## v1.3.5 — 安全与基线修复
+
+- Semantic Kernel `1.71.0`，迁移到新的 `IEmbeddingGenerator` 接口。
+- EF Core / Microsoft.Data.Sqlite `8.0.30`，SQLitePCLRaw bundle `3.0.5`。
+- NuGet Central Package Management、依赖锁文件和全量漏洞审计门禁。
+- 隐藏尚未实现的语音、好感度、FreeForAll 设置入口；旧 FreeForAll 配置回退为 Hybrid。
+- 增加版本一致性测试，校准 README、CHANGELOG、ROADMAP 与应用版本。
 
 ---
 
 ## v1.3.x — 工程债与体验修复（P1）
 
-> 目标：`v1.3.2` 之后以 `v1.3.3+` 迭代还债+小步快跑，不改产品形态，按 `AGENTS.md` 单向依赖与 `CHATAPP_DATA_DIR` 隔离。
+> `v1.3.5` 之后继续小步偿还工程债，不改变产品形态，保持 `AGENTS.md` 单向依赖与 `CHATAPP_DATA_DIR` 隔离。
 
 ### A. 依赖健康
 
 | 编号 | 位置 | 现状 | 实现方案 |
 |---|---|---|---|
-| P1-A1 | `global.json:3` `8.0.424` | 2024-11补丁滞后 | 升至 `8.0.414+`/`8.0.12x`，`dotnet restore` 重锁，CI 加 `dotnet list package --vulnerable` 门禁 |
-| P1-A2 | `ChatApp.Infrastructure.csproj:11` EF 8.0.11 | 滞后3 patch | 升 `Microsoft.Data.Sqlite/EFCore.Sqlite 8.0.15`，跑迁移幂等测试 |
-| P1-A3 | `ChatApp.AI.csproj:12` SK 1.21.1 | 滞后11月，`DeepSeek-V3.1` 推理`reasoning_content`无法透出 | 升 SK 1.60+，解 `SKEXP0001`，`ChatOrchestrator` 增加 `reasoning_content` 透出或丢弃策略，补提示词契约测试 |
 | P1-A4 | `SkiaSharp 2.88.9` `Avalonia 11.3.20` | HEIC/WebP `IncompleteInput` | 升 SkiaSharp 3.x，`KnowledgeService.CreateSquareAvatarJpeg:983` 加重试+回退emoji |
-| P1-A5 | `ChatApp.UI.csproj:21-25` `Configuration 8.0.0` | 与 `Hosting 8.0.1` 偏斜 | 对齐至 `8.0.1/8.0.2`，启用 CPM `Directory.Packages.props` |
 | P1-A6 | `ChatApp.Tests.csproj:25` 直引 `ChatApp.UI` | 破分层 | 抽 `ChatApp.Application` 或测试仅依赖 `Core/AI` 接口，`Avalonia.Headless` 隔离 |
 | P1-A7 | `AiModule.cs:11` `MultimodalClient(new HttpClient)` / `KernelFactory.cs:47` per-Build new `HttpClient` | 无 `IHttpClientFactory` 泄漏 | 注册 `AddHttpClient("chat"/"embedding"/"vision").SetHandlerLifetime(15min)`，注入 `IHttpClientFactory` |
 
@@ -37,7 +43,7 @@
 | P1-AI3 | `KnowledgeService.cs:484` 先拉全量再过滤，`SqliteVectorStore` 全量进内存 | 5k+ `O(total)` | 按 `GroupId` SQL层过滤或 `Scope=knowledge:{groupId}` 分组 |
 | P1-AI4 | `OpenAIEmbeddingService.cs:14` `MaxInputsPerRequest=10` | 硅基支持32吞吐减半 | 按端点自适应 `siliconflow→32 else 10`，`_requestGate 4→6` |
 | P1-AI5 | `ImageDescriptionService.cs:312` 文件名插提示词 | 注入风险 | `SingleLine`截断+ `<filename>` 包裹 |
-| P1-AI6 | `GroupChatOrchestrator.cs:298` 未解析 `@`，`FreeForAll` 桩 | `@` 失效 | `Regex @` 预解析强制入 `picked`，`FreeForAll` 自评+导演评分 |
+| P1-AI6 | `FreeForAll` 仍为保留枚举值 | 尚无自评与导演评分实现 | 独立实现 Agent 自评、导演评分、调用上限和失败回退 |
 
 ### D. 数据层
 
@@ -82,7 +88,6 @@
 | 编号 | 位置 | 现状 | 实现方案 |
 |---|---|---|---|
 | P1-Doc2 | `publish-win-x64.ps1:4` 无 `--self-contained` | 对齐macOS `-r win-x64 --self-contained true` |
-| P1-Doc3 | 无版本一致性门禁 | 加 `scripts/verify-version.ps1` 比对 `Version/CFBundle/MainWindow/README/BundleVersion/tag` |
 
 ---
 
@@ -115,10 +120,10 @@
 | **引用调试面板** | 仅记数量 | `KnowledgeRetrievalDebugView` |
 | **语音** | `IExtensionServices` 桩 | `Windows.Media.Speech` / `AVSpeechSynthesizer` |
 | **好感度** | `Role.Affinity` 有字段未注册 | `AffinityService` + 心形进度 |
-| **@点名** | 提示词有但无解析 | 见 P1-AI6 |
+| **@点名** | `v1.3.3` 已交付 | 保持提及优先与群聊成员边界契约测试 |
 | **群聊动态增删** | 仅创建时选成员 | `ManageGroupMembersWindow` + 重排 |
 | **内置知识库增量** | 无CI | `scripts/verify-bundle.ps1` 哈希比对 |
 
 ---
 
-> 已移除 `v1.3.2` 已交付的 P0（SiliconFlow统一默认、侧边栏帮助、预设锁定、视觉迁移、滚动修复）。`file:line` 基于 `2026-08-22` 工作区。
+> 已移除 `v1.3.5` 已完成的依赖安全、CPM、锁文件、漏洞门禁和版本一致性事项。`file:line` 需在后续实施前重新核对。

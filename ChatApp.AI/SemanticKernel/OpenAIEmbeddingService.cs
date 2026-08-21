@@ -1,9 +1,9 @@
 using ChatApp.Core.Services;
 using ChatApp.Core.Settings;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
-using Microsoft.SemanticKernel.Embeddings;
 using System.Net;
 
 namespace ChatApp.AI.SemanticKernel;
@@ -21,7 +21,7 @@ public class OpenAIEmbeddingService : IEmbeddingService
     private readonly SemaphoreSlim _runtimeGate = new(1, 1);
     private string _runtimeSignature = string.Empty;
     private Kernel? _cachedKernel;
-    private ITextEmbeddingGenerationService? _cachedService;
+    private IEmbeddingGenerator<string, Embedding<float>>? _cachedService;
 
     public OpenAIEmbeddingService(IConfigurationService config, ILogger<OpenAIEmbeddingService> logger)
     {
@@ -40,7 +40,7 @@ public class OpenAIEmbeddingService : IEmbeddingService
         if (texts.Count == 0) return Array.Empty<float[]>();
         var settings = await _config.LoadAsync(ct);
         EnsureEmbeddings(settings);
-        var (kernel, svc) = await GetRuntimeAsync(settings, ct);
+        var svc = await GetRuntimeAsync(settings, ct);
         var output = new float[texts.Count][];
         var batches = CreateBatches(texts, MaxInputsPerRequest);
 
@@ -49,18 +49,18 @@ public class OpenAIEmbeddingService : IEmbeddingService
             new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrentRequests, CancellationToken = ct },
             async (batch, token) =>
             {
-                var results = await GenerateWithRetryAsync(svc, kernel, batch.Texts, token);
+                var results = await GenerateWithRetryAsync(svc, batch.Texts, token);
                 if (results.Count != batch.Texts.Count)
                     throw new InvalidDataException(
                         $"Embedding 服务返回了 {results.Count} 个向量，但请求包含 {batch.Texts.Count} 段文本。");
                 for (var index = 0; index < results.Count; index++)
-                    output[batch.Offset + index] = results[index].ToArray();
+                    output[batch.Offset + index] = results[index].Vector.ToArray();
             });
 
         return output;
     }
 
-    private async Task<(Kernel Kernel, ITextEmbeddingGenerationService Service)> GetRuntimeAsync(
+    private async Task<IEmbeddingGenerator<string, Embedding<float>>> GetRuntimeAsync(
         AiSettings settings,
         CancellationToken ct)
     {
@@ -75,10 +75,10 @@ public class OpenAIEmbeddingService : IEmbeddingService
                 !string.Equals(_runtimeSignature, signature, StringComparison.Ordinal))
             {
                 _cachedKernel = KernelFactory.Build(settings);
-                _cachedService = _cachedKernel.GetRequiredService<ITextEmbeddingGenerationService>();
+                _cachedService = _cachedKernel.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
                 _runtimeSignature = signature;
             }
-            return (_cachedKernel!, _cachedService!);
+            return _cachedService!;
         }
         finally
         {
@@ -100,9 +100,8 @@ public class OpenAIEmbeddingService : IEmbeddingService
         return batches;
     }
 
-    private async Task<IReadOnlyList<ReadOnlyMemory<float>>> GenerateWithRetryAsync(
-        ITextEmbeddingGenerationService service,
-        Kernel kernel,
+    private async Task<GeneratedEmbeddings<Embedding<float>>> GenerateWithRetryAsync(
+        IEmbeddingGenerator<string, Embedding<float>> service,
         IReadOnlyList<string> texts,
         CancellationToken ct)
     {
@@ -112,8 +111,7 @@ public class OpenAIEmbeddingService : IEmbeddingService
             await _requestGate.WaitAsync(ct);
             try
             {
-                var results = await service.GenerateEmbeddingsAsync(texts.ToList(), kernel, ct);
-                return results.ToList();
+                return await service.GenerateAsync(texts, options: null, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {

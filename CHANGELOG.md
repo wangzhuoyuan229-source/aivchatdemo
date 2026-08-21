@@ -2,7 +2,27 @@
 
 项目遵循语义化版本号。版本日期按 Asia/Shanghai 记录。
 
-## [1.3.4] - 2026-08-22
+## [1.3.5] - 2026-08-21
+
+### 安全
+
+- 升级 Semantic Kernel 至 `1.71.0`、EF Core/SQLite 至 `8.0.30`，并显式使用新版 SQLitePCLRaw 原生 bundle，消除已知 Critical/High 依赖漏洞。
+- 启用 NuGet 全量依赖审计，`NU1901`–`NU1904` 在 restore 阶段按错误处理；CI 使用锁定依赖恢复并输出漏洞报告。
+
+### 改进
+
+- 引入 `Directory.Packages.props` 集中管理 NuGet 版本，并为各项目生成 `packages.lock.json`。
+- RID 发布使用 `obj/` 下的平台专用锁文件，避免 self-contained 发布改写常规构建锁文件。
+- Embedding 适配迁移到 `Microsoft.Extensions.AI.IEmbeddingGenerator`，消除 Semantic Kernel 升级后的弃用警告。
+- 设置页隐藏尚未实现的语音、好感度与 FreeForAll 入口；旧配置中的 FreeForAll 自动回退到 Hybrid。
+- 增加版本一致性与未完成功能可见性测试，统一 `v1.3.5` 开发版本标识。
+
+### 质量保障
+
+- `dotnet build` 0 警告/0 错误，120 项测试全部通过；NuGet 审计无已知漏洞。
+- macOS arm64 完整发布脚本通过，Windows x64 自包含发布输出验证通过，均包含 1792 个内置知识文件。
+
+## [1.3.4] - 2026-08-21
 
 ### 新增
 
@@ -17,7 +37,7 @@
 
 - `dotnet build` 0 警告/0 错误，`dotnet test` 保持 117 项通过；`MainWindow` 弹窗新文案不影响现有契约，图标资源经 `AvaloniaResource`/`Content` 双通道校验，`publish-macos.sh` 仍通过 `BundledKnowledge` 与图标存在性检查。
 
-## [1.3.3] - 2026-08-23
+## [1.3.3] - 2026-08-21
 
 ### 新增
 
@@ -33,7 +53,7 @@
 
 - `dotnet build` 0 警告/0 错误，`dotnet test` 117 项通过（含撤回/提及/新建简化契约），`ChatView` 虚拟化与 `@` 弹窗轻量。
 
-## [1.3.2] - 2026-08-22
+## [1.3.2] - 2026-08-21
 
 ### 新增
 
@@ -142,4 +162,3 @@
 ## [1.0.2] - 2026-08-15
 
 - 严格 RAG、角色示范对话、远程 API-only、Embedding 预设、群聊编排和 macOS 发布包。
-

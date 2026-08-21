@@ -14,7 +14,6 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Header -->
@@ -547,37 +546,8 @@
                 </StackPanel>
             </Border>
 
-            <!-- P2 toggles -->
-            <Border Grid.Row="4" Background="{DynamicResource PanelBrush}" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
-                <StackPanel>
-                    <TextBlock Text="扩展功能（P2）" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,10"/>
-                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
-                        <CheckBox Content="启用语音交互" IsChecked="{Binding EnableVoice}" VerticalAlignment="Center"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="打开后，以后可以让角色用语音和你对话（需后续支持）。&#10;现在只是开关，不影响文字聊天，小白可先关闭。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
-                                <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
-                                <Button.Flyout>
-                                    <Flyout Placement="Right">
-                                        <TextBlock Text="打开后，以后可以让角色用语音和你对话（需后续支持）。&#10;现在只是开关，不影响文字聊天，小白可先关闭。" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
-                                    </Flyout>
-                                </Button.Flyout>
-                            </Button>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
-                        <CheckBox Content="启用角色好感度系统" IsChecked="{Binding EnableAffinity}" VerticalAlignment="Center"/>
-                        <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="打开后，角色会根据你的话产生好感度变化（越聊越喜欢你）。&#10;适合想玩养成、攻略的玩法；不想被数值打扰就关闭。" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
-                                <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
-                                <Button.Flyout>
-                                    <Flyout Placement="Right">
-                                        <TextBlock Text="打开后，角色会根据你的话产生好感度变化（越聊越喜欢你）。&#10;适合想玩养成、攻略的玩法；不想被数值打扰就关闭。" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
-                                    </Flyout>
-                                </Button.Flyout>
-                            </Button>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
             <!-- Group chat -->
-            <Border Grid.Row="5" Background="{DynamicResource PanelBrush}" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
+            <Border Grid.Row="4" Background="{DynamicResource PanelBrush}" CornerRadius="6" Padding="20,16" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="群聊设置" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,10"/>
 
@@ -590,11 +560,11 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <TextBlock Text="发言模式" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Center"/>
-                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="群聊时谁决定下一个说话的人：&#10;• 轮询制：所有人按顺序一个个来（最公平）&#10;• 混合式：AI 导演挑几个人说（最智能，推荐）&#10;• 自由插话：谁想说谁说（更热闹但更乱，暂未开放）" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
+                                <Button Width="16" Height="16" CornerRadius="8" Padding="0" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="群聊时谁决定下一个说话的人：&#10;• 轮询制：所有人按顺序一个个来（最公平）&#10;• 混合式：AI 导演挑几个人说（最智能，推荐）" ToolTip.Placement="Right" ToolTip.ShowDelay="0">
                                 <TextBlock Text="?" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextSubBrush}"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Right">
-                                        <TextBlock Text="群聊时谁决定下一个说话的人：&#10;• 轮询制：所有人按顺序一个个来（最公平）&#10;• 混合式：AI 导演挑几个人说（最智能，推荐）&#10;• 自由插话：谁想说谁说（更热闹但更乱，暂未开放）" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
+                                        <TextBlock Text="群聊时谁决定下一个说话的人：&#10;• 轮询制：所有人按顺序一个个来（最公平）&#10;• 混合式：AI 导演挑几个人说（最智能，推荐）" TextWrapping="Wrap" MaxWidth="320" FontSize="12"/>
                                     </Flyout>
                                 </Button.Flyout>
                             </Button>
@@ -629,7 +599,7 @@
                                 </Button.Flyout>
                             </Button>
                     </StackPanel>
-                    <TextBlock Text="轮询制：每轮所有成员依次发言；混合式：导演选择指定人数发言；自由插话（Phase 2）。"
+                    <TextBlock Text="轮询制：每轮所有成员依次发言；混合式：导演选择指定人数发言。"
                                FontSize="11" Foreground="{DynamicResource TextSubBrush}" Margin="0,8,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
