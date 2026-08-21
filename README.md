@@ -54,10 +54,10 @@ open /Applications/ChatApp.app
 shasum -a 256 ~/Downloads/ChatApp-macOS-arm64.zip
 ```
 
-v1.3.3 的 SHA-256（待发布后更新）：
+v1.3.3 的 SHA-256：
 
 ```text
-待发布后由 `publish-macos.sh` 输出 SHA-256 并更新此处
+1085b4663cb79ba90f283bd26fb97afef89df7b0bec9fe2ad4d3a3d1658f85ec
 ```
 
 ### 首次配置
