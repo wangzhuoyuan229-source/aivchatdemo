@@ -5,7 +5,8 @@
         Title="{Binding WindowTitle}" Height="760" Width="1180"
         MinHeight="600" MinWidth="960"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource BgBrush}">
+        Background="{DynamicResource BgBrush}"
+        Icon="/Assets/icon.png">
   <Window.Resources>
     <conv:NullToVisibilityConverter x:Key="Null2Vis"/>
     <conv:InverseNullToVisibilityConverter x:Key="InverseNull2Vis"/>
@@ -26,7 +27,7 @@
                     Background="{Binding CurrentPageKey, Converter={StaticResource AccentIfEqual}, ConverterParameter=settings}" Content="⚙️"/>
             <Button Classes="nav" ToolTip.Tip="帮助与支持" Command="{Binding ShowDeveloperHelpCommand}" Content="💬"/>
           </StackPanel>
-          <TextBlock Grid.Row="2" Text="v1.3.3" Foreground="{DynamicResource TimeBrush}" FontSize="10"
+          <TextBlock Grid.Row="2" Text="v1.3.4" Foreground="{DynamicResource TimeBrush}" FontSize="10"
                      HorizontalAlignment="Center" Margin="0,0,0,12"/>
         </Grid>
       </Border>
@@ -65,6 +66,7 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+          <TextBlock Text="B站 UID:451598529 · 小红书 7439240082 · 邮箱 1037561013@qq.com · 欢迎私信" FontSize="11" Foreground="{DynamicResource TextSubBrush}" TextWrapping="Wrap" Margin="0,12,0,0" Opacity="0.9"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="关闭" Command="{Binding CloseDeveloperHelpCommand}"/>
           </StackPanel>

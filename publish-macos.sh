@@ -37,6 +37,16 @@ cp -R "$raw_dir/." "$app_dir/Contents/MacOS/"
 if [[ -d "$app_dir/Contents/MacOS/BundledKnowledge" ]]; then
   mv "$app_dir/Contents/MacOS/BundledKnowledge" "$app_dir/Contents/Resources/BundledKnowledge"
 fi
+# Move macOS bundle icon to Resources (published via Content copy)
+if [[ -f "$app_dir/Contents/MacOS/AppIcon.icns" ]]; then
+  mv "$app_dir/Contents/MacOS/AppIcon.icns" "$app_dir/Contents/Resources/AppIcon.icns"
+elif [[ -f "$app_dir/Contents/MacOS/Assets/AppIcon.icns" ]]; then
+  mv "$app_dir/Contents/MacOS/Assets/AppIcon.icns" "$app_dir/Contents/Resources/AppIcon.icns"
+  rmdir "$app_dir/Contents/MacOS/Assets" 2>/dev/null || true
+fi
+if [[ ! -f "$app_dir/Contents/Resources/AppIcon.icns" ]]; then
+  echo "Warning: AppIcon.icns not found in publish output; bundle will use default icon." >&2
+fi
 cp "$project_dir/ChatApp.UI/Platforms/macOS/Info.plist" "$app_dir/Contents/Info.plist"
 chmod +x "$app_dir/Contents/MacOS/ChatApp.UI"
 find "$app_dir/Contents/MacOS" -type f -name '*.pdb' -delete

@@ -2,6 +2,21 @@
 
 项目遵循语义化版本号。版本日期按 Asia/Shanghai 记录。
 
+## [1.3.4] - 2026-08-22
+
+### 新增
+
+- 帮助与支持新增 B站（UID:451598529）、小红书（7439240082）、邮箱（1037561013@qq.com）并附“欢迎私信”提示：`DeveloperSocials.All` 扩展 3 项，`MainWindow` 弹窗底部新增常驻文案，支持 `IUrlLauncher` 打开与 `ClipboardService` 复制。
+
+### 改进
+
+- 应用图标全面更新：新增 `ChatApp.UI/Assets/icon.png`（512px，`Window.Icon="/Assets/icon.png"`）、`icon.ico`（WinExe `ApplicationIcon`，6 尺寸含 PNG 压缩）与 `AppIcon.icns`（macOS `CFBundleIconFile=AppIcon`，`Contents/Resources/AppIcon.icns`），`publish-macos.sh` 新增图标搬运与校验，`ChatApp.UI.csproj` 版本升至 `1.3.4/1.3.4.0`，`Info.plist` 同步为 `1.3.4/6`，侧边栏版本标识 `v1.3.4`，`README` Current/Release 链接与帮助表述同步更新。
+- 占位图标为临时渐变 AI 图，后续替换 `Assets/icon.png` 后需按 `icon.ico`（256/128/64/48/32/16）与 `AppIcon.icns`（1024..16 @2x）重新生成（`PIL`/`iconutil` 流程已在仓库保留），或直接提供新源图由维护者重新导出。
+
+### 质量保障
+
+- `dotnet build` 0 警告/0 错误，`dotnet test` 保持 117 项通过；`MainWindow` 弹窗新文案不影响现有契约，图标资源经 `AvaloniaResource`/`Content` 双通道校验，`publish-macos.sh` 仍通过 `BundledKnowledge` 与图标存在性检查。
+
 ## [1.3.3] - 2026-08-23
 
 ### 新增

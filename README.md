@@ -2,7 +2,7 @@
 
 > .NET 8 + Avalonia 跨平台桌面应用 | Semantic Kernel AI 引擎 | EF Core + SQLite 持久化
 
-当前版本：**v1.3.3** · [更新日志](CHANGELOG.md)
+当前版本：**v1.3.4** · [更新日志](CHANGELOG.md)
 
 ## 项目概述
 
@@ -29,11 +29,11 @@ Responses 兼容服务。多模态 API 只在导入图片和“重新识图”�
 
 ## macOS Release 使用说明
 
-当前正式版为 [v1.3.3](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.3.2)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
+当前正式版为 [v1.3.4](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/tag/v1.3.4)，适用于 Apple Silicon（M1/M2/M3/M4 等 arm64）Mac，要求 macOS 12 或更高版本。安装包已包含 .NET 运行时，普通用户不需要另外安装 .NET SDK。
 
 ### 下载与安装
 
-1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.3.3/ChatApp-macOS-arm64.zip)。
+1. 下载 [ChatApp-macOS-arm64.zip](https://github.com/wangzhuoyuan229-source/aivchatdemo/releases/download/v1.3.4/ChatApp-macOS-arm64.zip)。
 2. 双击 ZIP 文件解压，得到 `ChatApp.app`。
 3. 将 `ChatApp.app` 拖入“应用程序（Applications）”文件夹。
 4. 首次启动时，在 Finder 中右键 `ChatApp.app`，选择“打开”，然后在系统提示中再次选择“打开”。后续可正常双击启动。
@@ -54,10 +54,10 @@ open /Applications/ChatApp.app
 shasum -a 256 ~/Downloads/ChatApp-macOS-arm64.zip
 ```
 
-v1.3.3 的 SHA-256：
+v1.3.4 的 SHA-256：
 
 ```text
-1085b4663cb79ba90f283bd26fb97afef89df7b0bec9fe2ad4d3a3d1658f85ec
+53cd95f2b85c94c6b1c6741cc1b5f7aaf95520d8d7188ac71c74096dffa6bbfc
 ```
 
 ### 首次配置
@@ -188,7 +188,7 @@ ChatApp.UI ──────────────► ChatApp.AI ────
 | 📎 **知识引用溯源** | AI 回复下方展示所引用的知识文档标签，点击跳转到知识库对应文档 |
 | 🗜️ **长对话摘要压缩** | 上下文接近上限时用 LLM 生成“摘要 + 关键记忆点”替换早期消息，保留最近完整消息；失败时回退原有截断逻辑 |
 | ⚙️ **BYOK 设置** | 自定义 API 端点/密钥/模型，支持 OpenAI 兼容服务；统一 API 模式下通过预设一键填充对话/向量/视觉三模型（SiliconFlow/阿里百炼/OpenAI），预设内单独模型选择自动禁用（自定义除外），每项旁 `?` 提供悬停/点击通俗帮助 |
-| 💬 **帮助与支持** | 侧边栏常驻 `💬` 入口，一键查看开发者社交账户（GitHub/邮箱/反馈），支持外链打开与复制，弹窗 `Panel.ZIndex` 置顶，不占滚动空间 |
+| 💬 **帮助与支持** | 侧边栏常驻 `💬` 入口，一键查看开发者社交账户（GitHub/B站/小红书/邮箱/反馈，欢迎私信），支持外链打开与复制，弹窗 `Panel.ZIndex` 置顶，不占滚动空间 |
 | ⌨️ **快捷发送** | 聊天输入框 `回车` 发送、`Shift+回车` 换行 |
 | 📁 **知识库目录与批处理** | 一次选择多个多层文件夹递归导入，保留完整相对目录树；可按分组/目录范围全选、移动、删除及批量重新识图 |
 | 📦 **内置知识库** | 根目录 `知识库/` 随应用发布，首次自动索引并支持断点续传，后续启动和覆盖安装直接复用本机向量 |
@@ -610,4 +610,4 @@ dotnet run --project ChatApp.UI
 
 ---
 
-> 文档生成日期：2026-08-23 | 项目版本：v1.3.3
+> 文档生成日期：2026-08-22 | 项目版本：v1.3.4
